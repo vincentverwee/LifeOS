@@ -1,4 +1,4 @@
-import { Trip, Location } from '@/types';
+import { TripSummary, Location } from '@/types';
 
 export interface YearlyStats {
   year: number;
@@ -6,7 +6,7 @@ export interface YearlyStats {
   tripsCount: number;
 }
 
-export function getYearlyStats(trips: Trip[]): YearlyStats[] {
+export function getYearlyStats(trips: TripSummary[]): YearlyStats[] {
   const byYear = new Map<number, YearlyStats>();
 
   for (const trip of trips) {
@@ -44,11 +44,14 @@ export function getCountryStats(locations: Location[]): CountryStats[] {
 }
 
 export interface TripBreakdownEntry {
-  trip: Trip;
+  trip: TripSummary;
   cityCount: number;
 }
 
-export function getTripBreakdown(trips: Trip[], locations: Location[]): TripBreakdownEntry[] {
+export function getTripBreakdown(
+  trips: TripSummary[],
+  locations: Location[]
+): TripBreakdownEntry[] {
   return trips
     .map((trip) => {
       const cities = new Set(

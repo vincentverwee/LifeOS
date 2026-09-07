@@ -1,7 +1,4 @@
-'use client';
-
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Trip } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,12 +25,13 @@ export function RecentTrips({ trips }: RecentTripsProps) {
       </CardHeader>
       <CardContent className="space-y-2">
         {trips.map((trip, i) => (
-          <motion.div
+          // CSS keyframes rather than Framer Motion. The old timing also waited 300ms before
+          // the first row even started (then +70ms per row), so the list took ~0.9s to settle;
+          // now it starts immediately and staggers 30ms.
+          <div
             key={trip.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 + i * 0.07 }}
-            className="flex items-center justify-between rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted"
+            className="animate-slide-in flex items-center justify-between rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted"
+            style={{ animationDelay: `${i * 30}ms` }}
           >
             <div className="min-w-0 space-y-1">
               <p className="truncate text-sm font-medium">{trip.title}</p>
@@ -58,7 +56,7 @@ export function RecentTrips({ trips }: RecentTripsProps) {
                 </Button>
               </Link>
             </div>
-          </motion.div>
+          </div>
         ))}
       </CardContent>
     </Card>

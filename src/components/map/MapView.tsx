@@ -252,6 +252,10 @@ interface MapViewProps {
    *  at the phone's devicePixelRatio 2–3 would otherwise blow past iOS's ~4096px WebGL canvas limit
    *  and render only a partial strip. */
   pixelRatio?: number;
+  /** Keep the WebGL drawing buffer after each compositor swap. Only the export pages need it
+   *  (`modern-screenshot` reads pixels back out of the canvas); it pins an extra full-size buffer
+   *  in GPU memory and blocks a compositor fast path, so ordinary maps leave it off. */
+  preserveDrawingBuffer?: boolean;
   /** Fires on the map's `idle` event after the latest markers/route/fit have painted — the export
    *  page awaits this before capturing the full-resolution map. */
   onReady?: () => void;
@@ -278,6 +282,7 @@ export default function MapView({
   reserveBottom,
   showControls = true,
   pixelRatio,
+  preserveDrawingBuffer = false,
   onReady,
   selectedTripId = null,
   onSelectTrip,
@@ -312,9 +317,11 @@ export default function MapView({
       style: 'https://tiles.openfreemap.org/styles/liberty',
       center: [4.4, 50.85],
       zoom: 5,
-      // Without this, WebGL discards its drawing buffer after each compositor swap, so a
-      // later modern-screenshot capture (export page) can sample a blank frame from the canvas.
-      preserveDrawingBuffer: true,
+      // Export pages only: without this, WebGL discards its drawing buffer after each
+      // compositor swap, so a later modern-screenshot capture can sample a blank frame from the
+      // canvas. It is not free (an extra retained buffer + a lost compositor fast path), so
+      // every other map leaves it off.
+      preserveDrawingBuffer,
       // Cap the buffer for the export map (passes 1) so it stays within iOS's WebGL canvas limit.
       ...(pixelRatio != null ? { pixelRatio } : {}),
     });
@@ -384,7 +391,7 @@ export default function MapView({
       mapRef.current = null;
       setLoaded(false);
     };
-  }, [showControls, pixelRatio]);
+  }, [showControls, pixelRatio, preserveDrawingBuffer]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -435,11 +442,14 @@ export default function MapView({
           el.textContent = String(number);
 
           const label = tripLabels?.[loc.trip_id] ?? '';
+          // Build the popup's DOM on first open, not up front: the world map plots every stop of
+          // every trip, and eagerly constructing a popup body per marker is a pile of DOM work
+          // for panels that mostly never get opened.
+          const popup = new maplibregl.Popup({ offset: 16 });
+          popup.once('open', () => popup.setDOMContent(buildPopupContent(loc, label)));
           return new maplibregl.Marker({ element: el })
             .setLngLat([loc.longitude, loc.latitude])
-            .setPopup(
-              new maplibregl.Popup({ offset: 16 }).setDOMContent(buildPopupContent(loc, label))
-            )
+            .setPopup(popup)
             .addTo(map);
         })
       : [];

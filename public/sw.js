@@ -5,7 +5,7 @@
  *
  * Bump SW_VERSION whenever this file changes to roll all caches.
  */
-const SW_VERSION = 'v1';
+const SW_VERSION = 'v2';
 const SHELL_CACHE = `waypoint-shell-${SW_VERSION}`;
 const STATIC_CACHE = `waypoint-static-${SW_VERSION}`;
 const TILE_CACHE = `waypoint-tiles-${SW_VERSION}`;
@@ -125,6 +125,16 @@ self.addEventListener('fetch', (event) => {
   // last-seen page, then to the offline shell.
   if (request.mode === 'navigate') {
     event.respondWith(networkFirst(request, PAGE_CACHE, PAGE_LIMIT, OFFLINE_URL));
+    return;
+  }
+
+  // Client-side (App Router) navigations and link prefetches don't use `mode: 'navigate'` --
+  // they're plain fetches for an RSC payload, marked by the `RSC` header or an `_rsc` query
+  // param. Without this branch they fell through to the same-origin cache-first rule at the
+  // bottom and were served from cache forever, so the dashboard and stats pages kept showing
+  // whatever data was current the first time they were opened. Same policy as a navigation.
+  if (isSameOrigin && (request.headers.get('RSC') === '1' || url.searchParams.has('_rsc'))) {
+    event.respondWith(networkFirst(request, PAGE_CACHE, PAGE_LIMIT));
     return;
   }
 

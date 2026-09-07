@@ -4,7 +4,7 @@ import { YearlyKmChart } from '@/components/stats/YearlyKmChart';
 import { CountryBreakdown } from '@/components/stats/CountryBreakdown';
 import { TripBreakdown } from '@/components/stats/TripBreakdown';
 import { Badge } from '@/components/ui/badge';
-import { getDashboardStats, getAllTrips, getAllLocations } from '@/lib/data';
+import { getDashboardStats, getAllTripSummaries, getAllLocations } from '@/lib/data';
 import { getYearlyStats, getCountryStats, getTripBreakdown } from '@/lib/stats';
 import { BarChart3, Trophy } from 'lucide-react';
 
@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export default async function StatsPage() {
   const [stats, trips, locations] = await Promise.all([
     getDashboardStats(),
-    getAllTrips(),
+    getAllTripSummaries(),
     getAllLocations(),
   ]);
 

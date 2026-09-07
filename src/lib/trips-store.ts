@@ -1,7 +1,11 @@
-import { Trip, Location } from '@/types';
+import { Trip, TripSummary, Location } from '@/types';
 import { MOCK_TRIPS, MOCK_LOCATIONS, getAllMockLocations } from './mock-data';
 import { isSupabaseConfigured } from './supabase/config';
-import { createBrowserClient } from './supabase/client';
+import { getBrowserClient } from './supabase/client';
+
+/** Every trip column except `route_geometry` — see the note on the same constant in `data.ts`. */
+const TRIP_SUMMARY_COLUMNS =
+  'id, title, description, start_date, end_date, cover_image, route_preference, total_km, created_at, updated_at';
 
 export type CreateTripInput = {
   title: string;
@@ -34,16 +38,30 @@ function emptyToNull(value: string | undefined): string | null {
 
 // --- Trip CRUD ---
 
+/** Full trips, route geometry included — for the all-trips map export, which draws every route. */
 export async function getTrips(): Promise<Trip[]> {
   if (!isSupabaseConfigured()) return MOCK_TRIPS;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from('trips')
     .select('*')
     .order('start_date', { ascending: false, nullsFirst: false });
   if (error) throw error;
   return data as Trip[];
+}
+
+/** Trips without their route geometry — for the trips list, which never draws a route. */
+export async function getTripSummaries(): Promise<TripSummary[]> {
+  if (!isSupabaseConfigured()) return MOCK_TRIPS;
+
+  const supabase = await getBrowserClient();
+  const { data, error } = await supabase
+    .from('trips')
+    .select(TRIP_SUMMARY_COLUMNS)
+    .order('start_date', { ascending: false, nullsFirst: false });
+  if (error) throw error;
+  return data as unknown as TripSummary[];
 }
 
 export async function createTrip(input: CreateTripInput): Promise<Trip> {
@@ -67,7 +85,7 @@ export async function createTrip(input: CreateTripInput): Promise<Trip> {
     };
   }
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from('trips')
     .insert({
@@ -96,7 +114,7 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
     return { ...base, ...sanitized, id, updated_at: now() };
   }
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from('trips')
     .update({ ...sanitized, updated_at: now() })
@@ -110,7 +128,7 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
 export async function deleteTrip(id: string): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { error } = await supabase.from('trips').delete().eq('id', id);
   if (error) throw error;
 }
@@ -124,7 +142,7 @@ export async function getTripWithLocations(
     return { trip, locations };
   }
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const [{ data: trip, error: tripError }, { data: locations, error: locError }] =
     await Promise.all([
       supabase.from('trips').select('*').eq('id', id).single(),
@@ -139,7 +157,7 @@ export async function getTripWithLocations(
 export async function updateTripRoute(id: string, input: UpdateTripRouteInput): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { error } = await supabase.from('trips').update(input).eq('id', id);
   if (error) throw error;
 }
@@ -149,7 +167,7 @@ export async function updateTripRoute(id: string, input: UpdateTripRouteInput): 
 export async function getAllLocations(): Promise<Location[]> {
   if (!isSupabaseConfigured()) return getAllMockLocations();
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase
     .from('locations')
     .select('*')
@@ -164,7 +182,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
     return { ...input, id: generateId(), created_at: now(), updated_at: now() };
   }
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { data, error } = await supabase.from('locations').insert(input).select().single();
   if (error) throw error;
   return data as Location;
@@ -173,7 +191,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
 export async function deleteLocation(id: string): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { error } = await supabase.from('locations').delete().eq('id', id);
   if (error) throw error;
 }
@@ -181,7 +199,7 @@ export async function deleteLocation(id: string): Promise<void> {
 export async function updateLocation(id: string, input: UpdateLocationInput): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   const { error } = await supabase
     .from('locations')
     .update({ ...input, updated_at: now() })
@@ -195,7 +213,7 @@ export async function reorderLocations(
 ): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const supabase = createBrowserClient();
+  const supabase = await getBrowserClient();
   await Promise.all(
     locations.map(({ id, visit_order }) =>
       supabase.from('locations').update({ visit_order }).eq('id', id)

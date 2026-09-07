@@ -1,6 +1,6 @@
 'use client';
 
-import { Trip } from '@/types';
+import { TripSummary } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,12 +17,11 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CalendarDays, Navigation, Pencil, Trash2, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 interface TripCardProps {
-  trip: Trip;
+  trip: TripSummary;
   index: number;
-  onEdit: (trip: Trip) => void;
+  onEdit: (trip: TripSummary) => void;
   onDelete: (id: string) => void;
 }
 
@@ -36,11 +35,9 @@ function formatDate(dateStr: string) {
 
 export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, delay: index * 0.06 }}
-    >
+    // CSS keyframes rather than Framer Motion, and the stagger is capped: with a long trip list
+    // the old `index * 60ms` meant the last cards took seconds to appear.
+    <div className="animate-rise" style={{ animationDelay: `${Math.min(index, 8) * 35}ms` }}>
       <Card className="group border-border/50 transition-shadow hover:shadow-md">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
@@ -132,6 +129,6 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   );
 }

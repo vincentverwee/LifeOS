@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Trip } from '@/types';
+import { TripSummary } from '@/types';
 import { CreateTripInput } from '@/lib/trips-store';
 import {
   Dialog,
@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface TripDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  trip?: Trip | null;
+  trip?: TripSummary | null;
   onSave: (data: CreateTripInput) => Promise<void>;
 }
 
@@ -37,7 +37,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
 
   // Reset the form whenever the dialog opens for a (possibly different) trip.
   // Done during render, not in an effect, so the fields never flash stale content.
-  const [syncedFor, setSyncedFor] = useState<{ trip?: Trip | null; open: boolean }>();
+  const [syncedFor, setSyncedFor] = useState<{ trip?: TripSummary | null; open: boolean }>();
   if (!syncedFor || syncedFor.trip !== trip || syncedFor.open !== open) {
     setSyncedFor({ trip, open });
     setForm(

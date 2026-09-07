@@ -292,6 +292,79 @@ A run of small iterative changes after deploy (all on `main`, live on Vercel):
    - Single-trip views / exports (`routeGeometry`) are **unchanged** — one solid line at 0.9 opacity, no corridor layers, no selection (`onSelectTrip` absent ⇒ non-interactive). `colorForTrip` moved to `tripColors.ts` (was exported from the client-only `MapView`) so `MapWrapper` can use the fallback without statically importing `maplibre-gl` into SSR.
    - Not yet device-verified in a real browser (no browser in the dev env); build + `tsc` clean.
 
+### Post-M6 — Mobile responsiveness pass (no feature changes)
+
+Taps felt laggy on the phone. Nothing was recomputing wrongly; the cost was in what had to be
+downloaded, parsed and executed before a tap could do anything. Initial route JS (raw, sum of the
+route's client chunks) before → after:
+
+| Route | Before | After |
+|---|---|---|
+| `/` | 213 kB | 102 kB |
+| `/stats` | 204 kB | 95 kB |
+| `/trips` | 540 kB | 207 kB |
+| `/trips/[id]` | 556 kB | 330 kB |
+| `/trips/[id]/export` | 377 kB | 150 kB |
+| `/map/export` | 378 kB | 150 kB |
+| `/map` | 101 kB | 102 kB |
+
+- [x] **`loading.tsx` for every route** (`/`, `/map`, `/stats`, `/trips`, `/trips/[id]`, plus the
+  `Skeleton` primitive). `/`, `/map` and `/stats` are `force-dynamic`, so a nav tap had to wait on
+  a server render *and* its Supabase queries before anything moved on screen — and Next can't
+  prefetch a dynamic route with no loading boundary at all. With the boundary the tap paints
+  instantly and the boundary itself is prefetched when the link scrolls into view. Each one renders
+  `AppShell` because the shell lives in the pages, not in a layout.
+- [x] **Supabase client is lazily imported and memoised** (`supabase/client.ts` →
+  `getBrowserClient()`, now async; 12 call sites in `trips-store` `await` it).
+  `@supabase/supabase-js` is ~236 kB and was statically imported into every client page, so it had
+  to download and parse *before hydration* — the single biggest reason buttons were dead on
+  `/trips`, `/trips/[id]` and both export pages. Behind a dynamic `import()` it loads in parallel
+  with hydration instead. It was also re-created on every store call (a dozen clients per page,
+  each with its own GoTrue instance); now it's one per tab. `auth: { persistSession: false,
+  autoRefreshToken: false, detectSessionInUrl: false }` on both clients — there's no sign-in, so
+  the session machinery and its background refresh timer were pure overhead.
+  `createServerClient()` is memoised per process for the same reason.
+- [x] **`route_geometry` no longer fetched where it isn't drawn.** It's a full OSRM polyline per
+  trip, and `getDashboardStats()` + `getAllTrips()` were both `select('*')` — so `/stats` pulled
+  every geometry down twice and used neither. New `TripSummary` type (`Omit<Trip,'route_geometry'>`)
+  + `TRIP_SUMMARY_COLUMNS`, with `getAllTripSummaries()` (server) and `getTripSummaries()` (browser)
+  for the list/stats screens. `getAllTrips()`/`getTrips()` keep the geometry for the map pages.
+- [x] **Framer Motion off the hot paths.** The entrance animations on `StatsCard`, `RecentTrips`,
+  `TripCard` and the trips empty state were pure enter transitions — now CSS keyframes
+  (`.animate-rise` / `.animate-slide-in` / `.animate-fade-in` in `globals.css`, stagger via an
+  inline `animation-delay`, with a `prefers-reduced-motion` opt-out). Framer Motion (121 kB) now
+  loads **only** on `/trips/[id]`, where `LocationList` does real FLIP layout animation on reorder.
+  Timings were tightened too: `RecentTrips` waited 300 ms before the first row even started and
+  took ~0.9 s to settle; `TripCard`'s uncapped `index * 60ms` meant the tail of a long list took
+  seconds. `StatsCard`/`StatsGrid`/`RecentTrips` also dropped `'use client'` — with the animation
+  gone they have no hooks or handlers, so they render on the server.
+- [x] **Touch feedback.** `-webkit-tap-highlight-color: transparent` + `touch-action: manipulation`
+  on every control (the latter drops the browser's double-tap-zoom wait, up to ~300 ms), and an
+  `active:` state on every Button variant, nav link and legend chip. A touch screen has no hover,
+  so without one a tap looked dead until the next screen painted — a large part of the *perceived*
+  latency was this, not actual work.
+- [x] **MapLibre deferred until the map is near the viewport** (`MapWrapper` `IntersectionObserver`,
+  `rootMargin: 400px`). Matters most on `/trips/[id]`, where the map sits below the whole locations
+  list on a phone. Export pages pass the new `priority` prop to keep mounting immediately.
+- [x] **`preserveDrawingBuffer` is now opt-in** (`MapView`/`MapWrapper` prop; both export pages pass
+  it). It's only needed so `modern-screenshot` can read pixels back out of the canvas; on every
+  other map it just pinned an extra full-size GPU buffer and gave up a compositor fast path.
+- [x] **Popup DOM built on first open** rather than eagerly per marker — `/map` plots every stop of
+  every trip, and most of those popups are never opened. (`Popup._update` bails while `_content` is
+  unset, then `setDOMContent` in the `open` handler builds the container — verified against the
+  installed MapLibre source.)
+- [x] **Service worker: RSC payloads were being served cache-first forever.** Client-side App Router
+  navigations aren't `mode: 'navigate'` — they're plain fetches marked by the `RSC` header / `_rsc`
+  query param, so they fell through to the catch-all same-origin cache-first rule. That meant the
+  dashboard and stats pages kept showing whatever data was current the first time they were opened.
+  They now use the same network-first policy as a navigation. `SW_VERSION` bumped to `v2`, so caches
+  roll on the next deploy.
+- Verified: `tsc`, `eslint` and `next build` clean; `next start` smoke test renders `/`, `/map`,
+  `/stats`, `/trips` at 200 with the real Supabase data intact (6 trips / 11 countries / 50 cities /
+  12,177.7 km, longest-trip badge unchanged). The tap-latency improvement itself is not
+  device-measured — no browser or phone in the dev env.
+
+
 ---
 
 ## Key Decisions

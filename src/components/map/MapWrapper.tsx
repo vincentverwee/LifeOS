@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Location } from '@/types';
 import { cn } from '@/lib/utils';
 import { colorForTrip } from '@/lib/tripColors';
@@ -30,6 +30,13 @@ interface MapWrapperProps {
   onReady?: () => void;
   /** Multi-trip maps (dashboard, world map): show the trip-focus legend + enable tap-to-focus. */
   selectable?: boolean;
+  /** Keep the WebGL drawing buffer after each compositor swap. Required only for the export
+   *  pages, whose `modern-screenshot` capture reads pixels back out of the canvas; it costs
+   *  memory and blocks a compositor fast path, so ordinary maps leave it off. */
+  preserveDrawingBuffer?: boolean;
+  /** Load MapLibre immediately instead of waiting for the map to scroll into view. Set on the
+   *  export pages, where the map IS the page. */
+  priority?: boolean;
 }
 
 export function MapWrapper({
@@ -49,8 +56,39 @@ export function MapWrapper({
   pixelRatio,
   onReady,
   selectable = false,
+  preserveDrawingBuffer = false,
+  priority = false,
 }: MapWrapperProps) {
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+
+  // MapLibre GL is by far the heaviest thing this app loads (library + WebGL context + tiles).
+  // On the dashboard and the trip detail page the map sits below the fold on a phone, so mounting
+  // it eagerly spends the main thread on a map the user cannot see yet -- which is exactly when
+  // they are tapping around. Hold the dynamic import until the map is near the viewport.
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(priority);
+
+  useEffect(() => {
+    if (visible) return;
+    const el = hostRef.current;
+    // No element yet, or a browser without IntersectionObserver: fall back to mounting now.
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      // Start loading a screenful early so it is ready by the time it is scrolled to.
+      { rootMargin: '400px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [visible]);
 
   // Legend chips: one per trip that actually has a route drawn, in the order the routes arrive
   // (pages sort them chronologically). Label from tripLabels, color from tripColors (fallback hash).
@@ -72,7 +110,11 @@ export function MapWrapper({
 
   const showLegend = selectable && chips.length > 0;
 
-  const map = (
+  const placeholder = <div className="h-full w-full animate-pulse rounded-2xl bg-muted" />;
+
+  const map = !visible ? (
+    placeholder
+  ) : (
     <MapView
       locations={locations}
       routeGeometry={routeGeometry}
@@ -87,6 +129,7 @@ export function MapWrapper({
       reserveBottom={reserveBottom}
       showControls={showControls}
       pixelRatio={pixelRatio}
+      preserveDrawingBuffer={preserveDrawingBuffer}
       onReady={onReady}
       selectedTripId={showLegend ? selectedTripId : null}
       onSelectTrip={showLegend ? setSelectedTripId : undefined}
@@ -94,14 +137,18 @@ export function MapWrapper({
   );
 
   if (!showLegend) {
-    return <div className={cn('min-w-0', className)}>{map}</div>;
+    return (
+      <div ref={hostRef} className={cn('min-w-0', className)}>
+        {map}
+      </div>
+    );
   }
 
   // Legend on top (shrink-0), map fills the rest. `min-w-0` lets this item shrink below the
   // legend's intrinsic (nowrap chips) width so the legend scrolls internally instead of pushing
   // the whole page wider than the viewport on mobile.
   return (
-    <div className={cn('flex min-w-0 flex-col gap-3', className)}>
+    <div ref={hostRef} className={cn('flex min-w-0 flex-col gap-3', className)}>
       <TripLegend chips={chips} selectedId={selectedTripId} onSelect={setSelectedTripId} />
       <div className="min-h-0 min-w-0 flex-1">{map}</div>
     </div>

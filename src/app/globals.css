@@ -56,4 +56,79 @@
     @apply bg-background text-foreground antialiased;
     font-feature-settings: 'rlig' 1, 'calt' 1;
   }
+
+  /* Touch latency: kill the grey flash Safari/Chrome paint over a tapped element (we render our
+     own :active states instead), and opt every control out of the browser's double-tap-to-zoom
+     wait, which otherwise defers the click by up to ~300ms on mobile. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  label,
+  select,
+  summary,
+  [role='button'],
+  [role='tab'] {
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  /* Entrance animations. These used to be Framer Motion `motion.div`s on the dashboard and the
+     trips list; as plain CSS keyframes they run on the compositor, need no JS on the critical
+     path, and keep ~35kB of animation library out of those pages' bundles. Stagger comes from
+     an inline `animation-delay`. */
+  @keyframes wp-rise {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 12px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes wp-slide-in {
+    from {
+      opacity: 0;
+      transform: translate3d(-10px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  @keyframes wp-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-rise {
+    animation: wp-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-slide-in {
+    animation: wp-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .animate-fade-in {
+    animation: wp-fade-in 0.25s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise,
+    .animate-slide-in,
+    .animate-fade-in {
+      animation-duration: 0.01ms;
+      animation-delay: 0ms !important;
+    }
+  }
 }

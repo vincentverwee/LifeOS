@@ -30,6 +30,15 @@ export interface Location {
   updated_at: string;
 }
 
+/**
+ * A trip minus its `route_geometry` — the (potentially very large) OSRM polyline.
+ *
+ * The list/stats screens never draw a route, so they fetch this narrower row set instead of
+ * `select('*')`; on a phone that's the difference between a few kB and several MB per page load.
+ * `Trip` is assignable to `TripSummary`, so a full trip can be passed anywhere this is accepted.
+ */
+export type TripSummary = Omit<Trip, 'route_geometry'>;
+
 export interface DashboardStats {
   countries_visited: number;
   cities_visited: number;
@@ -37,5 +46,5 @@ export interface DashboardStats {
   total_km: number;
   longest_trip_km: number;
   longest_trip_title: string | null;
-  latest_trip: Trip | null;
+  latest_trip: TripSummary | null;
 }

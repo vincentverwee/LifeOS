@@ -5,18 +5,30 @@ import { AppShell } from '@/components/layout/AppShell';
 import { TripCard } from '@/components/trips/TripCard';
 import { TripDialog } from '@/components/trips/TripDialog';
 import { Button } from '@/components/ui/button';
-import { Trip } from '@/types';
-import { CreateTripInput, createTrip, updateTrip, deleteTrip, getTrips } from '@/lib/trips-store';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TripSummary } from '@/types';
+import {
+  CreateTripInput,
+  createTrip,
+  updateTrip,
+  deleteTrip,
+  getTripSummaries,
+} from '@/lib/trips-store';
 import { Plus, Route } from 'lucide-react';
-import { motion } from 'framer-motion';
 
 export default function TripsPage() {
-  const [trips, setTrips] = useState<Trip[]>([]);
+  const [trips, setTrips] = useState<TripSummary[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
+  const [editingTrip, setEditingTrip] = useState<TripSummary | null>(null);
+  // Distinguishes "still fetching" from "genuinely no trips" -- without it the page flashed the
+  // full "No trips yet" empty state on every visit before the query came back.
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    getTrips().then(setTrips);
+    getTripSummaries().then((data) => {
+      setTrips(data);
+      setLoaded(true);
+    });
   }, []);
 
   function openCreate() {
@@ -24,7 +36,7 @@ export default function TripsPage() {
     setDialogOpen(true);
   }
 
-  function openEdit(trip: Trip) {
+  function openEdit(trip: TripSummary) {
     setEditingTrip(trip);
     setDialogOpen(true);
   }
@@ -51,7 +63,7 @@ export default function TripsPage() {
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Trips</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {trips.length} trip{trips.length !== 1 ? 's' : ''} recorded
+              {loaded ? `${trips.length} trip${trips.length !== 1 ? 's' : ''} recorded` : ' '}
             </p>
           </div>
           <Button onClick={openCreate} className="gap-2">
@@ -60,12 +72,14 @@ export default function TripsPage() {
           </Button>
         </div>
 
-        {trips.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center"
-          >
+        {!loaded ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} className="h-[104px] rounded-2xl" />
+            ))}
+          </div>
+        ) : trips.length === 0 ? (
+          <div className="animate-fade-in flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
             <Route size={48} className="mb-4 text-muted-foreground/40" />
             <p className="font-medium text-muted-foreground">No trips yet</p>
             <p className="mt-1 text-sm text-muted-foreground/60">
@@ -75,7 +89,7 @@ export default function TripsPage() {
               <Plus size={16} />
               Create first trip
             </Button>
-          </motion.div>
+          </div>
         ) : (
           <div className="space-y-3">
             {trips.map((trip, i) => (

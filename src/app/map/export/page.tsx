@@ -100,6 +100,8 @@ function ExportStage({
         reserveBottom={reserveBottom}
         showControls={false}
         pixelRatio={1}
+        preserveDrawingBuffer
+        priority
       />
       <div
         className="absolute inset-x-0 bottom-0"

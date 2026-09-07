@@ -3,17 +3,24 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
+// `touch-manipulation` + `select-none` remove the mobile double-tap-zoom delay and the
+// long-press text selection. Every variant also carries an `active:` state: on a touch screen
+// there is no hover, so without one a tap gives no feedback until the next screen paints, which
+// is what made the buttons feel unresponsive even when the handler fired immediately.
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex touch-manipulation select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        default: 'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80',
+        destructive:
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80',
+        outline:
+          'border border-input bg-background hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70',
+        ghost: 'hover:bg-accent hover:text-accent-foreground active:bg-accent/80',
+        link: 'text-primary underline-offset-4 hover:underline active:opacity-70',
       },
       size: {
         default: 'h-10 px-4 py-2',

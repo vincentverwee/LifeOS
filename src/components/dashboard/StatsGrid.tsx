@@ -1,5 +1,3 @@
-'use client';
-
 import { Globe, Building2, Route, Navigation } from 'lucide-react';
 import { StatsCard } from './StatsCard';
 import { DashboardStats } from '@/types';

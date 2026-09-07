@@ -103,6 +103,8 @@ function ExportStage({
         reserveBottom={reserveBottom}
         showControls={false}
         pixelRatio={pixelRatio}
+        preserveDrawingBuffer
+        priority
         onReady={onReady}
       />
       <div

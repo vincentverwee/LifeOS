@@ -38,7 +38,7 @@ export function TripLegend({ chips, selectedId, onSelect, className }: TripLegen
         onClick={() => onSelect(null)}
         aria-pressed={selectedId === null}
         className={cn(
-          'inline-flex h-9 shrink-0 items-center rounded-full border px-3 text-sm font-medium transition-colors',
+          'inline-flex h-9 shrink-0 touch-manipulation select-none items-center rounded-full border px-3 text-sm font-medium transition-colors duration-100 active:opacity-80',
           selectedId === null
             ? 'border-foreground/20 bg-foreground text-background'
             : 'border-border bg-background text-muted-foreground hover:bg-muted'
@@ -57,7 +57,7 @@ export function TripLegend({ chips, selectedId, onSelect, className }: TripLegen
             aria-pressed={active}
             title={chip.label}
             className={cn(
-              'inline-flex h-9 max-w-[10rem] shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-medium transition-colors',
+              'inline-flex h-9 max-w-[10rem] shrink-0 touch-manipulation select-none items-center gap-2 rounded-full border px-3 text-sm font-medium transition-colors duration-100 active:opacity-80',
               active
                 ? 'border-transparent text-white shadow-sm'
                 : 'border-border bg-background text-foreground hover:bg-muted'

@@ -26,7 +26,9 @@ export function BottomNav() {
             key={href}
             href={href}
             className={cn(
-              'flex flex-col items-center gap-1 px-3 py-3 text-xs font-medium transition-colors',
+              // `active:` gives the tap instant feedback: a touch screen has no hover, so
+              // without it the nav item looks dead until the next page paints.
+              'flex touch-manipulation select-none flex-col items-center gap-1 rounded-xl px-3 py-3 text-xs font-medium transition-colors duration-100 active:bg-accent active:text-foreground',
               pathname === href ? 'text-primary' : 'text-muted-foreground'
             )}
           >
