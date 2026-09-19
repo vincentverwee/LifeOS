@@ -1,0 +1,22 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// Connection URLs are configured in prisma7.config.ts, not here (Prisma 7).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// TEMPORARY: exists only to verify the Prisma <-> Supabase connection works.
+// Delete this once the real data model is designed from the user's existing
+// expense-tracking spreadsheets.
+model HealthCheck {
+  id        String   @id @default(cuid())
+  message   String
+  createdAt DateTime @default(now())
+}
