@@ -1,21 +1,90 @@
 @import "tailwindcss";
 
+/* "Meadow" — LifeOS's green/sheep visual identity. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf9f6;
+  --foreground: #14170f;
+
+  --color-primary: #1f5c3b; /* deep forest: headers, primary actions */
+  --color-primary-foreground: #ffffff;
+
+  --color-surface: #ffffff;
+  --color-surface-muted: #eef4ec; /* sage: secondary/background UI */
+  --color-border: rgba(15, 46, 31, 0.12);
+
+  --color-accent: #2f9e44; /* grass green: chart lines, positive UI */
+  --color-good: #0ca30c; /* status fill: ahead of plan / under budget */
+  --color-critical: #d03b3b; /* status fill/text: reserved for genuinely negative states */
+  --color-positive-text: #006300; /* card deltas, "under budget" text */
+
+  --color-ink-muted: #898781; /* axis labels, context series */
+  --color-gridline: #e1e0d9;
+
+  /* Tag palette — fixed 8-hue categorical order, never cycled. */
+  --color-tag-blue: #2a78d6;
+  --color-tag-orange: #eb6834;
+  --color-tag-aqua: #1baf7a;
+  --color-tag-yellow: #eda100;
+  --color-tag-magenta: #e87ba4;
+  --color-tag-green: #008300;
+  --color-tag-violet: #4a3aa7;
+  --color-tag-red: #e34948;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-surface: var(--color-surface);
+  --color-surface-muted: var(--color-surface-muted);
+  --color-border: var(--color-border);
+  --color-accent: var(--color-accent);
+  --color-good: var(--color-good);
+  --color-critical: var(--color-critical);
+  --color-positive-text: var(--color-positive-text);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-gridline: var(--color-gridline);
+  --color-tag-blue: var(--color-tag-blue);
+  --color-tag-orange: var(--color-tag-orange);
+  --color-tag-aqua: var(--color-tag-aqua);
+  --color-tag-yellow: var(--color-tag-yellow);
+  --color-tag-magenta: var(--color-tag-magenta);
+  --color-tag-green: var(--color-tag-green);
+  --color-tag-violet: var(--color-tag-violet);
+  --color-tag-red: var(--color-tag-red);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0f120c;
+    --foreground: #ededea;
+
+    --color-primary: #4c9a72;
+    --color-primary-foreground: #0b0f0b;
+
+    --color-surface: #171a14;
+    --color-surface-muted: #1e2419;
+    --color-border: rgba(255, 255, 255, 0.1);
+
+    --color-accent: #46b35c;
+    --color-good: #0ca30c;
+    --color-critical: #d03b3b;
+    --color-positive-text: #0ca30c;
+
+    --color-ink-muted: #898781;
+    --color-gridline: #2c2c2a;
+
+    --color-tag-blue: #3987e5;
+    --color-tag-orange: #d95926;
+    --color-tag-aqua: #199e70;
+    --color-tag-yellow: #c98500;
+    --color-tag-magenta: #d55181;
+    --color-tag-green: #008300;
+    --color-tag-violet: #9085e9;
+    --color-tag-red: #e66767;
   }
 }
 
@@ -23,4 +92,18 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes sheep-hop {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-15%);
+  }
+}
+
+.animate-sheep-hop {
+  animation: sheep-hop 0.9s ease-in-out infinite;
 }

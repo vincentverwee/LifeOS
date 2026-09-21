@@ -12,11 +12,157 @@ datasource db {
   provider = "postgresql"
 }
 
-// TEMPORARY: exists only to verify the Prisma <-> Supabase connection works.
-// Delete this once the real data model is designed from the user's existing
-// expense-tracking spreadsheets.
-model HealthCheck {
-  id        String   @id @default(cuid())
-  message   String
+// --- Recurring/monthly budget cycles ("cycles") ---
+// One row per day within a period, tracking theoretical (planned decay from
+// startingBudget) vs actual balances.
+
+model BudgetCycle {
+  id             String           @id @default(cuid())
+  name           String
+  startingBudget Decimal          @db.Decimal(12, 2)
+  startDate      DateTime         @db.Date
+  endDate        DateTime         @db.Date
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  days           BudgetCycleDay[]
+  categories     Category[]
+  expenses       Expense[]
+
+  @@index([startDate])
+}
+
+model BudgetCycleDay {
+  id      String      @id @default(cuid())
+  cycleId String
+  cycle   BudgetCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  date    DateTime    @db.Date
+
+  // Plan-time values, known for the whole cycle range up front.
+  theoreticalBalance Decimal @db.Decimal(12, 2)
+  dailyGoal          Decimal @db.Decimal(12, 2)
+
+  // Actuals, only known once a day has been logged — nullable so unlogged
+  // days render as real gaps in the chart instead of fake zeros.
+  cashBalance  Decimal? @db.Decimal(12, 2)
+  bankBalance  Decimal? @db.Decimal(12, 2)
+  totalBalance Decimal? @db.Decimal(12, 2)
+  amountSpent  Decimal? @db.Decimal(12, 2)
+
+  notes     String?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cycleId, date])
+  @@index([cycleId, date])
+}
+
+// --- Category-based trip/period budgets ("trips") ---
+// Expenses bucketed by user-defined categories, scoped per trip.
+
+model Trip {
+  id          String     @id @default(cuid())
+  name        String
+  totalBudget Decimal    @db.Decimal(12, 2)
+  startDate   DateTime   @db.Date
+  endDate     DateTime   @db.Date
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  categories  Category[]
+  expenses    Expense[]
+
+  @@index([startDate])
+}
+
+// Categories are scoped to exactly one period — a Trip or a Cycle, never
+// both/neither (enforced in the mutation layer, not the DB; see
+// src/lib/actions/categories.ts). Two separate @@unique blocks, not one
+// combined composite: Postgres never considers two NULLs equal in a unique
+// index, so @@unique([tripId, cycleId, name]) would silently allow duplicate
+// names within the same trip (cycleId is NULL on every trip-scoped row).
+// Splitting into two constraints means each one only "activates" on the rows
+// where its own FK is actually set.
+model Category {
+  id        String       @id @default(cuid())
+  tripId    String?
+  trip      Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  cycleId   String?
+  cycle     BudgetCycle? @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime     @default(now())
+  expenses  Expense[]
+
+  @@unique([tripId, name])
+  @@unique([cycleId, name])
+  @@index([tripId])
+  @@index([cycleId])
+}
+
+// Same generic-period pattern as Category. tripId/cycleId are always derived
+// server-side from the selected Category's own tripId/cycleId (see
+// src/lib/actions/expenses.ts) — never accepted directly from client input —
+// so an expense's period can never disagree with its category's period.
+model Expense {
+  id         String       @id @default(cuid())
+  categoryId String
+  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  tripId     String?
+  trip       Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  cycleId    String?
+  cycle      BudgetCycle? @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  date       DateTime     @db.Date
+  amount     Decimal      @db.Decimal(12, 2)
+  note       String?
+  createdAt  DateTime     @default(now())
+  tags       Tag[]
+
+  @@index([categoryId, date])
+  @@index([tripId, date])
+  @@index([cycleId, date])
+}
+
+// --- Savings / net-worth log ---
+// Flat timestamped list, not scoped to any cycle/trip.
+
+model SavingsEntry {
+  id                String   @id @default(cuid())
+  transactionNumber Int
+  runningTotal      Decimal  @db.Decimal(12, 2)
+  bonusAmount       Decimal? @db.Decimal(12, 2)
+  date              DateTime
+  createdAt         DateTime @default(now())
+
+  @@index([date])
+}
+
+// --- Debts ("Schulden") ---
+// Simple running list. Signed amount: positive = owed to the user,
+// negative = the user owes them.
+
+model Debt {
+  id        String   @id @default(cuid())
+  name      String
+  amount    Decimal  @db.Decimal(12, 2)
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// --- Tags ---
+// A curated, flat, global tagging layer on top of Category — created/managed
+// only via the /tags screen, never freeform-typed from expense entry. "color"
+// stores one of a fixed set of palette slot keys (see src/lib/tagPalette.ts),
+// not a raw hex, so light/dark values resolve through the --color-tag-*
+// theme tokens like every other color in this app.
+
+model Tag {
+  id         String    @id @default(cuid())
+  name       String    @unique
+  color      String
+  sortOrder  Int       @default(0)
+  isArchived Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  expenses   Expense[]
+
+  @@index([isArchived, sortOrder])
 }
