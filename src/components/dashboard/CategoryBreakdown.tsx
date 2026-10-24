@@ -1,16 +1,23 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { CategoryStat } from "@/lib/data/trips";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { formatCurrency, formatPercent } from "@/lib/format";
+
+export type BreakdownItem = {
+  id: string;
+  name: string;
+  totalSpent: number;
+  dailyAverage: number;
+  percentOfBudget: number;
+};
 
 function CategoryTooltip({
   active,
   payload,
 }: {
   active?: boolean;
-  payload?: { payload: CategoryStat }[];
+  payload?: { payload: BreakdownItem }[];
 }) {
   if (!active || !payload?.length) return null;
   const category = payload[0].payload;
@@ -26,7 +33,7 @@ function CategoryTooltip({
 }
 
 type CategoryBreakdownProps = {
-  categories: CategoryStat[];
+  categories: BreakdownItem[];
 };
 
 export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {

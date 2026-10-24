@@ -36,14 +36,22 @@ npm run db:studio   # Prisma Studio
 
 ```
 src/
-  app/          routes: / (dashboard), /expenses, /insights, /settings, /api/health
-  components/   reusable UI (e.g. Navigation)
-  lib/          app logic + Prisma client singleton
+  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/expenses (entry, list, category management), /budget/insights (any month/trip + per-category trend), /budget/settings (new trip), /api/health
+  components/   dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
+  lib/          actions/ (server actions), data/ (server-only queries), monthStats.ts (pure month math), format.ts
   generated/    Prisma Client output (generated, gitignored)
-prisma/schema.prisma   data model — currently just a temporary HealthCheck model
+prisma/schema.prisma   data model
+prisma/seed.ts         seeds starter categories
+prisma/import-excel.ts one-off import of ExcelContextFiles/BudgetGalway.xlsx (idempotent; `npx tsx prisma/import-excel.ts [--dry]`)
 prisma7.config.ts      Prisma CLI datasource config
 ```
 
-## Current state / what's temporary
+## Data model in one paragraph
 
-`HealthCheck` (in `prisma/schema.prisma`) and `GET /api/health` exist solely to verify Prisma ↔ Supabase connectivity. Delete both once the real schema exists. Verified working end-to-end (schema pushed to the actual Supabase project).
+A **month** is a `BudgetCycle` (calendar month, created automatically by `ensureCurrentMonth()` in `src/lib/data/ensureMonth.ts` the first time a new month is viewed, copying the previous one; `startingBudget` = monthly budget, plus manual `bank`/`tricount`/`cash` balances and `rent`/`rentDay`). A **trip** is a `Trip`. Both hold `Expense` rows (`cycleId` or `tripId`, validated in `src/lib/actions/expenses.ts`). **Categories are one global list** (`Category`: name, color slot, sortOrder, isArchived, optional `pintPrice`), managed on the expenses page; there is no separate tag concept. Daily totals, cumulative-vs-budget, category/weekday stats, beer stats and the balance outlook are all **computed from expenses** in `src/lib/monthStats.ts` — nothing is stored per day. A category with a `pintPrice` counts as beer. `BudgetCycleDay` is legacy and unused. `SavingsEntry` and `Debt` are still display-only (no entry UI). `HealthCheck` + `GET /api/health` exist only to verify Prisma <-> Supabase connectivity.
+
+## Gotchas
+
+- After `prisma generate`/`db:push` changes, **restart `npm run dev`** — the running server keeps the old generated client in memory.
+- Date-only columns are UTC midnight; use `dayKey()`/`toDateInputValue()` from `src/lib/format.ts` rather than `toISOString()` slices scattered around.
+- Amount inputs go through `parseAmount()` (accepts `6,8+7,4` sums).

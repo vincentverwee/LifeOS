@@ -1,11 +1,12 @@
+import Link from "next/link";
 import { SheepIllustration } from "@/components/icons/SheepIllustration";
 
-type EmptyStateVariant = "cycle" | "trip" | "savings" | "no-periods" | "tag-trend";
+type EmptyStateVariant = "cycle" | "trip" | "savings" | "no-periods" | "category-trend";
 
 const COPY: Record<EmptyStateVariant, { heading: string; body: string }> = {
   cycle: {
-    heading: "No days logged yet",
-    body: "Add a few days in this cycle to see the balance chart fill in.",
+    heading: "No spending yet",
+    body: "Add a few expenses in this month to see the chart fill in.",
   },
   trip: {
     heading: "No expenses yet",
@@ -17,11 +18,11 @@ const COPY: Record<EmptyStateVariant, { heading: string; body: string }> = {
   },
   "no-periods": {
     heading: "No budget periods yet",
-    body: "Create a budget cycle or a trip to see it here.",
+    body: "Create a month or a trip to get started.",
   },
-  "tag-trend": {
-    heading: "Not enough data for this tag yet",
-    body: "Log a couple more expenses with this tag to see a trend.",
+  "category-trend": {
+    heading: "Not enough data for this category yet",
+    body: "Log a couple more expenses in this category to see a trend.",
   },
 };
 
@@ -40,6 +41,14 @@ export function EmptyState({ variant, className }: EmptyStateProps) {
       <SheepIllustration />
       <p className="font-medium text-foreground">{copy.heading}</p>
       <p className="max-w-xs text-sm text-ink-muted">{copy.body}</p>
+      {variant === "no-periods" && (
+        <Link
+          href="/budget/settings"
+          className="rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Create a month or trip
+        </Link>
+      )}
     </div>
   );
 }

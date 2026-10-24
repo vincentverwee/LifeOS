@@ -22,10 +22,19 @@ model BudgetCycle {
   startingBudget Decimal          @db.Decimal(12, 2)
   startDate      DateTime         @db.Date
   endDate        DateTime         @db.Date
+
+  // Month-level money snapshot, edited by hand. Used to estimate whether
+  // spending puts the balance at risk (available after rent, safe spend/day).
+  bank              Decimal   @default(0) @db.Decimal(12, 2)
+  tricount          Decimal   @default(0) @db.Decimal(12, 2)
+  cash              Decimal   @default(0) @db.Decimal(12, 2)
+  balancesUpdatedAt DateTime?
+  rent              Decimal   @default(0) @db.Decimal(12, 2)
+  rentDay           Int?
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   days           BudgetCycleDay[]
-  categories     Category[]
   expenses       Expense[]
 
   @@index([startDate])
@@ -56,8 +65,8 @@ model BudgetCycleDay {
   @@index([cycleId, date])
 }
 
-// --- Category-based trip/period budgets ("trips") ---
-// Expenses bucketed by user-defined categories, scoped per trip.
+// --- Trips: a separate, dated budget alongside the monthly ones ---
+// Expenses use the same global categories as months.
 
 model Trip {
   id          String     @id @default(cuid())
@@ -67,40 +76,30 @@ model Trip {
   endDate     DateTime   @db.Date
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
-  categories  Category[]
   expenses    Expense[]
 
   @@index([startDate])
 }
 
-// Categories are scoped to exactly one period — a Trip or a Cycle, never
-// both/neither (enforced in the mutation layer, not the DB; see
-// src/lib/actions/categories.ts). Two separate @@unique blocks, not one
-// combined composite: Postgres never considers two NULLs equal in a unique
-// index, so @@unique([tripId, cycleId, name]) would silently allow duplicate
-// names within the same trip (cycleId is NULL on every trip-scoped row).
-// Splitting into two constraints means each one only "activates" on the rows
-// where its own FK is actually set.
+// One global list shared by every month and trip. Managed from the expenses
+// screen. "color" is a palette slot key (see src/lib/categoryPalette.ts), not a
+// raw hex, so light/dark values resolve through the --color-tag-* theme tokens.
+// A category with a pintPrice counts as beer in the insights.
 model Category {
-  id        String       @id @default(cuid())
-  tripId    String?
-  trip      Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  cycleId   String?
-  cycle     BudgetCycle? @relation(fields: [cycleId], references: [id], onDelete: Cascade)
-  name      String
-  createdAt DateTime     @default(now())
-  expenses  Expense[]
+  id         String    @id @default(cuid())
+  name       String    @unique
+  color      String    @default("blue")
+  sortOrder  Int       @default(0)
+  isArchived Boolean   @default(false)
+  pintPrice  Decimal?  @db.Decimal(6, 2)
+  createdAt  DateTime  @default(now())
+  expenses   Expense[]
 
-  @@unique([tripId, name])
-  @@unique([cycleId, name])
-  @@index([tripId])
-  @@index([cycleId])
+  @@index([isArchived, sortOrder])
 }
 
-// Same generic-period pattern as Category. tripId/cycleId are always derived
-// server-side from the selected Category's own tripId/cycleId (see
-// src/lib/actions/expenses.ts) — never accepted directly from client input —
-// so an expense's period can never disagree with its category's period.
+// Belongs to exactly one period: a month (cycleId) or a trip (tripId), enforced
+// in the mutation layer (src/lib/actions/expenses.ts).
 model Expense {
   id         String       @id @default(cuid())
   categoryId String
@@ -113,7 +112,6 @@ model Expense {
   amount     Decimal      @db.Decimal(12, 2)
   note       String?
   createdAt  DateTime     @default(now())
-  tags       Tag[]
 
   @@index([categoryId, date])
   @@index([tripId, date])
@@ -145,24 +143,4 @@ model Debt {
   note      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
-
-// --- Tags ---
-// A curated, flat, global tagging layer on top of Category — created/managed
-// only via the /tags screen, never freeform-typed from expense entry. "color"
-// stores one of a fixed set of palette slot keys (see src/lib/tagPalette.ts),
-// not a raw hex, so light/dark values resolve through the --color-tag-*
-// theme tokens like every other color in this app.
-
-model Tag {
-  id         String    @id @default(cuid())
-  name       String    @unique
-  color      String
-  sortOrder  Int       @default(0)
-  isArchived Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  expenses   Expense[]
-
-  @@index([isArchived, sortOrder])
 }

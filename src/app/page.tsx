@@ -1,67 +1,74 @@
-import type { ReactNode } from "react";
-import {
-  getAllPeriods,
-  getCycleWithDays,
-  getDebts,
-  getSavingsEntries,
-  getTripWithExpenses,
-  resolveActivePeriod,
-} from "@/lib/data";
-import { encodePeriodKey } from "@/lib/period";
-import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
-import { CyclePanel } from "@/components/dashboard/CyclePanel";
-import { TripPanel } from "@/components/dashboard/TripPanel";
-import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChart";
-import { DebtsList } from "@/components/dashboard/DebtsList";
-import { EmptyState } from "@/components/dashboard/EmptyState";
+import Link from "next/link";
 
-export default async function DashboardPage(props: PageProps<"/">) {
-  const searchParams = await props.searchParams;
-  const requestedPeriod = searchParams.period;
-  const requestedKey = Array.isArray(requestedPeriod) ? requestedPeriod[0] : requestedPeriod;
+type Feature = {
+  name: string;
+  description: string;
+  href?: string;
+  emoji: string;
+};
 
-  const [periods, savings, debts] = await Promise.all([
-    getAllPeriods(),
-    getSavingsEntries(),
-    getDebts(),
-  ]);
+const FEATURES: Feature[] = [
+  {
+    name: "Budget",
+    description: "Monthly budgets, trips, expenses and spending insights.",
+    href: "/budget",
+    emoji: "💶",
+  },
+  {
+    name: "Waypoint",
+    description: "Places and plans worth remembering.",
+    emoji: "📍",
+  },
+  {
+    name: "Recipes",
+    description: "What to cook, and what it needs.",
+    emoji: "🍲",
+  },
+];
 
-  const activePeriod = resolveActivePeriod(periods, requestedKey);
-
-  let activePanel: ReactNode = null;
-  if (activePeriod?.type === "cycle") {
-    const cycle = await getCycleWithDays(activePeriod.id);
-    if (cycle) activePanel = <CyclePanel cycle={cycle} />;
-  } else if (activePeriod?.type === "trip") {
-    const trip = await getTripWithExpenses(activePeriod.id);
-    if (trip) activePanel = <TripPanel trip={trip} />;
-  }
-
+export default function HomePage() {
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Budget dashboard</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            Your active budget cycles and trips, at a glance.
-          </p>
-        </div>
-        {periods.length > 0 && activePeriod && (
-          <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
-        )}
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="text-2xl font-semibold text-foreground">Life Analytics</h1>
+        <p className="mt-1 text-sm text-ink-muted">Your personal data, in one place.</p>
       </div>
 
-      {activePanel ?? <EmptyState variant="no-periods" />}
+      <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {FEATURES.map((feature) => {
+          const body = (
+            <>
+              <span className="text-3xl" aria-hidden="true">
+                {feature.emoji}
+              </span>
+              <span className="mt-3 block font-medium text-foreground">{feature.name}</span>
+              <span className="mt-1 block text-sm text-ink-muted">{feature.description}</span>
+              {!feature.href && (
+                <span className="mt-3 inline-block rounded-full border border-border px-2 py-0.5 text-xs text-ink-muted">
+                  Coming soon
+                </span>
+              )}
+            </>
+          );
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium text-foreground">Savings trend</h2>
-        <SavingsTrendChart entries={savings} />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium text-foreground">Debts</h2>
-        <DebtsList debts={debts} />
-      </section>
+          return (
+            <li key={feature.name}>
+              {feature.href ? (
+                <Link
+                  href={feature.href}
+                  className="block rounded-xl border border-border bg-surface p-5 hover:border-primary"
+                >
+                  {body}
+                </Link>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border p-5 opacity-70">
+                  {body}
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

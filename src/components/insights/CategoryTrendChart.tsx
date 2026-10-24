@@ -2,7 +2,7 @@
 
 import { format, parse } from "date-fns";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import type { TagTrendPoint } from "@/lib/data/tagAnalytics";
+import type { CategoryTrendPoint } from "@/lib/data/categoryAnalytics";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { formatCurrency } from "@/lib/format";
 
@@ -15,7 +15,7 @@ function TrendTooltip({
   payload,
 }: {
   active?: boolean;
-  payload?: { payload: TagTrendPoint }[];
+  payload?: { payload: CategoryTrendPoint }[];
 }) {
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
@@ -28,13 +28,13 @@ function TrendTooltip({
   );
 }
 
-type TagTrendChartProps = {
-  trend: TagTrendPoint[];
+type CategoryTrendChartProps = {
+  trend: CategoryTrendPoint[];
 };
 
-export function TagTrendChart({ trend }: TagTrendChartProps) {
+export function CategoryTrendChart({ trend }: CategoryTrendChartProps) {
   if (trend.length < 2) {
-    return <EmptyState variant="tag-trend" />;
+    return <EmptyState variant="category-trend" />;
   }
 
   return (

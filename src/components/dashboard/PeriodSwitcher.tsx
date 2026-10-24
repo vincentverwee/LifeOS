@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { Period } from "@/lib/data/periods";
 import { encodePeriodKey } from "@/lib/period";
@@ -16,7 +17,12 @@ export function PeriodSwitcher({ periods, activeKey }: PeriodSwitcherProps) {
 
   return (
     <label className="flex flex-col gap-1 text-sm">
-      <span className="text-ink-muted">Active period</span>
+      <span className="flex items-center justify-between text-ink-muted">
+        Active period
+        <Link href="/budget/settings" className="text-primary">
+          + New
+        </Link>
+      </span>
       <select
         value={activeKey}
         onChange={(event) => {
@@ -26,7 +32,7 @@ export function PeriodSwitcher({ periods, activeKey }: PeriodSwitcherProps) {
       >
         {periods.map((period) => {
           const key = encodePeriodKey(period);
-          const typeLabel = period.type === "cycle" ? "Cycle" : "Trip";
+          const typeLabel = period.type === "cycle" ? "Month" : "Trip";
           return (
             <option key={key} value={key}>
               {typeLabel} — {period.name} ({formatDate(period.startDate)}–{formatDate(period.endDate)})

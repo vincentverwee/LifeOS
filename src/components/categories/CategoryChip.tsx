@@ -1,14 +1,14 @@
-import type { TagColorSlot } from "@/lib/tagPalette";
+import type { CategoryColorSlot } from "@/lib/categoryPalette";
 
-type TagChipProps = {
+type CategoryChipProps = {
   name: string;
-  color: TagColorSlot;
+  color: CategoryColorSlot;
   selected?: boolean;
   onClick?: () => void;
   className?: string;
 };
 
-export function TagChip({ name, color, selected, onClick, className }: TagChipProps) {
+export function CategoryChip({ name, color, selected, onClick, className }: CategoryChipProps) {
   const dot = (
     <span
       className="h-2.5 w-2.5 shrink-0 rounded-full"

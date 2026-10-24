@@ -1,25 +1,15 @@
 import Link from "next/link";
-
-const LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/expenses", label: "Expenses" },
-  { href: "/tags", label: "Tags" },
-  { href: "/insights", label: "Insights" },
-  { href: "/settings", label: "Settings" },
-];
+import { SheepMark } from "@/components/icons/SheepMark";
 
 export function Navigation() {
   return (
-    <nav className="border-b border-border">
-      <ul className="mx-auto flex max-w-3xl gap-6 overflow-x-auto px-6 py-4 text-sm font-medium">
-        {LINKS.map((link) => (
-          <li key={link.href} className="shrink-0">
-            <Link href={link.href} className="hover:underline">
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </nav>
+    <header className="border-b border-border">
+      <div className="mx-auto flex max-w-3xl items-center px-6 py-4">
+        <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-foreground">
+          <SheepMark className="h-5 w-5 text-primary" />
+          Life Analytics
+        </Link>
+      </div>
+    </header>
   );
 }
