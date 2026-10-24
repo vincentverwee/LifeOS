@@ -5,11 +5,26 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Location } from '@/lib/waypoint/types';
 import { cn } from '@/lib/waypoint/utils';
 import { colorForTrip } from '@/lib/waypoint/tripColors';
+import { SheepSpinner } from '@/components/icons/SheepSpinner';
+import { SheepPhrase } from '@/components/icons/SheepPhrase';
 import { TripLegend, type LegendChip } from './TripLegend';
+
+function MapPlaceholder() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex h-full min-h-48 w-full flex-col items-center justify-center gap-3 rounded-2xl bg-muted"
+    >
+      <SheepSpinner size={48} />
+      <SheepPhrase />
+    </div>
+  );
+}
 
 const MapView = dynamic(() => import('./MapView'), {
   ssr: false,
-  loading: () => <div className="h-full w-full animate-pulse rounded-2xl bg-muted" />,
+  loading: () => <MapPlaceholder />,
 });
 
 interface MapWrapperProps {
@@ -110,7 +125,7 @@ export function MapWrapper({
 
   const showLegend = selectable && chips.length > 0;
 
-  const placeholder = <div className="h-full w-full animate-pulse rounded-2xl bg-muted" />;
+  const placeholder = <MapPlaceholder />;
 
   const map = !visible ? (
     placeholder
