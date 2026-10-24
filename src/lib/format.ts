@@ -70,3 +70,14 @@ const compactCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
 export function formatCurrencyCompact(value: number): string {
   return compactCurrencyFormatter.format(value);
 }
+
+const wholeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
+  style: "currency",
+  currency: "EUR",
+  maximumFractionDigits: 0,
+});
+
+/** Big amounts without cents so they fit small cards: "€ 1.047" (cents kept below € 1.000). */
+export function formatCurrencyShort(value: number): string {
+  return Math.abs(value) >= 1000 ? wholeCurrencyFormatter.format(value) : formatCurrency(value);
+}

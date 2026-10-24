@@ -97,3 +97,19 @@ export async function updateMonthBudget(input: {
   revalidateMonthRoutes();
   return { ok: true, cycleId: input.cycleId };
 }
+
+export async function setPeriodLabel(input: { cycleId: string; label: string }): Promise<CycleResult> {
+  const label = input.label.trim();
+  if (!label) return { ok: false, error: "Give the label a name." };
+  if (label.length > 24) return { ok: false, error: "Keep the label under 24 characters." };
+
+  const existing = await prisma.budgetCycle.findUnique({
+    where: { id: input.cycleId },
+    select: { id: true },
+  });
+  if (!existing) return { ok: false, error: "That month no longer exists." };
+
+  await prisma.budgetCycle.update({ where: { id: input.cycleId }, data: { label } });
+  revalidateMonthRoutes();
+  return { ok: true, cycleId: input.cycleId };
+}

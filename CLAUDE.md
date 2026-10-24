@@ -36,19 +36,21 @@ npm run db:studio   # Prisma Studio
 
 ```
 src/
-  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, edit/delete), /budget/insights (any month/trip + per-category trend), /budget/settings (new trip), /api/health
+  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, edit/delete), /budget/insights (any month/trip vs the average of its label peers; categories, all periods), /budget/settings (new trip), /api/health
   components/   dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
   lib/          actions/ (server actions), data/ (server-only queries), monthStats.ts (pure month math), format.ts
   generated/    Prisma Client output (generated, gitignored)
 prisma/schema.prisma   data model
 prisma/seed.ts         seeds starter categories
+prisma/label-periods.ts   one-off: fills missing labels (before Sep 2026 = Thuis, else Galway)
+prisma/import-old-budget.ts one-off import of ExcelContextFiles/budget.xlsx (Apr–Aug 2026, 18th→17th periods; spend derived from daily balance drops, category "Oud budget", archived)
 prisma/import-excel.ts one-off import of ExcelContextFiles/BudgetGalway.xlsx (idempotent; `npx tsx prisma/import-excel.ts [--dry]`)
 prisma7.config.ts      Prisma CLI datasource config
 ```
 
 ## Data model in one paragraph
 
-A **month** is a `BudgetCycle` (calendar month, created automatically by `ensureCurrentMonth()` in `src/lib/data/ensureMonth.ts` the first time a new month is viewed, copying the previous one; `startingBudget` = monthly budget, plus manual `bank`/`tricount`/`cash` balances and `rent`/`rentDay`). A **trip** is a `Trip`. Both hold `Expense` rows (`cycleId` or `tripId`, validated in `src/lib/actions/expenses.ts`). **Categories are one global list** (`Category`: name, color slot, sortOrder, isArchived, optional `pintPrice`), managed on the expenses page; there is no separate tag concept. Daily totals, cumulative-vs-budget, category/weekday stats, beer stats and the balance outlook are all **computed from expenses** in `src/lib/monthStats.ts` — nothing is stored per day. A category with a `pintPrice` counts as beer. `BudgetCycleDay` is legacy and unused. `SavingsEntry` and `Debt` are still display-only (no entry UI). `HealthCheck` + `GET /api/health` exist only to verify Prisma <-> Supabase connectivity.
+A **month** is a `BudgetCycle` (calendar month, created automatically by `ensureCurrentMonth()` in `src/lib/data/ensureMonth.ts` the first time a new month is viewed, copying the previous one; `startingBudget` = monthly budget, plus manual `bank`/`tricount`/`cash` balances and `rent`/`rentDay`). A **trip** is a `Trip`. Both hold `Expense` rows (`cycleId` or `tripId`, validated in `src/lib/actions/expenses.ts`). **Categories are one global list** (`Category`: name, color slot, sortOrder, isArchived, optional `pintPrice`), managed on the expenses page; there is no separate tag concept. Daily totals, cumulative-vs-budget, category/weekday stats, beer stats and the balance outlook are all **computed from expenses** in `src/lib/monthStats.ts` — nothing is stored per day. A category with a `pintPrice` counts as beer. `BudgetCycle.label` ("Thuis", "Galway") groups periods; Insights compares a period with the average of the other *finished* periods with the same label, by day of the period (`src/lib/insights.ts`). New months inherit the previous label. `BudgetCycleDay` is legacy and unused. `SavingsEntry` and `Debt` are still display-only (no entry UI). `HealthCheck` + `GET /api/health` exist only to verify Prisma <-> Supabase connectivity.
 
 ## Gotchas
 

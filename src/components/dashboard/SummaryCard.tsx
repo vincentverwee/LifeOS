@@ -7,6 +7,8 @@ export type SummaryCardProps = {
   value: string;
   tone?: SummaryCardTone;
   hint?: string;
+  /** Override the tone arrow, e.g. "▼" for "less spending = good"; null hides it. */
+  icon?: string | null;
 };
 
 const TONE_TEXT: Record<SummaryCardTone, string> = {
@@ -21,17 +23,18 @@ const TONE_ICON: Record<SummaryCardTone, string> = {
   negative: "▼",
 };
 
-export function SummaryCard({ label, value, tone = "neutral", hint }: SummaryCardProps) {
+export function SummaryCard({ label, value, tone = "neutral", hint, icon }: SummaryCardProps) {
+  const arrow = icon === undefined ? TONE_ICON[tone] : icon;
   return (
     <div className="relative min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-3 sm:p-4">
       <SheepMark className="pointer-events-none absolute right-2 bottom-2 h-12 w-12 text-primary opacity-[0.08]" />
       <p className="text-xs text-ink-muted sm:text-sm">{label}</p>
-      <p className={`mt-1 truncate font-mono text-lg font-semibold tabular-nums sm:text-2xl ${TONE_TEXT[tone]}`}>
+      <p className={`mt-1 font-mono text-lg leading-tight font-semibold tabular-nums break-words sm:text-2xl ${TONE_TEXT[tone]}`}>
         {value}
       </p>
       {hint && (
         <p className={`mt-1 text-xs sm:text-sm ${TONE_TEXT[tone]}`}>
-          {TONE_ICON[tone] && <span aria-hidden="true">{TONE_ICON[tone]} </span>}
+          {arrow && <span aria-hidden="true">{arrow} </span>}
           {hint}
         </p>
       )}

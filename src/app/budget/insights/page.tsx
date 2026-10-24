@@ -1,101 +1,155 @@
-import {
-  computeCategoryTrend,
-  getAllMonths,
-  getAllPeriods,
-  getCategoryExpenses,
-  getCategorySpendTotals,
-  getPeriodData,
-  resolveActivePeriod,
-} from "@/lib/data";
+import { getAllMonths, getAllPeriods, getAllTrips, resolveActivePeriod } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
 import { computeMonthStats } from "@/lib/monthStats";
-import { formatCurrency, toDateInputValue } from "@/lib/format";
+import {
+  categoryTotalsAtDay,
+  comparisonDay,
+  labelBaseline,
+  labelSummaries,
+  type PeriodEntry,
+} from "@/lib/insights";
+import { formatCurrency, formatCurrencyShort, formatPercent, toDateInputValue } from "@/lib/format";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
-import { CategorySelector } from "@/components/insights/CategorySelector";
-import { CategoryTrendChart } from "@/components/insights/CategoryTrendChart";
-import { MonthInsights } from "@/components/insights/MonthInsights";
+import { InsightsHero } from "@/components/insights/InsightsHero";
+import { CompareChart, type ComparePoint } from "@/components/insights/CompareChart";
+import { CategoryList, type CategoryRow } from "@/components/insights/CategoryList";
+import { PeriodList } from "@/components/insights/PeriodList";
+import { LabelChip } from "@/components/insights/LabelChip";
+import { MoreDetails } from "@/components/insights/MoreDetails";
 
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="min-w-0 rounded-xl border border-border bg-surface p-4">
+      <h2 className="mb-3 font-medium text-foreground">{title}</h2>
+      {children}
+    </section>
+  );
 }
 
 export default async function InsightsPage(props: PageProps<"/budget/insights">) {
   const searchParams = await props.searchParams;
-  const requestedPeriodKey = first(searchParams.period);
-  const requestedCategoryId = first(searchParams.category);
+  const requested = Array.isArray(searchParams.period) ? searchParams.period[0] : searchParams.period;
 
   const today = toDateInputValue();
-  const [periods, months, categoryTotals] = await Promise.all([
-    getAllPeriods(),
-    getAllMonths(),
-    getCategorySpendTotals(),
-  ]);
+  const [periods, months, trips] = await Promise.all([getAllPeriods(), getAllMonths(), getAllTrips()]);
+  const activePeriod = resolveActivePeriod(periods, requested, today);
 
-  const activePeriod = resolveActivePeriod(periods, requestedPeriodKey, today);
-  const activeData = activePeriod ? await getPeriodData(activePeriod) : null;
-  const activeEntry = activeData ? { month: activeData, stats: computeMonthStats(activeData, today) } : null;
-  const monthEntries = months.map((month) => ({ month, stats: computeMonthStats(month, today) }));
+  const entries: PeriodEntry[] = [...months, ...trips]
+    .map((month) => ({ month, stats: computeMonthStats(month, today) }))
+    .sort((a, b) => a.month.startDate.localeCompare(b.month.startDate));
+  const active = activePeriod ? entries.find((e) => e.month.id === activePeriod.id) : undefined;
 
-  const usedCategories = categoryTotals.filter((c) => c.expenseCount > 0);
-  const activeCategory =
-    usedCategories.find((c) => c.id === requestedCategoryId) ?? usedCategories[0] ?? null;
+  if (!activePeriod || !active) {
+    return (
+      <div className="flex flex-col gap-6">
+        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+        <EmptyState variant="no-periods" />
+      </div>
+    );
+  }
+
+  const { month, stats } = active;
+  const day = comparisonDay(active);
+  const baseline = labelBaseline(active, entries, today);
+  const remaining = month.budget - stats.spent;
+
+  // Cumulative chart: this period vs the typical peer period vs the budget line.
+  const chart: ComparePoint[] = stats.daily.map((point, i) => ({
+    day: point.day,
+    actual: point.cumulative,
+    typical: baseline ? (baseline.curve[i] ?? null) : null,
+    budget: point.budgetLine,
+  }));
+
+  // Categories of this period, each with its delta vs peers and its history.
+  const colors = new Map(month.expenses.map((e) => [e.categoryId, e.categoryColor]));
+  const totalsNow = categoryTotalsAtDay(month, day);
+  const categories: CategoryRow[] = stats.categories
+    .filter((c) => c.total > 0)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      color: colors.get(c.id) ?? "blue",
+      total: c.total,
+      percent: c.percent,
+      delta: baseline ? (totalsNow.get(c.id) ?? 0) - (baseline.categoryAtDay.get(c.id) ?? 0) : null,
+      history: entries
+        .map((e) => ({
+          periodId: e.month.id,
+          name: e.month.name,
+          label: e.month.label,
+          amount: e.stats.categories.find((x) => x.id === c.id)?.total ?? 0,
+          active: e.month.id === month.id,
+        }))
+        .filter((h) => h.amount > 0 || h.active),
+    }));
+
+  const labels = [...new Set(months.map((m) => m.label).filter((l): l is string => !!l))];
+  const typical = baseline ? `typical ${baseline.label} ${formatCurrency(baseline.avgPerDay)}/day` : undefined;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Look back at any month or trip, then at one category across all of them.
-        </p>
+    <div className="flex flex-col gap-4 sm:gap-5">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between gap-3 sm:items-end">
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Insights</h1>
+          <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
+        </div>
+        <LabelChip
+          cycleId={month.kind === "month" ? month.id : null}
+          label={month.label}
+          options={labels}
+        />
       </div>
 
-      {activePeriod && activeEntry ? (
-        <section className="flex flex-col gap-4">
-          {/* Phones: the period pill doubles as the section title. */}
-          <div className="flex items-center justify-between gap-3 sm:items-end">
-            <h2 className="text-lg font-semibold text-foreground">
-              <span className="sm:hidden">Period</span>
-              <span className="hidden sm:inline">{activeEntry.month.name}</span>
-            </h2>
-            <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
-          </div>
-          <MonthInsights active={activeEntry} all={monthEntries} />
-        </section>
-      ) : (
-        <EmptyState variant="no-periods" />
-      )}
+      <InsightsHero month={month} stats={stats} baseline={baseline} day={day} />
 
-      <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold text-foreground">By category</h2>
-        {activeCategory ? (
-          <>
-            <CategorySelector categories={usedCategories} activeCategoryId={activeCategory.id} />
-            <SummaryCards
-              cards={[
-                { label: "Total spent", value: formatCurrency(activeCategory.totalSpent) },
-                { label: "Expenses", value: `${activeCategory.expenseCount}` },
-              ]}
-            />
-            <CategoryTrendPanel categoryId={activeCategory.id} />
-          </>
-        ) : (
-          <EmptyState variant="category-trend" />
-        )}
-      </section>
-    </div>
-  );
-}
+      <SummaryCards
+        cards={[
+          {
+            label: "Spent",
+            value: formatCurrencyShort(stats.spent),
+            hint: `${formatPercent(stats.budgetUsedPercent)} of ${formatCurrencyShort(month.budget)}`,
+          },
+          {
+            label: remaining >= 0 ? "Left in budget" : "Over budget",
+            value: formatCurrencyShort(Math.abs(remaining)),
+            tone: remaining >= 0 ? "positive" : "negative",
+            icon: null,
+          },
+          {
+            label: "Average per day",
+            value: formatCurrencyShort(stats.avgPerDay),
+            tone: baseline ? (stats.avgPerDay <= baseline.avgPerDay ? "positive" : "negative") : "neutral",
+            icon: baseline ? (stats.avgPerDay <= baseline.avgPerDay ? "▼" : "▲") : null,
+            hint: typical ?? `day ${day} of ${stats.daysInMonth}`,
+          },
+          {
+            label: "Expected total",
+            value: formatCurrencyShort(stats.expectedTotal),
+            tone: stats.expectedVsBudget < 0 ? "negative" : "neutral",
+            hint:
+              stats.expectedVsBudget < 0
+                ? `${formatCurrencyShort(-stats.expectedVsBudget)} over budget`
+                : `${formatCurrencyShort(stats.expectedVsBudget)} under budget`,
+          },
+        ]}
+      />
 
-async function CategoryTrendPanel({ categoryId }: { categoryId: string }) {
-  const expenses = await getCategoryExpenses(categoryId);
-  const trend = computeCategoryTrend(expenses);
+      <Section title="Spending over the period">
+        <CompareChart data={chart} typicalLabel={baseline?.label ?? null} />
+      </Section>
 
-  return (
-    <div className="rounded-xl border border-border bg-surface p-4">
-      <h3 className="mb-3 font-medium text-foreground">Trend over time</h3>
-      <CategoryTrendChart trend={trend} />
+      <Section title="Categories">
+        <CategoryList rows={categories} typicalLabel={baseline?.label ?? null} />
+      </Section>
+
+      <Section title="All periods">
+        <PeriodList entries={entries} summaries={labelSummaries(entries)} activeId={month.id} />
+      </Section>
+
+      <MoreDetails stats={stats} />
     </div>
   );
 }

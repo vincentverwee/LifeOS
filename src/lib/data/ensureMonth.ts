@@ -54,6 +54,7 @@ export async function ensureCurrentMonth(): Promise<void> {
         endDate: new Date(Date.UTC(year, month, 0)),
         rent: previous?.rent ?? 0,
         rentDay: previous?.rentDay ?? null,
+        label: previous?.label ?? null,
         bank: previous?.bank ?? 0,
         tricount: previous?.tricount ?? 0,
         cash: previous?.cash ?? 0,

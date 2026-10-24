@@ -32,6 +32,10 @@ model BudgetCycle {
   rent              Decimal   @default(0) @db.Decimal(12, 2)
   rentDay           Int?
 
+  // Groups periods with the same kind of life ("Thuis", "Galway") so Insights
+  // can compare a period with the average of its peers.
+  label             String?
+
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
   days           BudgetCycleDay[]

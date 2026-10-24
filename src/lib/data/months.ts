@@ -6,7 +6,7 @@ import type { Month, MonthExpense } from "@/lib/monthStats";
 
 const expenseInclude = {
   orderBy: [{ date: "asc" as const }, { createdAt: "asc" as const }],
-  include: { category: { select: { name: true, pintPrice: true } } },
+  include: { category: { select: { name: true, color: true, pintPrice: true } } },
 };
 
 type ExpenseRow = {
@@ -15,7 +15,7 @@ type ExpenseRow = {
   amount: { toNumber(): number };
   note: string | null;
   categoryId: string;
-  category: { name: string; pintPrice: { toNumber(): number } | null };
+  category: { name: string; color: string; pintPrice: { toNumber(): number } | null };
 };
 
 function toExpense(e: ExpenseRow): MonthExpense {
@@ -26,6 +26,7 @@ function toExpense(e: ExpenseRow): MonthExpense {
     note: e.note,
     categoryId: e.categoryId,
     categoryName: e.category.name,
+    categoryColor: e.category.color,
     pintPrice: e.category.pintPrice?.toNumber() ?? null,
   };
 }
@@ -41,6 +42,7 @@ function toMonth(row: MonthRow): Month {
     kind: "month",
     id: row.id,
     name: row.name,
+    label: row.label,
     budget: row.startingBudget.toNumber(),
     startDate: dayKey(row.startDate),
     endDate: dayKey(row.endDate),
@@ -68,6 +70,7 @@ export async function getTrip(id: string): Promise<Month | null> {
     kind: "trip",
     id: trip.id,
     name: trip.name,
+    label: "Trip",
     budget: trip.totalBudget.toNumber(),
     startDate: dayKey(trip.startDate),
     endDate: dayKey(trip.endDate),
@@ -83,6 +86,13 @@ export async function getTrip(id: string): Promise<Month | null> {
 
 export async function getPeriodData(period: { type: "cycle" | "trip"; id: string }) {
   return period.type === "cycle" ? getMonth(period.id) : getTrip(period.id);
+}
+
+/** Every trip, oldest first (in the same shape as months). */
+export async function getAllTrips(): Promise<Month[]> {
+  const trips = await prisma.trip.findMany({ orderBy: { startDate: "asc" }, select: { id: true } });
+  const all = await Promise.all(trips.map((t) => getTrip(t.id)));
+  return all.filter((t): t is Month => t !== null);
 }
 
 /** Every month, oldest first (for comparisons). */

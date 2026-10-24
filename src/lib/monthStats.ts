@@ -10,6 +10,8 @@ export type MonthExpense = {
   note: string | null;
   categoryId: string;
   categoryName: string;
+  /** palette slot key (see categoryPalette.ts) */
+  categoryColor: string;
   /** price of one pint if the expense's category counts as beer */
   pintPrice: number | null;
 };
@@ -19,6 +21,8 @@ export type Month = {
   kind: "month" | "trip";
   id: string;
   name: string;
+  /** peer group for comparisons ("Thuis", "Galway"); trips are "Trip" */
+  label: string | null;
   budget: number;
   /** "YYYY-MM-DD" */
   startDate: string;
