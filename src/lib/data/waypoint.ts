@@ -47,11 +47,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 }
 
-export async function getRecentTrips(limit = 5): Promise<Trip[]> {
-  const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST], take: limit });
-  return rows.map(toTrip);
-}
-
 /** Full trips, route geometry included — for the map pages, which draw the route lines. */
 export async function getAllTrips(): Promise<Trip[]> {
   const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST] });
