@@ -29,6 +29,8 @@
   --color-tag-green: #008300;
   --color-tag-violet: #4a3aa7;
   --color-tag-red: #e34948;
+
+  --color-wool: #ffffff; /* sheep mark wool, stays light in dark mode too */
 }
 
 @theme inline {
@@ -53,6 +55,7 @@
   --color-tag-green: var(--color-tag-green);
   --color-tag-violet: var(--color-tag-violet);
   --color-tag-red: var(--color-tag-red);
+  --color-wool: var(--color-wool);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -85,6 +88,8 @@
     --color-tag-green: #008300;
     --color-tag-violet: #9085e9;
     --color-tag-red: #e66767;
+
+    --color-wool: #e9ece4;
   }
 }
 
@@ -135,16 +140,25 @@ textarea {
   }
 }
 
-@keyframes sheep-hop {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-15%);
+@keyframes sheep-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-.animate-sheep-hop {
-  animation: sheep-hop 0.9s ease-in-out infinite;
+/* Loading sheep: a steady spin; slower, gentler pulse if the user prefers reduced motion. */
+.animate-sheep-spin {
+  animation: sheep-spin 1.1s linear infinite;
+}
+
+@keyframes sheep-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheep-spin {
+    animation: sheep-pulse 1.6s ease-in-out infinite;
+  }
 }

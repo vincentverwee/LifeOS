@@ -7,6 +7,7 @@ import type { Category } from "@/lib/data/categories";
 import type { CategoryDto } from "@/lib/actions/categories";
 import { createExpenseFromForm, type CreateExpenseFormState } from "@/lib/actions/expenses";
 import { CategoryGrid } from "@/components/expenses/CategoryGrid";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { formatCurrency, formatDate, parseAmount, toDateInputValue } from "@/lib/format";
 
 type ExpenseEntryFormProps = {
@@ -25,7 +26,14 @@ function SubmitButton({ label }: { label: string }) {
       disabled={pending}
       className="w-full rounded-xl bg-primary px-4 py-3.5 text-base font-semibold text-primary-foreground shadow-md disabled:opacity-60 sm:shadow-none"
     >
-      {pending ? "Saving…" : label}
+      {pending ? (
+        <span className="inline-flex items-center justify-center gap-2">
+          <SheepSpinner size={20} />
+          Saving…
+        </span>
+      ) : (
+        label
+      )}
     </button>
   );
 }

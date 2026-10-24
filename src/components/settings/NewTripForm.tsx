@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { createTrip } from "@/lib/actions/trips";
 import { encodePeriodKey } from "@/lib/period";
 import { parseAmount } from "@/lib/format";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 export function NewTripForm() {
   const router = useRouter();
@@ -89,7 +90,14 @@ export function NewTripForm() {
         disabled={isPending}
         className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
       >
-        {isPending ? "Creating…" : "Create trip"}
+        {isPending ? (
+          <span className="inline-flex items-center justify-center gap-2">
+            <SheepSpinner size={18} />
+            Creating…
+          </span>
+        ) : (
+          "Create trip"
+        )}
       </button>
     </div>
   );

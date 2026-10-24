@@ -7,11 +7,6 @@ type SheepSpinnerProps = {
 
 export function SheepSpinner({ className, size = 40 }: SheepSpinnerProps) {
   return (
-    <Sheep
-      width={size}
-      height={(size * 80) / 100}
-      animate
-      className={["text-primary", className].filter(Boolean).join(" ")}
-    />
+    <Sheep size={size} animate className={["text-primary", className].filter(Boolean).join(" ")} />
   );
 }

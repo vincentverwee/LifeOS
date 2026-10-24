@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { updateBalances, updateMonthBudget, updateRent } from "@/lib/actions/cycles";
 import { formatCurrency, parseAmount, parseSignedAmount } from "@/lib/format";
 import type { BalanceOutlook } from "@/lib/monthStats";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 type BalancesCardProps = {
   cycleId: string;
@@ -171,7 +172,14 @@ export function BalancesCard({
           disabled={invalid || rentInvalid || budgetInvalid || isPending}
           className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
-          {isPending ? "Saving…" : "Save"}
+          {isPending ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <SheepSpinner size={18} />
+              Saving…
+            </span>
+          ) : (
+            "Save"
+          )}
         </button>
       )}
       {error && <p className="text-sm text-critical">{error}</p>}
