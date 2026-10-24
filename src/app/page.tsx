@@ -3,12 +3,13 @@ import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { computeMonthStats } from "@/lib/monthStats";
 import { formatCurrency } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
+import { BudgetIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 
 type Feature = {
   name: string;
   description: string;
   href?: string;
-  emoji: string;
+  icon: (props: { className?: string }) => React.ReactNode;
 };
 
 const FEATURES: Feature[] = [
@@ -16,18 +17,13 @@ const FEATURES: Feature[] = [
     name: "Budget",
     description: "Monthly budgets, trips, expenses and spending insights.",
     href: "/budget",
-    emoji: "💶",
+    icon: BudgetIcon,
   },
   {
     name: "Waypoint",
     description: "Road trips, routes and maps.",
     href: "/waypoint",
-    emoji: "📍",
-  },
-  {
-    name: "Recipes",
-    description: "What to cook, and what it needs.",
-    emoji: "🍲",
+    icon: WaypointIcon,
   },
 ];
 
@@ -59,8 +55,8 @@ export default async function HomePage() {
         {FEATURES.map((feature) => {
           const body = (
             <>
-              <span className="text-3xl" aria-hidden="true">
-                {feature.emoji}
+              <span className={`flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground`}>
+                <feature.icon className="h-7 w-7" />
               </span>
               <span className="mt-3 block font-medium text-foreground">{feature.name}</span>
               <span className="mt-1 block text-sm text-ink-muted">{feature.description}</span>
@@ -71,11 +67,6 @@ export default async function HomePage() {
                   }`}
                 >
                   {glance.text}
-                </span>
-              )}
-              {!feature.href && (
-                <span className="mt-3 inline-block rounded-full border border-border px-2 py-0.5 text-xs text-ink-muted">
-                  Coming soon
                 </span>
               )}
             </>
@@ -98,6 +89,21 @@ export default async function HomePage() {
             </li>
           );
         })}
+        <li>
+          <div
+            className="flex h-full min-h-40 flex-col justify-between rounded-xl border border-dashed border-border p-5"
+            aria-label="More features coming soon"
+          >
+            <div className="flex animate-pulse flex-col gap-3">
+              <span className="h-12 w-12 rounded-xl bg-surface-muted" />
+              <span className="h-4 w-1/3 rounded bg-surface-muted" />
+              <span className="h-3 w-3/4 rounded bg-surface-muted" />
+            </div>
+            <span className="mt-4 inline-block self-start rounded-full border border-border px-2 py-0.5 text-xs text-ink-muted">
+              Coming soon
+            </span>
+          </div>
+        </li>
       </ul>
     </div>
   );
