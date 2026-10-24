@@ -11,7 +11,7 @@ export function CountryBreakdown({ data }: CountryBreakdownProps) {
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Countries & Cities</CardTitle>
+        <CardTitle className="text-base font-semibold">Countries</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {data.length === 0 ? (
@@ -23,13 +23,12 @@ export function CountryBreakdown({ data }: CountryBreakdownProps) {
             <div
               key={entry.country}
               className="space-y-1"
-              title={`${entry.country}: ${entry.cities} ${entry.cities === 1 ? 'city' : 'cities'} · ${entry.visits} stop${entry.visits === 1 ? '' : 's'}`}
+              title={`${entry.country}: ${entry.visits} stop${entry.visits === 1 ? '' : 's'}`}
             >
               <div className="flex items-center justify-between text-sm">
                 <span className="font-medium">{entry.country}</span>
                 <span className="text-xs text-muted-foreground">
-                  {entry.cities} {entry.cities === 1 ? 'city' : 'cities'} · {entry.visits} stop
-                  {entry.visits === 1 ? '' : 's'}
+                  {entry.visits} stop{entry.visits === 1 ? '' : 's'}
                 </span>
               </div>
               <div className="h-2 w-full overflow-hidden rounded-full bg-muted/40">

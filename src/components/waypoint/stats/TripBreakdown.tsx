@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
 import { Badge } from '@/components/waypoint/ui/badge';
-import { CalendarDays, MapPin, Navigation } from 'lucide-react';
+import { CalendarDays, Navigation } from 'lucide-react';
 import { TripBreakdownEntry } from '@/lib/waypoint/stats';
 
 interface TripBreakdownProps {
@@ -31,7 +31,7 @@ export function TripBreakdown({ data }: TripBreakdownProps) {
         {data.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">No trips yet</p>
         ) : (
-          data.map(({ trip, cityCount }) => {
+          data.map(({ trip }) => {
             const dateRange = formatDateRange(trip.start_date, trip.end_date);
             return (
               <div
@@ -45,12 +45,6 @@ export function TripBreakdown({ data }: TripBreakdownProps) {
                       <span className="flex items-center gap-1">
                         <CalendarDays size={12} />
                         {dateRange}
-                      </span>
-                    )}
-                    {cityCount > 0 && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} />
-                        {cityCount} {cityCount === 1 ? 'city' : 'cities'}
                       </span>
                     )}
                   </div>

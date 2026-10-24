@@ -212,7 +212,7 @@ export default function AllTripsExportPage() {
   // Per-trip caption overrides for the legend. Blank/absent falls back to the trip title.
   const [customLabels, setCustomLabels] = useState<Record<string, string>>({});
   const [customHeadline, setCustomHeadline] = useState('');
-  // Override for the "N trips · N countries · N cities" line. Blank falls back to the computed one.
+  // Override for the "N trips · N countries" line. Blank falls back to the computed one.
   const [customStats, setCustomStats] = useState('');
   const [showLegend, setShowLegend] = useState(true);
   const [showDots, setShowDots] = useState(true);
@@ -299,11 +299,9 @@ export default function AllTripsExportPage() {
 
   const totalKm = includedTrips.reduce((sum, t) => sum + (t.total_km ?? 0), 0);
   const countries = new Set(includedLocations.map((l) => l.country).filter(Boolean)).size;
-  const cities = new Set(includedLocations.map((l) => l.city).filter(Boolean)).size;
   const defaultStatsLine = [
     `${includedTrips.length} ${includedTrips.length === 1 ? 'trip' : 'trips'}`,
     countries > 0 ? `${countries} ${countries === 1 ? 'country' : 'countries'}` : null,
-    cities > 0 ? `${cities} ${cities === 1 ? 'city' : 'cities'}` : null,
   ]
     .filter(Boolean)
     .join(' · ');

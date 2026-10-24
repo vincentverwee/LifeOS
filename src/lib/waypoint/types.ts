@@ -41,7 +41,6 @@ export type TripSummary = Omit<Trip, 'route_geometry'>;
 
 export interface DashboardStats {
   countries_visited: number;
-  cities_visited: number;
   trips_count: number;
   total_km: number;
   longest_trip_km: number;

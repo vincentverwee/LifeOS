@@ -48,7 +48,7 @@ export default async function StatsPage() {
               <CountryBreakdown data={getCountryStats(locations)} />
             </div>
 
-            <TripBreakdown data={getTripBreakdown(trips, locations)} />
+            <TripBreakdown data={getTripBreakdown(trips)} />
           </>
         )}
       </div>

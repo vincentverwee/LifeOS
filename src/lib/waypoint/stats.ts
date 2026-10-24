@@ -23,45 +23,31 @@ export function getYearlyStats(trips: TripSummary[]): YearlyStats[] {
 
 export interface CountryStats {
   country: string;
-  cities: number;
   visits: number;
 }
 
 export function getCountryStats(locations: Location[]): CountryStats[] {
-  const byCountry = new Map<string, { cities: Set<string>; visits: number }>();
+  const byCountry = new Map<string, { visits: number }>();
 
   for (const loc of locations) {
     if (!loc.country) continue;
-    const entry = byCountry.get(loc.country) ?? { cities: new Set<string>(), visits: 0 };
-    if (loc.city) entry.cities.add(loc.city);
+    const entry = byCountry.get(loc.country) ?? { visits: 0 };
     entry.visits += 1;
     byCountry.set(loc.country, entry);
   }
 
   return [...byCountry.entries()]
-    .map(([country, { cities, visits }]) => ({ country, cities: cities.size, visits }))
+    .map(([country, { visits }]) => ({ country, visits }))
     .sort((a, b) => b.visits - a.visits);
 }
 
 export interface TripBreakdownEntry {
   trip: TripSummary;
-  cityCount: number;
 }
 
-export function getTripBreakdown(
-  trips: TripSummary[],
-  locations: Location[]
-): TripBreakdownEntry[] {
+export function getTripBreakdown(trips: TripSummary[]): TripBreakdownEntry[] {
   return trips
-    .map((trip) => {
-      const cities = new Set(
-        locations
-          .filter((loc) => loc.trip_id === trip.id)
-          .map((loc) => loc.city)
-          .filter((city): city is string => Boolean(city))
-      );
-      return { trip, cityCount: cities.size };
-    })
+    .map((trip) => ({ trip }))
     .sort((a, b) => (b.trip.start_date ?? '').localeCompare(a.trip.start_date ?? ''));
 }
 
@@ -74,7 +60,6 @@ export function getDashboardStats(
   locations: Pick<Location, 'country' | 'city'>[],
 ): DashboardStats {
   const countries = new Set(locations.map((l) => l.country).filter(Boolean));
-  const cities = new Set(locations.map((l) => l.city).filter(Boolean));
   const totalKm = trips.reduce((sum, t) => sum + (t.total_km ?? 0), 0);
 
   const longestTrip = trips.reduce<TripSummary | null>((longest, t) => {
@@ -91,7 +76,6 @@ export function getDashboardStats(
 
   return {
     countries_visited: countries.size,
-    cities_visited: cities.size,
     trips_count: trips.length,
     total_km: totalKm,
     longest_trip_km: longestTrip?.total_km ?? 0,

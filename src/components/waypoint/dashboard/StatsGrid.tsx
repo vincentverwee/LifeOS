@@ -1,4 +1,4 @@
-import { Globe, Building2, Route, Navigation } from 'lucide-react';
+import { Globe, Route, Navigation } from 'lucide-react';
 import { StatsCard } from './StatsCard';
 import { DashboardStats } from '@/lib/waypoint/types';
 
@@ -15,12 +15,6 @@ export function StatsGrid({ stats }: StatsGridProps) {
       description: 'Unique countries visited',
     },
     {
-      label: 'Cities',
-      value: stats.cities_visited,
-      icon: Building2,
-      description: 'Cities explored',
-    },
-    {
       label: 'Trips',
       value: stats.trips_count,
       icon: Route,
@@ -35,7 +29,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
       {cards.map((card, i) => (
         <StatsCard key={card.label} {...card} index={i} />
       ))}
