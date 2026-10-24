@@ -113,7 +113,7 @@ export function BalancesCard({
               placeholder="0"
               onChange={(e) => setValues((prev) => ({ ...prev, [key]: e.target.value }))}
               onFocus={(e) => e.target.select()}
-              className={`w-full rounded-lg border bg-surface px-3 py-2 font-mono text-base tabular-nums text-foreground ${
+              className={`w-full rounded-lg border bg-surface px-2.5 py-2.5 font-mono text-base tabular-nums text-foreground ${
                 parsed[key] === null ? "border-critical" : "border-border"
               }`}
             />
@@ -122,7 +122,7 @@ export function BalancesCard({
       </div>
 
       <details className="text-sm">
-        <summary className="cursor-pointer text-ink-muted">
+        <summary className="cursor-pointer py-1 text-ink-muted">
           Month settings · budget {formatCurrency(budget)}
           {rent > 0 ? ` · rent ${formatCurrency(rent)}${rentDay ? ` on day ${rentDay}` : ""}` : ""}
         </summary>
@@ -176,13 +176,13 @@ export function BalancesCard({
       )}
       {error && <p className="text-sm text-critical">{error}</p>}
 
-      <dl className="grid grid-cols-1 gap-3 border-t border-border pt-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-3">
         <div>
           <dt className="text-xs text-ink-muted">
             Available{outlook.rentStillDue > 0 ? " (after rent)" : ""}
           </dt>
           <dd
-            className={`font-mono text-lg font-semibold tabular-nums ${
+            className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
               outlook.available < 0 ? "text-critical" : "text-foreground"
             }`}
           >
@@ -192,7 +192,7 @@ export function BalancesCard({
         <div>
           <dt className="text-xs text-ink-muted">Safe to spend per day</dt>
           <dd
-            className={`font-mono text-lg font-semibold tabular-nums ${
+            className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
               outlook.safePerDay !== null && outlook.safePerDay < 0
                 ? "text-critical"
                 : "text-foreground"
@@ -204,7 +204,7 @@ export function BalancesCard({
         <div>
           <dt className="text-xs text-ink-muted">Predicted at month end</dt>
           <dd
-            className={`font-mono text-lg font-semibold tabular-nums ${
+            className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
               outlook.predictedEndBalance < 0 ? "text-critical" : "text-positive-text"
             }`}
           >

@@ -55,3 +55,10 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 - After `prisma generate`/`db:push` changes, **restart `npm run dev`** — the running server keeps the old generated client in memory.
 - Date-only columns are UTC midnight; use `dayKey()`/`toDateInputValue()` from `src/lib/format.ts` rather than `toISOString()` slices scattered around.
 - Amount inputs go through `parseAmount()` (accepts `6,8+7,4` sums).
+
+## Mobile-first conventions
+
+- Phones are the primary target (~375px). Budget pages get a fixed bottom tab bar (`src/components/budget/BudgetTabBar.tsx`, hidden from `sm:`); its height is cleared by the `.pb-tabbar` utility in `globals.css`. Respect `env(safe-area-inset-*)`.
+- Inputs are forced to 16px below `sm` in `globals.css` (prevents iOS focus-zoom) — don't fight it with per-input sizes.
+- Tap targets ≥ ~48px; wide tables get a stacked list variant below `sm` (see `MonthInsights.tsx`).
+- PWA: `src/app/manifest.ts`, icons in `public/icon-*.png` + `src/app/apple-icon.png` (generated from `src/app/icon.svg` with sharp).

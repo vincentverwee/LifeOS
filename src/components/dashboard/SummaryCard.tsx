@@ -23,12 +23,14 @@ const TONE_ICON: Record<SummaryCardTone, string> = {
 
 export function SummaryCard({ label, value, tone = "neutral", hint }: SummaryCardProps) {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-4">
+    <div className="relative min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-3 sm:p-4">
       <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-16 w-16 text-primary opacity-[0.06]" />
-      <p className="text-sm text-ink-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${TONE_TEXT[tone]}`}>{value}</p>
+      <p className="text-xs text-ink-muted sm:text-sm">{label}</p>
+      <p className={`mt-1 truncate font-mono text-lg font-semibold tabular-nums sm:text-2xl ${TONE_TEXT[tone]}`}>
+        {value}
+      </p>
       {hint && (
-        <p className={`mt-1 text-sm ${TONE_TEXT[tone]}`}>
+        <p className={`mt-1 text-xs sm:text-sm ${TONE_TEXT[tone]}`}>
           {TONE_ICON[tone] && <span aria-hidden="true">{TONE_ICON[tone]} </span>}
           {hint}
         </p>

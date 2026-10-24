@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { WeekdayStat } from "@/lib/monthStats";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 function WeekdayTooltip({
   active,
@@ -36,11 +36,11 @@ export function WeekdayChart({ weekdays }: { weekdays: WeekdayStat[] }) {
           tickLine={false}
         />
         <YAxis
-          tickFormatter={(value: number) => formatCurrency(value)}
+          tickFormatter={(value: number) => formatCurrencyCompact(value)}
           tick={{ fill: "var(--color-ink-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
-          width={72}
+          width={52}
         />
         <Tooltip content={<WeekdayTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
         <Bar

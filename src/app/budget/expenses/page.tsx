@@ -44,9 +44,9 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
   ].join("|");
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className="text-2xl font-semibold text-foreground">Expenses</h1>
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Add expense</h1>
         <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
       </div>
 
@@ -57,8 +57,8 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
         defaultCategoryId={defaultCategoryId}
       />
 
-      <details id="categories" className="group rounded-xl border border-border bg-surface p-4">
-        <summary className="flex cursor-pointer items-center justify-between font-medium text-foreground">
+      <details id="categories" className="group scroll-mt-4 rounded-xl border border-border bg-surface p-4">
+        <summary className="flex min-h-8 cursor-pointer items-center justify-between font-medium text-foreground">
           Edit categories ({allCategories.length})
           <span className="text-sm font-normal text-ink-muted group-open:hidden">Show</span>
         </summary>
@@ -69,11 +69,10 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
         <CategoryManager categories={allCategories} />
       </details>
 
-      <section className="flex flex-col gap-3">
+      <section id="list" className="flex scroll-mt-4 flex-col gap-3">
         <h2 className="font-medium text-foreground">{activePeriod.name}</h2>
         <ExpenseList expenses={recent} categories={activeCategories} />
       </section>
-
     </div>
   );
 }

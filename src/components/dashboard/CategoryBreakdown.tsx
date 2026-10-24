@@ -2,7 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { formatCurrency, formatPercent } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact, formatPercent } from "@/lib/format";
 
 export type BreakdownItem = {
   id: string;
@@ -50,13 +50,13 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
       <BarChart
         data={withSpend}
         layout="vertical"
-        margin={{ top: 4, right: 48, bottom: 4, left: 4 }}
+        margin={{ top: 4, right: 56, bottom: 4, left: 4 }}
         barCategoryGap={8}
       >
         <CartesianGrid stroke="var(--color-gridline)" horizontal={false} />
         <XAxis
           type="number"
-          tickFormatter={(value: number) => formatCurrency(value)}
+          tickFormatter={(value: number) => formatCurrencyCompact(value)}
           tick={{ fill: "var(--color-ink-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
@@ -67,7 +67,7 @@ export function CategoryBreakdown({ categories }: CategoryBreakdownProps) {
           tick={{ fill: "var(--color-foreground)", fontSize: 13 }}
           axisLine={false}
           tickLine={false}
-          width={100}
+          width={92}
         />
         <Tooltip content={<CategoryTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
         <Bar

@@ -132,7 +132,28 @@ export function MonthInsights({ active, all }: MonthInsightsProps) {
       </Card>
 
       <Card title="By category">
-        <div className="overflow-x-auto">
+        {/* Phone: one compact row per category instead of a wide table. */}
+        <ul className="flex flex-col sm:hidden">
+          {stats.categories
+            .filter((c) => c.total > 0)
+            .map((c) => (
+              <li key={c.id} className="border-t border-border py-2.5 first:border-t-0 first:pt-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-sm font-medium text-foreground">{c.name}</span>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                    {formatCurrency(c.total)}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-ink-muted">
+                  {formatPercent(c.percent)} · {c.daysWithSpend} days · {formatCurrency(c.avgPerSpendDay)}
+                  /day
+                  {c.busiestDay ? ` · top ${formatDate(c.busiestDay)}` : ""}
+                </p>
+              </li>
+            ))}
+          {stats.spent === 0 && <li className="text-sm text-ink-muted">No expenses yet.</li>}
+        </ul>
+        <div className="hidden overflow-x-auto sm:block">
           <table className="w-full min-w-[32rem] text-left text-sm">
             <thead className="text-xs text-ink-muted">
               <tr>
@@ -199,7 +220,47 @@ export function MonthInsights({ active, all }: MonthInsightsProps) {
 
       {isMonth && all.length > 1 && (
         <Card title="Month comparison">
-          <div className="overflow-x-auto">
+          <ul className="flex flex-col gap-2 sm:hidden">
+            {[...all].reverse().map(({ month: m, stats: s }) => (
+              <li
+                key={m.id}
+                className={`rounded-lg border border-border p-3 ${
+                  m.id === month.id ? "bg-surface-muted" : ""
+                }`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-sm font-medium text-foreground">
+                    {m.name}
+                    {s.isCurrent && <span className="ml-1 text-xs text-ink-muted">(running)</span>}
+                  </span>
+                  <span className="font-mono text-sm font-semibold tabular-nums text-foreground">
+                    {formatCurrency(s.spent)}
+                  </span>
+                </div>
+                <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <dt className="text-ink-muted">Budget</dt>
+                    <dd className="font-mono tabular-nums">{formatPercent(s.budgetUsedPercent)} used</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">Per day</dt>
+                    <dd className="font-mono tabular-nums">{formatCurrency(s.avgPerDay)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-ink-muted">Expected</dt>
+                    <dd
+                      className={`font-mono tabular-nums ${
+                        s.expectedVsBudget < 0 ? "text-critical" : "text-positive-text"
+                      }`}
+                    >
+                      {formatCurrency(s.expectedTotal)}
+                    </dd>
+                  </div>
+                </dl>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto sm:block">
             <table className="w-full min-w-[32rem] text-left text-sm">
               <thead className="text-xs text-ink-muted">
                 <tr>

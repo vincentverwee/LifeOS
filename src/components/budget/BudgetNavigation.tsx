@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/budget", label: "Today" },
@@ -7,17 +10,33 @@ const LINKS = [
   { href: "/budget/settings", label: "Settings" },
 ];
 
+function isActive(pathname: string, href: string) {
+  return href === "/budget" ? pathname === href : pathname.startsWith(href);
+}
+
+/** Text tabs above the content — tablet/desktop only. Phones use BudgetTabBar. */
 export function BudgetNavigation() {
+  const pathname = usePathname();
+
   return (
-    <nav aria-label="Budget" className="-mt-4 mb-8 border-b border-border">
-      <ul className="flex gap-6 overflow-x-auto pb-3 text-sm font-medium">
-        {LINKS.map((link) => (
-          <li key={link.href} className="shrink-0">
-            <Link href={link.href} className="hover:underline">
-              {link.label}
-            </Link>
-          </li>
-        ))}
+    <nav aria-label="Budget" className="-mt-4 mb-8 hidden border-b border-border sm:block">
+      <ul className="flex gap-6 text-sm font-medium">
+        {LINKS.map((link) => {
+          const active = isActive(pathname, link.href);
+          return (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                aria-current={active ? "page" : undefined}
+                className={`-mb-px inline-block border-b-2 pb-3 ${
+                  active ? "border-primary text-foreground" : "border-transparent text-ink-muted hover:text-foreground"
+                }`}
+              >
+                {link.label}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </nav>
   );

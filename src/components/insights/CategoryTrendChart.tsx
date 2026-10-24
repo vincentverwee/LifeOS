@@ -4,7 +4,7 @@ import { format, parse } from "date-fns";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CategoryTrendPoint } from "@/lib/data/categoryAnalytics";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 function formatBucket(bucket: string): string {
   return format(parse(bucket, "yyyy-MM", new Date()), "MMM yyyy");
@@ -38,7 +38,7 @@ export function CategoryTrendChart({ trend }: CategoryTrendChartProps) {
   }
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
+    <ResponsiveContainer width="100%" height={220}>
       <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke="var(--color-gridline)" vertical={false} />
         <XAxis
@@ -50,11 +50,11 @@ export function CategoryTrendChart({ trend }: CategoryTrendChartProps) {
           minTickGap={24}
         />
         <YAxis
-          tickFormatter={(value: number) => formatCurrency(value)}
+          tickFormatter={(value: number) => formatCurrencyCompact(value)}
           tick={{ fill: "var(--color-ink-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
-          width={72}
+          width={52}
         />
         <Tooltip content={<TrendTooltip />} cursor={{ stroke: "var(--color-ink-muted)" }} />
         <Line

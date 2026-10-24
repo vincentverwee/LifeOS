@@ -12,7 +12,6 @@ import {
 } from "@/lib/actions/categories";
 import { CATEGORY_COLOR_SLOTS, type CategoryColorSlot } from "@/lib/categoryPalette";
 import { formatCurrency, parseAmount } from "@/lib/format";
-import { CategoryChip } from "@/components/categories/CategoryChip";
 
 type CategoryManagerProps = {
   categories: Category[];
@@ -45,76 +44,67 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
     <div className="flex flex-col gap-3">
       <CategoryCreateForm onCreate={(name, color) => run(() => createCategory({ name, color }))} />
 
-      <ul className="flex flex-col gap-2">
+      {/* Tap a row to open its editor; all actions live there as full-size buttons. */}
+      <ul className="overflow-hidden rounded-xl border border-border bg-surface">
         {categories.map((category, index) => (
           <li
             key={category.id}
-            className={`rounded-xl border border-border bg-surface p-3 ${
+            className={`border-b border-border last:border-b-0 ${
               category.isArchived ? "opacity-60" : ""
             }`}
           >
             {editingId === category.id ? (
-              <CategoryEditRow
-                category={category}
-                onSave={(name, color, pintPrice) => {
-                  setEditingId(null);
-                  run(() => updateCategory({ id: category.id, name, color, pintPrice }));
-                }}
-                onCancel={() => setEditingId(null)}
-              />
+              <div className="p-3">
+                <CategoryEditRow
+                  category={category}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < categories.length - 1}
+                  busy={isPending}
+                  onMove={(direction) => move(index, direction)}
+                  onArchiveToggle={() =>
+                    run(() =>
+                      setCategoryArchived({ id: category.id, archived: !category.isArchived })
+                    )
+                  }
+                  onDelete={() => {
+                    setEditingId(null);
+                    run(() => deleteCategory({ id: category.id }));
+                  }}
+                  onSave={(name, color, pintPrice) => {
+                    setEditingId(null);
+                    run(() => updateCategory({ id: category.id, name, color, pintPrice }));
+                  }}
+                  onCancel={() => setEditingId(null)}
+                />
+              </div>
             ) : (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <CategoryChip name={category.name} color={category.color} />
+              <button
+                type="button"
+                onClick={() => setEditingId(category.id)}
+                className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2 text-left active:bg-surface-muted"
+              >
+                <span className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: `var(--color-tag-${category.color})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate text-sm font-medium text-foreground">
+                    {category.name}
+                  </span>
                   {category.pintPrice !== null && (
-                    <span className="text-xs text-ink-muted">
-                      🍺 {formatCurrency(category.pintPrice)}/pint
+                    <span className="shrink-0 text-xs text-ink-muted">
+                      🍺 {formatCurrency(category.pintPrice)}
                     </span>
                   )}
-                  <span className="text-xs text-ink-muted">{category.expenseCount}×</span>
-                </div>
-                <div className="flex items-center gap-1 text-sm">
-                  <button
-                    type="button"
-                    onClick={() => move(index, -1)}
-                    disabled={index === 0 || isPending}
-                    aria-label="Move up"
-                    className="px-1 text-ink-muted disabled:opacity-30"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => move(index, 1)}
-                    disabled={index === categories.length - 1 || isPending}
-                    aria-label="Move down"
-                    className="px-1 text-ink-muted disabled:opacity-30"
-                  >
-                    ▼
-                  </button>
-                  <button type="button" onClick={() => setEditingId(category.id)} className="px-2 text-primary">
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      run(() => setCategoryArchived({ id: category.id, archived: !category.isArchived }))
-                    }
-                    className="px-2 text-ink-muted"
-                  >
-                    {category.isArchived ? "Unarchive" : "Archive"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => run(() => deleteCategory({ id: category.id }))}
-                    disabled={category.expenseCount > 0 || isPending}
-                    title={category.expenseCount > 0 ? "Has expenses — archive instead" : "Delete"}
-                    className="px-2 text-critical disabled:opacity-30"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+                  {category.isArchived && (
+                    <span className="shrink-0 text-xs text-ink-muted">archived</span>
+                  )}
+                </span>
+                <span className="flex shrink-0 items-center gap-2 text-sm text-ink-muted">
+                  {category.expenseCount}×<span aria-hidden="true">›</span>
+                </span>
+              </button>
             )}
           </li>
         ))}
@@ -133,14 +123,15 @@ function ColorDots({
   onChange: (slot: CategoryColorSlot) => void;
 }) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-3">
       {CATEGORY_COLOR_SLOTS.map((slot) => (
         <button
           key={slot}
           type="button"
           aria-label={slot}
+          aria-pressed={value === slot}
           onClick={() => onChange(slot)}
-          className={`h-6 w-6 rounded-full ${
+          className={`h-8 w-8 rounded-full ${
             value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""
           }`}
           style={{ backgroundColor: `var(--color-tag-${slot})` }}
@@ -150,7 +141,11 @@ function ColorDots({
   );
 }
 
-function CategoryCreateForm({ onCreate }: { onCreate: (name: string, color: CategoryColorSlot) => void }) {
+function CategoryCreateForm({
+  onCreate,
+}: {
+  onCreate: (name: string, color: CategoryColorSlot) => void;
+}) {
   const [name, setName] = useState("");
   const [color, setColor] = useState<CategoryColorSlot>(CATEGORY_COLOR_SLOTS[0]);
 
@@ -169,14 +164,15 @@ function CategoryCreateForm({ onCreate }: { onCreate: (name: string, color: Cate
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
+          enterKeyHint="done"
           placeholder="New category"
-          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
+          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
         />
         <button
           type="button"
           onClick={submit}
           disabled={!name.trim()}
-          className="rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
           Add
         </button>
@@ -190,10 +186,22 @@ function CategoryCreateForm({ onCreate }: { onCreate: (name: string, color: Cate
 
 function CategoryEditRow({
   category,
+  canMoveUp,
+  canMoveDown,
+  busy,
+  onMove,
+  onArchiveToggle,
+  onDelete,
   onSave,
   onCancel,
 }: {
   category: Category;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  busy: boolean;
+  onMove: (direction: -1 | 1) => void;
+  onArchiveToggle: () => void;
+  onDelete: () => void;
   onSave: (name: string, color: CategoryColorSlot, pintPrice: number | null) => void;
   onCancel: () => void;
 }) {
@@ -202,44 +210,75 @@ function CategoryEditRow({
   const [pint, setPint] = useState(category.pintPrice !== null ? String(category.pintPrice) : "");
   const pintValue = pint.trim() ? parseAmount(pint) : null;
   const pintInvalid = pint.trim() !== "" && (pintValue === null || pintValue <= 0);
+  const secondary =
+    "rounded-lg border border-border px-3 py-2.5 text-sm text-foreground disabled:opacity-40";
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
-        />
-        <button
-          type="button"
-          disabled={pintInvalid || !name.trim()}
-          onClick={() => onSave(name.trim(), color, pintValue)}
-          className="rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg border border-border px-3 py-2 text-sm text-ink-muted"
-        >
-          Cancel
-        </button>
-      </div>
-      <label className="flex items-center gap-2 text-sm text-ink-muted">
-        🍺 Pint price (leave empty if not beer)
+    <div className="flex flex-col gap-3">
+      <input
+        type="text"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        aria-label="Name"
+        className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+      />
+      <ColorDots value={color} onChange={setColor} />
+      <label className="flex items-center justify-between gap-2 text-sm text-ink-muted">
+        🍺 Pint price (empty = not beer)
         <input
           type="text"
           inputMode="decimal"
           value={pint}
           onChange={(e) => setPint(e.target.value)}
           placeholder="none"
-          className="w-24 rounded-lg border border-border bg-surface px-2 py-1 text-sm text-foreground"
+          className={`w-24 rounded-lg border bg-surface px-2 py-2 text-foreground ${
+            pintInvalid ? "border-critical" : "border-border"
+          }`}
         />
       </label>
-      <ColorDots value={color} onChange={setColor} />
+
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={() => onMove(-1)} disabled={!canMoveUp || busy} className={secondary}>
+          ▲ Move up
+        </button>
+        <button type="button" onClick={() => onMove(1)} disabled={!canMoveDown || busy} className={secondary}>
+          ▼ Move down
+        </button>
+        <button type="button" onClick={onArchiveToggle} disabled={busy} className={secondary}>
+          {category.isArchived ? "Unarchive" : "Archive"}
+        </button>
+        <button
+          type="button"
+          onClick={() => window.confirm(`Delete "${category.name}"?`) && onDelete()}
+          disabled={category.expenseCount > 0 || busy}
+          className="rounded-lg border border-border px-3 py-2.5 text-sm text-critical disabled:opacity-40"
+        >
+          Delete
+        </button>
+      </div>
+      {category.expenseCount > 0 && (
+        <p className="text-xs text-ink-muted">
+          Used by {category.expenseCount} expenses, so it can be archived but not deleted.
+        </p>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={pintInvalid || !name.trim()}
+          onClick={() => onSave(name.trim(), color, pintValue)}
+          className="flex-1 rounded-lg border border-primary bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+        >
+          Save
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex-1 rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

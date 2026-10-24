@@ -58,3 +58,15 @@ export function parseSignedAmount(raw: string): number | null {
   }
   return parseAmount(trimmed);
 }
+
+const compactCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
+  style: "currency",
+  currency: "EUR",
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
+/** Short axis labels for narrow charts, e.g. "€ 1,2K". */
+export function formatCurrencyCompact(value: number): string {
+  return compactCurrencyFormatter.format(value);
+}

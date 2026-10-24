@@ -2,7 +2,7 @@
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { SavingsEntry } from "@/lib/data/savings";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact, formatDate } from "@/lib/format";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 
 function SavingsTooltip({
@@ -63,11 +63,11 @@ export function SavingsTrendChart({ entries }: SavingsTrendChartProps) {
           minTickGap={24}
         />
         <YAxis
-          tickFormatter={(value: number) => formatCurrency(value)}
+          tickFormatter={(value: number) => formatCurrencyCompact(value)}
           tick={{ fill: "var(--color-ink-muted)", fontSize: 12 }}
           axisLine={false}
           tickLine={false}
-          width={72}
+          width={52}
         />
         <Tooltip content={<SavingsTooltip />} cursor={{ stroke: "var(--color-ink-muted)" }} />
         <Line

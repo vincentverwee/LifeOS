@@ -10,7 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import type { DailyPoint } from "@/lib/monthStats";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { formatCurrency, formatCurrencyCompact, formatDate } from "@/lib/format";
 
 function MonthTooltip({
   active,
@@ -55,7 +55,7 @@ export function MonthChart({ daily }: { daily: DailyPoint[] }) {
           Spent so far
         </span>
       </div>
-      <ResponsiveContainer width="100%" height={260}>
+      <ResponsiveContainer width="100%" height={230}>
         <ComposedChart data={daily} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="var(--color-gridline)" vertical={false} />
           <XAxis
@@ -67,11 +67,11 @@ export function MonthChart({ daily }: { daily: DailyPoint[] }) {
             minTickGap={24}
           />
           <YAxis
-            tickFormatter={(value: number) => formatCurrency(value)}
+            tickFormatter={(value: number) => formatCurrencyCompact(value)}
             tick={{ fill: "var(--color-ink-muted)", fontSize: 12 }}
             axisLine={false}
             tickLine={false}
-            width={72}
+            width={52}
           />
           <Tooltip content={<MonthTooltip />} cursor={{ stroke: "var(--color-ink-muted)" }} />
           <Line

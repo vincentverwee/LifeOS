@@ -23,7 +23,7 @@ export function TodayPanel({ month, stats }: TodayPanelProps) {
           {isMonth ? "Left to spend today" : `${month.name} — left to spend today`}
         </p>
         <p
-          className={`mt-1 font-mono text-4xl font-semibold tabular-nums ${
+          className={`mt-1 font-mono text-4xl font-semibold tabular-nums sm:text-5xl ${
             over ? "text-critical" : "text-foreground"
           }`}
         >

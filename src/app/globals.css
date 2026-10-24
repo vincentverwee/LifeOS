@@ -94,6 +94,47 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* --- Phone ergonomics --- */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* No double-tap-to-zoom delay on tappable things. */
+a,
+button,
+summary,
+label,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* iOS Safari zooms into any focused field under 16px. Enforce 16px on phones
+   in one place instead of per-component classes. */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* Clearance for the fixed bottom tab bar (see BudgetTabBar). */
+.pb-tabbar {
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 640px) {
+  .pb-tabbar {
+    padding-bottom: 0;
+  }
+}
+
 @keyframes sheep-hop {
   0%,
   100% {
