@@ -1,20 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { TripSummary } from '@/types';
-import { CreateTripInput } from '@/lib/trips-store';
+import { TripSummary } from '@/lib/waypoint/types';
+import { CreateTripInput } from '@/lib/actions/waypoint';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+} from '@/components/waypoint/ui/dialog';
+import { Button } from '@/components/waypoint/ui/button';
+import { Input } from '@/components/waypoint/ui/input';
+import { Textarea } from '@/components/waypoint/ui/textarea';
+import { Label } from '@/components/waypoint/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/waypoint/ui/select';
 
 interface TripDialogProps {
   open: boolean;

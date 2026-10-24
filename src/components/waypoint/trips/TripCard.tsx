@@ -1,9 +1,9 @@
 'use client';
 
-import { TripSummary } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { TripSummary } from '@/lib/waypoint/types';
+import { Card, CardContent } from '@/components/waypoint/ui/card';
+import { Badge } from '@/components/waypoint/ui/badge';
+import { Button } from '@/components/waypoint/ui/button';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from '@/components/waypoint/ui/alert-dialog';
 import { CalendarDays, Navigation, Pencil, Trash2, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
@@ -41,7 +41,7 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
       <Card className="group border-border/50 transition-shadow hover:shadow-md">
         <CardContent className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <Link href={`/trips/${trip.id}`} className="min-w-0 flex-1">
+            <Link href={`/waypoint/trips/${trip.id}`} className="min-w-0 flex-1">
               <div className="flex items-start gap-3">
                 <div className="mt-0.5 rounded-xl bg-primary/10 p-2 shrink-0">
                   <MapPin size={18} className="text-primary" />
@@ -120,7 +120,7 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                 </AlertDialogContent>
               </AlertDialog>
 
-              <Link href={`/trips/${trip.id}`}>
+              <Link href={`/waypoint/trips/${trip.id}`}>
                 <Button variant="ghost" size="icon" className="h-8 w-8">
                   <ChevronRight size={16} />
                 </Button>

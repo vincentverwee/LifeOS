@@ -1,8 +1,8 @@
 import Link from 'next/link';
-import { Trip } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Trip } from '@/lib/waypoint/types';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
+import { Badge } from '@/components/waypoint/ui/badge';
+import { Button } from '@/components/waypoint/ui/button';
 import { CalendarDays, Navigation, ImageDown } from 'lucide-react';
 
 interface RecentTripsProps {
@@ -49,7 +49,7 @@ export function RecentTrips({ trips }: RecentTripsProps) {
                   {trip.total_km.toLocaleString()} km
                 </Badge>
               )}
-              <Link href={`/trips/${trip.id}/export`} title={`Export ${trip.title} as an image`}>
+              <Link href={`/waypoint/trips/${trip.id}/export`} title={`Export ${trip.title} as an image`}>
                 <Button variant="outline" size="icon" className="h-8 w-8">
                   <ImageDown size={15} />
                   <span className="sr-only">Export {trip.title}</span>

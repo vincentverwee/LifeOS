@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { YearlyStats } from '@/lib/stats';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
+import { YearlyStats } from '@/lib/waypoint/stats';
 
 interface YearlyKmChartProps {
   data: YearlyStats[];

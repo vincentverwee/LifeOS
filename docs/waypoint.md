@@ -1,3 +1,9 @@
+> **Historical notes.** This was Waypoint's `CLAUDE.md` while it was a standalone app. It now lives
+> inside LifeOS at `/waypoint`: files moved to `src/{app,components,lib}/waypoint/`, Supabase JS +
+> mock data were replaced by Prisma (`src/lib/data/waypoint.ts`, `src/lib/actions/waypoint.ts`),
+> and the service worker, theme toggle and app shell were dropped. Paths below are pre-merge.
+> The current setup is described in the root `CLAUDE.md`.
+
 # Waypoint — Travel Tracking App
 
 Personal road trip journal. Single-user, no auth. Tracks routes, km driven, generates Instagram maps.

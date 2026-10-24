@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Input } from '@/components/ui/input';
-import { searchPlaces, extractCity, extractCountry, GeocodingResult } from '@/lib/geocoding';
+import { Input } from '@/components/waypoint/ui/input';
+import { searchPlaces, extractCity, extractCountry, GeocodingResult } from '@/lib/waypoint/geocoding';
 import { Search, MapPin, Loader2 } from 'lucide-react';
-import { Location } from '@/types';
+import { Location } from '@/lib/waypoint/types';
 
 interface LocationSearchProps {
   tripId: string;

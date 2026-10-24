@@ -148,3 +148,47 @@ model Debt {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+// --- Waypoint: road-trip journal (merged in from the standalone Waypoint app) ---
+// Unrelated to the budget Trip above. UUID ids are kept from the old Supabase
+// project so trip URLs survive the move. App code reads these through
+// src/lib/waypoint/rows.ts, which maps them to the snake_case types the
+// Waypoint components use.
+
+model WaypointTrip {
+  id              String             @id @default(uuid()) @db.Uuid
+  title           String
+  description     String?
+  startDate       DateTime?          @db.Date
+  endDate         DateTime?          @db.Date
+  coverImage      String?
+  totalKm         Decimal?           @db.Decimal(10, 2)
+  // "allow_tolls" | "avoid_tolls" — stored but ignored by the public OSRM server.
+  routePreference String             @default("allow_tolls")
+  // Whole-trip OSRM route as a GeoJSON LineString.
+  routeGeometry   Json?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  locations       WaypointLocation[]
+
+  @@index([startDate])
+}
+
+model WaypointLocation {
+  id            String       @id @default(uuid()) @db.Uuid
+  tripId        String       @db.Uuid
+  trip          WaypointTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name          String
+  latitude      Decimal      @db.Decimal(10, 7)
+  longitude     Decimal      @db.Decimal(10, 7)
+  country       String?
+  city          String?
+  arrivalDate   DateTime?    @db.Date
+  departureDate DateTime?    @db.Date
+  notes         String?
+  visitOrder    Int
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([tripId, visitOrder])
+}

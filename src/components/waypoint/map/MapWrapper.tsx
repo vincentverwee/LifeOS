@@ -2,9 +2,9 @@
 
 import dynamic from 'next/dynamic';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Location } from '@/types';
-import { cn } from '@/lib/utils';
-import { colorForTrip } from '@/lib/tripColors';
+import type { Location } from '@/lib/waypoint/types';
+import { cn } from '@/lib/waypoint/utils';
+import { colorForTrip } from '@/lib/waypoint/tripColors';
 import { TripLegend, type LegendChip } from './TripLegend';
 
 const MapView = dynamic(() => import('./MapView'), {

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { Location } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Location } from '@/lib/waypoint/types';
+import { Button } from '@/components/waypoint/ui/button';
+import { Input } from '@/components/waypoint/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+} from '@/components/waypoint/ui/alert-dialog';
 import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 

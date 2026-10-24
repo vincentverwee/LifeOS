@@ -1,15 +1,14 @@
 'use client';
 
 import { useState, useEffect, use } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
-import { LocationList } from '@/components/trips/LocationList';
-import { LocationSearch } from '@/components/trips/LocationSearch';
-import { TripDialog } from '@/components/trips/TripDialog';
-import { MapWrapper } from '@/components/map/MapWrapper';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Trip, Location } from '@/types';
+import { LocationList } from '@/components/waypoint/trips/LocationList';
+import { LocationSearch } from '@/components/waypoint/trips/LocationSearch';
+import { TripDialog } from '@/components/waypoint/trips/TripDialog';
+import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
+import { Button } from '@/components/waypoint/ui/button';
+import { Badge } from '@/components/waypoint/ui/badge';
+import { Separator } from '@/components/waypoint/ui/separator';
+import { Trip, Location } from '@/lib/waypoint/types';
 import {
   getTripWithLocations,
   updateTrip,
@@ -19,8 +18,8 @@ import {
   deleteLocation,
   updateLocation,
   reorderLocations,
-} from '@/lib/trips-store';
-import { calculateRoute } from '@/lib/routing/osrm';
+} from '@/lib/actions/waypoint';
+import { calculateRoute } from '@/lib/waypoint/routing/osrm';
 import { CalendarDays, Navigation, Pencil, ArrowLeft, MapPin, ImageDown } from 'lucide-react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -136,34 +135,34 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
   if (loading) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="h-8 w-48 animate-pulse rounded-xl bg-muted" />
           <div className="h-32 animate-pulse rounded-2xl bg-muted" />
         </div>
-      </AppShell>
+      </>
     );
   }
 
   if (!trip) {
     return (
-      <AppShell>
+      <>
         <div className="flex flex-col items-center py-24">
           <p className="text-muted-foreground">Trip not found</p>
-          <Link href="/trips" className="mt-4">
+          <Link href="/waypoint/trips" className="mt-4">
             <Button variant="outline">Back to trips</Button>
           </Link>
         </div>
-      </AppShell>
+      </>
     );
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Back + header */}
         <div className="flex items-start gap-4">
-          <Link href="/trips">
+          <Link href="/waypoint/trips">
             <Button variant="ghost" size="icon" className="mt-1 shrink-0">
               <ArrowLeft size={18} />
             </Button>
@@ -195,7 +194,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Link href={`/trips/${id}/export`}>
+                <Link href={`/waypoint/trips/${id}/export`}>
                   <Button variant="outline" size="sm" className="gap-2">
                     <ImageDown size={14} />
                     Export
@@ -274,6 +273,6 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
         trip={trip}
         onSave={handleEditSave}
       />
-    </AppShell>
+    </>
   );
 }

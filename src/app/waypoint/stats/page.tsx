@@ -1,16 +1,15 @@
-import { AppShell } from '@/components/layout/AppShell';
-import { StatsGrid } from '@/components/dashboard/StatsGrid';
-import { YearlyKmChart } from '@/components/stats/YearlyKmChart';
-import { CountryBreakdown } from '@/components/stats/CountryBreakdown';
-import { TripBreakdown } from '@/components/stats/TripBreakdown';
-import { Badge } from '@/components/ui/badge';
-import { getDashboardStats, getAllTripSummaries, getAllLocations } from '@/lib/data';
-import { getYearlyStats, getCountryStats, getTripBreakdown } from '@/lib/stats';
+import { connection } from 'next/server';
+import { StatsGrid } from '@/components/waypoint/dashboard/StatsGrid';
+import { YearlyKmChart } from '@/components/waypoint/stats/YearlyKmChart';
+import { CountryBreakdown } from '@/components/waypoint/stats/CountryBreakdown';
+import { TripBreakdown } from '@/components/waypoint/stats/TripBreakdown';
+import { Badge } from '@/components/waypoint/ui/badge';
+import { getDashboardStats, getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
+import { getYearlyStats, getCountryStats, getTripBreakdown } from '@/lib/waypoint/stats';
 import { BarChart3, Trophy } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
 export default async function StatsPage() {
+  await connection();
   const [stats, trips, locations] = await Promise.all([
     getDashboardStats(),
     getAllTripSummaries(),
@@ -18,7 +17,7 @@ export default async function StatsPage() {
   ]);
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Statistics</h2>
@@ -55,6 +54,6 @@ export default async function StatsPage() {
           </>
         )}
       </div>
-    </AppShell>
+    </>
   );
 }

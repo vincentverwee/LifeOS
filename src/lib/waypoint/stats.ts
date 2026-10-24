@@ -1,4 +1,4 @@
-import { TripSummary, Location } from '@/types';
+import { TripSummary, Location } from '@/lib/waypoint/types';
 
 export interface YearlyStats {
   year: number;

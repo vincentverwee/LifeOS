@@ -2,22 +2,21 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo, use } from 'react';
 import Link from 'next/link';
-import { useImageExport, isIOS } from '@/hooks/useImageExport';
-import { AppShell } from '@/components/layout/AppShell';
-import { MapWrapper } from '@/components/map/MapWrapper';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trip, Location } from '@/types';
-import { getTripWithLocations } from '@/lib/trips-store';
-import { calculateRoute, RouteResult } from '@/lib/routing/osrm';
+import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
+import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
+import { Button } from '@/components/waypoint/ui/button';
+import { Label } from '@/components/waypoint/ui/label';
+import { Card, CardContent } from '@/components/waypoint/ui/card';
+import { Trip, Location } from '@/lib/waypoint/types';
+import { getTripWithLocations } from '@/lib/actions/waypoint';
+import { calculateRoute, RouteResult } from '@/lib/waypoint/routing/osrm';
 import {
   EXPORT_FORMATS,
   DESIGN_WIDTH,
   PREVIEW_MAX_WIDTH,
   SANS_STACK,
   slugify,
-} from '@/lib/exportFormats';
+} from '@/lib/waypoint/exportFormats';
 import { ArrowLeft, Download, Sun, Moon, ImageDown, Check, RotateCcw, Share2, X } from 'lucide-react';
 
 const FORMATS = EXPORT_FORMATS;
@@ -254,34 +253,34 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
 
   if (loading) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="h-8 w-48 animate-pulse rounded-xl bg-muted" />
           <div className="h-96 animate-pulse rounded-2xl bg-muted" />
         </div>
-      </AppShell>
+      </>
     );
   }
 
   if (!trip) {
     return (
-      <AppShell>
+      <>
         <div className="flex flex-col items-center py-24">
           <p className="text-muted-foreground">Trip not found</p>
-          <Link href="/trips" className="mt-4">
+          <Link href="/waypoint/trips" className="mt-4">
             <Button variant="outline">Back to trips</Button>
           </Link>
         </div>
-      </AppShell>
+      </>
     );
   }
 
   if (locations.length < 2) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="flex items-center gap-3">
-            <Link href={`/trips/${id}`}>
+            <Link href={`/waypoint/trips/${id}`}>
               <Button variant="ghost" size="icon">
                 <ArrowLeft size={18} />
               </Button>
@@ -296,7 +295,7 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
             </p>
           </div>
         </div>
-      </AppShell>
+      </>
     );
   }
 
@@ -385,10 +384,10 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3">
-          <Link href={`/trips/${id}`}>
+          <Link href={`/waypoint/trips/${id}`}>
             <Button variant="ghost" size="icon">
               <ArrowLeft size={18} />
             </Button>
@@ -687,6 +686,6 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
-    </AppShell>
+    </>
   );
 }

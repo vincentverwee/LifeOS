@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CountryStats } from '@/lib/stats';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
+import { CountryStats } from '@/lib/waypoint/stats';
 
 interface CountryBreakdownProps {
   data: CountryStats[];

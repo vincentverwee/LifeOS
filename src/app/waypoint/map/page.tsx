@@ -1,14 +1,13 @@
+import { connection } from 'next/server';
 import Link from 'next/link';
-import { AppShell } from '@/components/layout/AppShell';
-import { MapWrapper } from '@/components/map/MapWrapper';
-import { Button } from '@/components/ui/button';
-import { getAllLocations, getAllTrips } from '@/lib/data';
-import { assignTripColors } from '@/lib/tripColors';
+import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
+import { Button } from '@/components/waypoint/ui/button';
+import { getAllLocations, getAllTrips } from '@/lib/data/waypoint';
+import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { ImageDown } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
 export default async function MapPage() {
+  await connection();
   const [locations, trips] = await Promise.all([getAllLocations(), getAllTrips()]);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
@@ -17,14 +16,14 @@ export default async function MapPage() {
     .map((t) => ({ tripId: t.id, geometry: t.route_geometry! }));
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto flex h-full max-w-7xl flex-col space-y-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Map</h2>
             <p className="mt-1 text-sm text-muted-foreground">Explore your routes</p>
           </div>
-          <Link href="/map/export" title="Export the whole map as an image">
+          <Link href="/waypoint/map/export" title="Export the whole map as an image">
             <Button variant="outline" size="sm" className="gap-1.5">
               <ImageDown size={15} />
               Export map
@@ -40,6 +39,6 @@ export default async function MapPage() {
           selectable
         />
       </div>
-    </AppShell>
+    </>
   );
 }

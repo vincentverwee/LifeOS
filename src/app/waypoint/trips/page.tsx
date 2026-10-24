@@ -1,19 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AppShell } from '@/components/layout/AppShell';
-import { TripCard } from '@/components/trips/TripCard';
-import { TripDialog } from '@/components/trips/TripDialog';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { TripSummary } from '@/types';
+import { TripCard } from '@/components/waypoint/trips/TripCard';
+import { TripDialog } from '@/components/waypoint/trips/TripDialog';
+import { Button } from '@/components/waypoint/ui/button';
+import { Skeleton } from '@/components/waypoint/ui/skeleton';
+import { TripSummary } from '@/lib/waypoint/types';
 import {
   CreateTripInput,
   createTrip,
   updateTrip,
   deleteTrip,
   getTripSummaries,
-} from '@/lib/trips-store';
+} from '@/lib/actions/waypoint';
 import { Plus, Route } from 'lucide-react';
 
 export default function TripsPage() {
@@ -57,7 +56,7 @@ export default function TripsPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -111,6 +110,6 @@ export default function TripsPage() {
         trip={editingTrip}
         onSave={handleSave}
       />
-    </AppShell>
+    </>
   );
 }

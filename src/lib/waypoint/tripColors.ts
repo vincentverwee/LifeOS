@@ -1,4 +1,4 @@
-import type { Trip } from '@/types';
+import type { Trip } from '@/lib/waypoint/types';
 
 // Validated 8-hue categorical palette (dataviz skill reference), in its documented fixed order —
 // the order itself is the colorblind-safety mechanism. Adjacent-pair CVD ΔE 9.1 / normal-vision

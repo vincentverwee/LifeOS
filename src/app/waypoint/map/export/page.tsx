@@ -2,22 +2,21 @@
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
-import { AppShell } from '@/components/layout/AppShell';
-import { MapWrapper } from '@/components/map/MapWrapper';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
-import { Trip, Location } from '@/types';
-import { getTrips, getAllLocations } from '@/lib/trips-store';
-import { assignTripColors } from '@/lib/tripColors';
-import { useImageExport, isIOS } from '@/hooks/useImageExport';
+import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
+import { Button } from '@/components/waypoint/ui/button';
+import { Label } from '@/components/waypoint/ui/label';
+import { Card, CardContent } from '@/components/waypoint/ui/card';
+import { Trip, Location } from '@/lib/waypoint/types';
+import { getTrips, getAllLocations } from '@/lib/actions/waypoint';
+import { assignTripColors } from '@/lib/waypoint/tripColors';
+import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
 import {
   EXPORT_FORMATS,
   DESIGN_WIDTH,
   PREVIEW_MAX_WIDTH,
   SANS_STACK,
   slugify,
-} from '@/lib/exportFormats';
+} from '@/lib/waypoint/exportFormats';
 import {
   ArrowLeft,
   Download,
@@ -252,21 +251,21 @@ export default function AllTripsExportPage() {
 
   if (loading) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="h-8 w-48 animate-pulse rounded-xl bg-muted" />
           <div className="h-96 animate-pulse rounded-2xl bg-muted" />
         </div>
-      </AppShell>
+      </>
     );
   }
 
   if (trips.length === 0) {
     return (
-      <AppShell>
+      <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="flex items-center gap-3">
-            <Link href="/">
+            <Link href="/waypoint">
               <Button variant="ghost" size="icon">
                 <ArrowLeft size={18} />
               </Button>
@@ -281,7 +280,7 @@ export default function AllTripsExportPage() {
             </p>
           </div>
         </div>
-      </AppShell>
+      </>
     );
   }
 
@@ -360,10 +359,10 @@ export default function AllTripsExportPage() {
   }
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3">
-          <Link href="/">
+          <Link href="/waypoint">
             <Button variant="ghost" size="icon">
               <ArrowLeft size={18} />
             </Button>
@@ -730,6 +729,6 @@ export default function AllTripsExportPage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

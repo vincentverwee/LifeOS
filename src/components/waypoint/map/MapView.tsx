@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { Location } from '@/types';
-import { colorForTrip } from '@/lib/tripColors';
-import { buildCorridorSegments } from '@/lib/routing/corridors';
+import type { Location } from '@/lib/waypoint/types';
+import { colorForTrip } from '@/lib/waypoint/tripColors';
+import { buildCorridorSegments } from '@/lib/waypoint/routing/corridors';
 
 const ROUTE_SOURCE_ID = 'route'; // single-trip solid line (trip detail + export)
 const ROUTE_LAYER_ID = 'route-line';

@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/waypoint/utils';
 
 /** Grey pulsing placeholder block. Used by the route-level `loading.tsx` boundaries. */
 export function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {

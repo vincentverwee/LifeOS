@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
+import { cn } from '@/lib/waypoint/utils';
 
 // `touch-manipulation` + `select-none` remove the mobile double-tap-zoom delay and the
 // long-press text selection. Every variant also carries an `active:` state: on a touch screen

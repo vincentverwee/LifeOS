@@ -1,34 +1,27 @@
-import { MOCK_STATS, MOCK_TRIPS, getAllMockLocations } from './mock-data';
-import { DashboardStats, Trip, TripSummary, Location } from '@/types';
-import { isSupabaseConfigured } from './supabase/config';
-import { createServerClient } from './supabase/server';
+import 'server-only';
+import { prisma } from '@/lib/prisma';
+import { toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
+import { DashboardStats, Trip, TripSummary, Location } from '@/lib/waypoint/types';
 
 /**
- * Every trip column EXCEPT `route_geometry`.
- *
- * `route_geometry` is a full OSRM polyline (tens to hundreds of kB per trip), so `select('*')`
- * on the trips table can pull megabytes down a phone connection. Only the map views actually
+ * `route_geometry` is a full OSRM polyline (tens to hundreds of kB per trip), so loading it
+ * for every trip can pull megabytes down a phone connection. Only the map views actually
  * draw a route; the dashboard stats and the statistics page just need dates and km, so they
- * select this list instead.
+ * leave it out.
  */
-const TRIP_SUMMARY_COLUMNS =
-  'id, title, description, start_date, end_date, cover_image, route_preference, total_km, created_at, updated_at';
+const WITHOUT_GEOMETRY = { routeGeometry: true } as const;
+
+const NEWEST_FIRST = [{ startDate: { sort: 'desc', nulls: 'last' } }] as const;
 
 export async function getDashboardStats(): Promise<DashboardStats> {
-  if (!isSupabaseConfigured()) return MOCK_STATS;
+  const [trips, locations] = await Promise.all([
+    prisma.waypointTrip.findMany({ omit: WITHOUT_GEOMETRY }),
+    prisma.waypointLocation.findMany({ select: { country: true, city: true } }),
+  ]);
 
-  const supabase = createServerClient();
-  const [{ data: trips, error: tripsError }, { data: locations, error: locationsError }] =
-    await Promise.all([
-      supabase.from('trips').select(TRIP_SUMMARY_COLUMNS),
-      supabase.from('locations').select('country, city'),
-    ]);
-  if (tripsError) throw tripsError;
-  if (locationsError) throw locationsError;
-
-  const tripList = (trips ?? []) as unknown as TripSummary[];
-  const countries = new Set((locations ?? []).map((l) => l.country).filter(Boolean));
-  const cities = new Set((locations ?? []).map((l) => l.city).filter(Boolean));
+  const tripList = trips.map(toTripSummary);
+  const countries = new Set(locations.map((l) => l.country).filter(Boolean));
+  const cities = new Set(locations.map((l) => l.city).filter(Boolean));
   const totalKm = tripList.reduce((sum, t) => sum + (t.total_km ?? 0), 0);
 
   const longestTrip = tripList.reduce<TripSummary | null>((longest, t) => {
@@ -55,53 +48,28 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 }
 
 export async function getRecentTrips(limit = 5): Promise<Trip[]> {
-  if (!isSupabaseConfigured()) return MOCK_TRIPS.slice(0, limit);
-
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from('trips')
-    .select('*')
-    .order('start_date', { ascending: false, nullsFirst: false })
-    .limit(limit);
-  if (error) throw error;
-  return data as Trip[];
+  const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST], take: limit });
+  return rows.map(toTrip);
 }
 
 /** Full trips, route geometry included — for the map pages, which draw the route lines. */
 export async function getAllTrips(): Promise<Trip[]> {
-  if (!isSupabaseConfigured()) return MOCK_TRIPS;
-
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from('trips')
-    .select('*')
-    .order('start_date', { ascending: false, nullsFirst: false });
-  if (error) throw error;
-  return data as Trip[];
+  const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST] });
+  return rows.map(toTrip);
 }
 
 /** Trips without their route geometry — for screens that only show titles, dates and km. */
 export async function getAllTripSummaries(): Promise<TripSummary[]> {
-  if (!isSupabaseConfigured()) return MOCK_TRIPS;
-
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from('trips')
-    .select(TRIP_SUMMARY_COLUMNS)
-    .order('start_date', { ascending: false, nullsFirst: false });
-  if (error) throw error;
-  return data as unknown as TripSummary[];
+  const rows = await prisma.waypointTrip.findMany({
+    omit: WITHOUT_GEOMETRY,
+    orderBy: [...NEWEST_FIRST],
+  });
+  return rows.map(toTripSummary);
 }
 
 export async function getAllLocations(): Promise<Location[]> {
-  if (!isSupabaseConfigured()) return getAllMockLocations();
-
-  const supabase = createServerClient();
-  const { data, error } = await supabase
-    .from('locations')
-    .select('*')
-    .order('trip_id')
-    .order('visit_order');
-  if (error) throw error;
-  return data as Location[];
+  const rows = await prisma.waypointLocation.findMany({
+    orderBy: [{ tripId: 'asc' }, { visitOrder: 'asc' }],
+  });
+  return rows.map(toLocation);
 }

@@ -1,10 +1,9 @@
-import { AppShell } from '@/components/layout/AppShell';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/waypoint/ui/skeleton';
 
 /** Shown while the router fetches this route, so a nav tap paints immediately. */
 export default function TripsLoading() {
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center justify-between">
       <div className="space-y-2">
@@ -19,6 +18,6 @@ export default function TripsLoading() {
           ))}
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }

@@ -36,21 +36,24 @@ npm run db:studio   # Prisma Studio
 
 ```
 src/
-  app/          routes: / (feature hub), /budget ("today at a glance": left today, same-day vs last month / typical month, today's expenses, balances), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, `?category=` filter, edit/delete), /budget/insights (any month/trip vs the average of its label peers; categories, all periods), /budget/settings (trips: new/edit/delete; months: budget + label), /api/health
-  components/   dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
-  lib/          actions/ (server actions), data/ (server-only queries), monthStats.ts (pure month math), format.ts
+  app/          routes: / (feature hub), /budget ("today at a glance": left today, same-day vs last month / typical month, today's expenses, balances), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, `?category=` filter, edit/delete), /budget/insights (any month/trip vs the average of its label peers; categories, all periods), /budget/settings (trips: new/edit/delete; months: budget + label), /waypoint (road-trip journal: dashboard, /trips, /trips/[id], /trips/[id]/export, /map, /map/export, /stats), /api/health
+  components/   waypoint/ (all Waypoint UI incl. its shadcn ui/), dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
+  lib/          actions/ (server actions), data/ (server-only queries), waypoint/ (routing/OSRM, stats, colors, export helpers, row mapping), monthStats.ts (pure month math), format.ts
   generated/    Prisma Client output (generated, gitignored)
 prisma/schema.prisma   data model
 prisma/seed.ts         seeds starter categories
 prisma/label-periods.ts   one-off: fills missing labels (before Sep 2026 = Thuis, else Galway)
 prisma/import-old-budget.ts one-off import of ExcelContextFiles/budget.xlsx (Apr–Aug 2026, 18th→17th periods; spend derived from daily balance drops, category "Oud budget", archived)
 prisma/import-excel.ts one-off import of ExcelContextFiles/BudgetGalway.xlsx (idempotent; `npx tsx prisma/import-excel.ts [--dry]`)
+prisma/import-waypoint.ts one-off copy of the old standalone Waypoint Supabase project (idempotent upsert by UUID; needs WAYPOINT_SUPABASE_URL/_ANON_KEY)
 prisma7.config.ts      Prisma CLI datasource config
 ```
 
 ## Data model in one paragraph
 
 A **month** is a `BudgetCycle` (calendar month, created automatically by `ensureCurrentMonth()` in `src/lib/data/ensureMonth.ts` the first time a new month is viewed, copying the previous one; `startingBudget` = monthly budget, plus manual `bank`/`tricount`/`cash` balances and `rent`/`rentDay`). A **trip** is a `Trip`. Both hold `Expense` rows (`cycleId` or `tripId`, validated in `src/lib/actions/expenses.ts`). **Categories are one global list** (`Category`: name, color slot, sortOrder, isArchived, optional `pintPrice`), managed on the expenses page; there is no separate tag concept. Daily totals, cumulative-vs-budget, category/weekday stats, beer stats and the balance outlook are all **computed from expenses** in `src/lib/monthStats.ts` — nothing is stored per day. A category with a `pintPrice` counts as beer. `BudgetCycle.label` ("Thuis", "Galway") groups periods; Insights compares a period with the average of the other *finished* periods with the same label, by day of the period (`src/lib/insights.ts`). New months inherit the previous label. `BudgetCycleDay` is legacy and unused. `SavingsEntry` and `Debt` are still display-only (no entry UI). `HealthCheck` + `GET /api/health` exist only to verify Prisma <-> Supabase connectivity.
+
+**Waypoint** (merged in from a standalone app, history included; old notes in `docs/waypoint.md`) is unrelated to budget trips: `WaypointTrip` (UUID id, dates, `totalKm`, `routePreference`, whole-trip OSRM `routeGeometry` JSON) has ordered `WaypointLocation` stops (`visitOrder`). Its components still speak the old snake_case Supabase shapes (`src/lib/waypoint/types.ts`); `src/lib/waypoint/rows.ts` maps Prisma rows to them. Server pages read via `src/lib/data/waypoint.ts`; client pages call the server actions in `src/lib/actions/waypoint.ts` (same names/signatures as the old browser-side `trips-store`).
 
 ## Gotchas
 
@@ -60,6 +63,8 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 - **"Today" on the server** comes from `getTodayKey()` / `getTimeZone()` in `src/lib/today.ts` (browser timezone via the `tz` cookie set by `TimeZoneSync`, fallback Europe/Dublin) — never `toDateInputValue()` server-side, Vercel runs in UTC.
 - An expense's **date decides its month**: `createExpense`/`updateExpense` move it to the `BudgetCycle` that covers the date ("yesterday" on the 1st lands in last month); trips only accept dates inside the trip.
 - Pages that read the DB without searchParams/cookies need `await connection()` or they get prerendered at build time.
+- **Waypoint styling** is scoped: `src/app/waypoint/layout.tsx` renders `data-waypoint`, and `:root:has([data-waypoint])` in `globals.css` swaps the shared tokens (background, primary, accent, border, radii) for Waypoint's slate/indigo shadcn palette — on `:root`, not the wrapper, because Radix dialogs portal to `<body>`. The `card`/`muted`/`popover`/… tokens only exist there. Waypoint files keep their single-quote style.
+- **Waypoint image export on iOS** (`src/lib/waypoint/useImageExport.ts`): render and save are two separate taps, the image is a Blob (never a `data:` URL), and nothing may be `await`ed before `navigator.share`. Maps that get captured need `preserveDrawingBuffer` (opt-in prop). The public OSRM server ignores `avoid_tolls`.
 
 ## Mobile-first conventions
 

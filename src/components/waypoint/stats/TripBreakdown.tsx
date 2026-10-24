@@ -1,7 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
+import { Badge } from '@/components/waypoint/ui/badge';
 import { CalendarDays, MapPin, Navigation } from 'lucide-react';
-import { TripBreakdownEntry } from '@/lib/stats';
+import { TripBreakdownEntry } from '@/lib/waypoint/stats';
 
 interface TripBreakdownProps {
   data: TripBreakdownEntry[];

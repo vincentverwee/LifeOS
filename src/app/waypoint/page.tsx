@@ -1,16 +1,15 @@
+import { connection } from 'next/server';
 import Link from 'next/link';
-import { AppShell } from '@/components/layout/AppShell';
-import { StatsGrid } from '@/components/dashboard/StatsGrid';
-import { RecentTrips } from '@/components/dashboard/RecentTrips';
-import { MapWrapper } from '@/components/map/MapWrapper';
-import { Button } from '@/components/ui/button';
-import { getDashboardStats, getRecentTrips, getAllLocations } from '@/lib/data';
-import { assignTripColors } from '@/lib/tripColors';
+import { StatsGrid } from '@/components/waypoint/dashboard/StatsGrid';
+import { RecentTrips } from '@/components/waypoint/dashboard/RecentTrips';
+import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
+import { Button } from '@/components/waypoint/ui/button';
+import { getDashboardStats, getRecentTrips, getAllLocations } from '@/lib/data/waypoint';
+import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { ImageDown } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
-
 export default async function DashboardPage() {
+  await connection();
   const [stats, recentTrips, locations] = await Promise.all([
     getDashboardStats(),
     getRecentTrips(5),
@@ -23,7 +22,7 @@ export default async function DashboardPage() {
     .map((t) => ({ tripId: t.id, geometry: t.route_geometry! }));
 
   return (
-    <AppShell>
+    <>
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
@@ -37,7 +36,7 @@ export default async function DashboardPage() {
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-muted-foreground">All trips</p>
               {/* Exports the whole map (every trip, not just the 5 plotted here) as one post. */}
-              <Link href="/map/export" title="Export the whole map as an image">
+              <Link href="/waypoint/map/export" title="Export the whole map as an image">
                 <Button variant="outline" size="sm" className="gap-1.5">
                   <ImageDown size={15} />
                   Export map
@@ -57,6 +56,6 @@ export default async function DashboardPage() {
           <RecentTrips trips={recentTrips} />
         </div>
       </div>
-    </AppShell>
+    </>
   );
 }
