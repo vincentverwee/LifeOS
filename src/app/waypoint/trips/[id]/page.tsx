@@ -22,7 +22,6 @@ import {
 import { calculateRoute } from '@/lib/waypoint/routing/osrm';
 import { CalendarDays, Navigation, Pencil, ArrowLeft, MapPin, ImageDown } from 'lucide-react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 
 function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('en-GB', {
@@ -170,7 +169,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="truncate text-2xl font-bold tracking-tight">{trip.title}</h2>
+                <h2 className="truncate text-2xl font-semibold text-foreground">{trip.title}</h2>
                 {trip.description && (
                   <p className="mt-1 text-sm text-muted-foreground">{trip.description}</p>
                 )}
@@ -231,7 +230,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
 
             <LocationSearch tripId={id} onAdd={addLocation} />
 
-            <motion.div layout>
+            <div>
               <LocationList
                 locations={locations}
                 onRemove={removeLocation}
@@ -240,7 +239,7 @@ export default function TripDetailPage({ params }: { params: Promise<{ id: strin
                 onUpdateDates={updateDates}
                 onUpdateNotes={updateNotes}
               />
-            </motion.div>
+            </div>
           </div>
 
           {/* Right: map */}

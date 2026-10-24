@@ -75,7 +75,7 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
               key={i}
               type="button"
               onClick={() => selectResult(r, i)}
-              className="flex w-full items-start gap-2.5 px-4 py-3 text-left text-sm hover:bg-accent transition-colors"
+              className="flex w-full items-start gap-2.5 px-4 py-3 text-left text-sm hover:bg-surface-muted transition-colors"
             >
               <MapPin size={14} className="mt-0.5 shrink-0 text-primary" />
               <span className="line-clamp-2 leading-snug">{r.display_name}</span>

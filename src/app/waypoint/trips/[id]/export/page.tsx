@@ -285,7 +285,7 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
                 <ArrowLeft size={18} />
               </Button>
             </Link>
-            <h2 className="text-2xl font-bold tracking-tight">Export</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Export</h2>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
             <ImageDown size={48} className="mb-4 text-muted-foreground/40" />
@@ -393,7 +393,7 @@ export default function ExportPage({ params }: { params: Promise<{ id: string }>
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Export — {trip.title}</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Export — {trip.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               The whole trip is always shown — tick the stops to feature. Featured stops get a name
               label, stack equally in the caption, and count toward the “+km added”. Edit each

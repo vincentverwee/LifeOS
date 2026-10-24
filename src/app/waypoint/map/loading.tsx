@@ -1,27 +1,15 @@
-import { Skeleton } from '@/components/waypoint/ui/skeleton';
+import { SheepSpinner } from '@/components/icons/SheepSpinner';
 
-/**
- * Route-level loading UI.
- *
- * This page is dynamic (`connection()`), so a tap on the nav has to wait for a server render plus its
- * Supabase queries before anything can change on screen. Without a `loading.tsx` the router has
- * nothing to show in the meantime, so the old page just sits there and the button feels dead --
- * and Next can't prefetch a dynamic route at all. With this boundary the tap paints instantly
- * and the boundary itself is prefetched when the link comes into view.
- */
-export default function MapLoading() {
+// Shown inside the Waypoint layout (tabs stay put) while a Waypoint page loads, same as Budget.
+export default function WaypointLoading() {
   return (
-    <>
-      <div className="mx-auto flex h-full max-w-7xl flex-col space-y-6">
-        <div className="flex items-start justify-between gap-3">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-44" />
-        <Skeleton className="h-4 w-64" />
-      </div>
-          <Skeleton className="h-9 w-28 rounded-lg" />
-        </div>
-        <Skeleton className="min-h-[500px] flex-1 rounded-2xl" />
-      </div>
-    </>
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-[50vh] flex-col items-center justify-center gap-3"
+    >
+      <SheepSpinner size={56} />
+      <p className="text-sm text-ink-muted">Counting sheep…</p>
+    </div>
   );
 }

@@ -1,14 +1,15 @@
-import { Skeleton } from '@/components/waypoint/ui/skeleton';
+import { SheepSpinner } from '@/components/icons/SheepSpinner';
 
-/** Shown while the router fetches this route, so a nav tap paints immediately. Mirrors the
- *  in-page skeleton the detail view shows while it loads its own data. */
-export default function TripDetailLoading() {
+// Shown inside the Waypoint layout (tabs stay put) while a Waypoint page loads, same as Budget.
+export default function WaypointLoading() {
   return (
-    <>
-      <div className="mx-auto max-w-5xl space-y-4">
-        <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-32 rounded-2xl" />
-      </div>
-    </>
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-[50vh] flex-col items-center justify-center gap-3"
+    >
+      <SheepSpinner size={56} />
+      <p className="text-sm text-ink-muted">Counting sheep…</p>
+    </div>
   );
 }

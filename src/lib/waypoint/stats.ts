@@ -1,4 +1,4 @@
-import { TripSummary, Location } from '@/lib/waypoint/types';
+import { DashboardStats, TripSummary, Location } from '@/lib/waypoint/types';
 
 export interface YearlyStats {
   year: number;
@@ -63,4 +63,39 @@ export function getTripBreakdown(
       return { trip, cityCount: cities.size };
     })
     .sort((a, b) => (b.trip.start_date ?? '').localeCompare(a.trip.start_date ?? ''));
+}
+
+/**
+ * Headline numbers for the dashboard and stats pages. Pure: pass the trips and locations the
+ * page already loaded, so the page does not run the same queries twice.
+ */
+export function getDashboardStats(
+  trips: TripSummary[],
+  locations: Pick<Location, 'country' | 'city'>[],
+): DashboardStats {
+  const countries = new Set(locations.map((l) => l.country).filter(Boolean));
+  const cities = new Set(locations.map((l) => l.city).filter(Boolean));
+  const totalKm = trips.reduce((sum, t) => sum + (t.total_km ?? 0), 0);
+
+  const longestTrip = trips.reduce<TripSummary | null>((longest, t) => {
+    if (!t.total_km) return longest;
+    if (!longest || t.total_km > (longest.total_km ?? 0)) return t;
+    return longest;
+  }, null);
+
+  const latestTrip = trips.reduce<TripSummary | null>((latest, t) => {
+    if (!t.start_date) return latest;
+    if (!latest || !latest.start_date || t.start_date > latest.start_date) return t;
+    return latest;
+  }, null);
+
+  return {
+    countries_visited: countries.size,
+    cities_visited: cities.size,
+    trips_count: trips.length,
+    total_km: totalKm,
+    longest_trip_km: longestTrip?.total_km ?? 0,
+    longest_trip_title: longestTrip?.title ?? null,
+    latest_trip: latestTrip,
+  };
 }

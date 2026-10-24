@@ -20,7 +20,7 @@ export function StatsCard({ label, value, icon: Icon, description, index }: Stat
           <div className="flex items-start justify-between">
             <div className="space-y-1">
               <p className="text-sm text-muted-foreground">{label}</p>
-              <p className="text-3xl font-bold tracking-tight">{value}</p>
+              <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{value}</p>
               {description && <p className="text-xs text-muted-foreground">{description}</p>}
             </div>
             <div className="rounded-xl bg-primary/10 p-2.5">
