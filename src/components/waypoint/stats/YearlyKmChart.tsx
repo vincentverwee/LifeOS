@@ -26,7 +26,7 @@ export function YearlyKmChart({ data }: YearlyKmChartProps) {
                 className="flex flex-1 flex-col items-center gap-2"
                 title={`${entry.year}: ${entry.totalKm.toLocaleString()} km · ${entry.tripsCount} trip${entry.tripsCount === 1 ? '' : 's'}`}
               >
-                <span className="text-xs font-medium">{entry.totalKm.toLocaleString()}</span>
+                <span className='font-mono text-xs font-medium tabular-nums'>{entry.totalKm.toLocaleString()}</span>
                 <div className="flex h-40 w-full max-w-16 items-end">
                   <div
                     className="w-full rounded-t-md bg-primary"

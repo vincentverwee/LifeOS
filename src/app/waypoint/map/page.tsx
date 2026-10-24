@@ -20,7 +20,7 @@ export default async function MapPage() {
       <div className="mx-auto flex max-w-7xl flex-col space-y-6">
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Map</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Map</h2>
             <p className="mt-1 text-sm text-muted-foreground">Explore your routes</p>
           </div>
           <Link href="/waypoint/map/export" title="Export the whole map as an image">

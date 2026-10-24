@@ -2,8 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
-import { Trip, TripSummary, Location, RoutePreference } from '@/lib/waypoint/types';
-import { toDateColumn, toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
+import { Trip, Location, RoutePreference } from '@/lib/waypoint/types';
+import { toDateColumn, toLocation, toTrip } from '@/lib/waypoint/rows';
 
 /**
  * Waypoint's data store. These used to be browser-side Supabase calls; they are now server
@@ -53,15 +53,6 @@ function emptyToNull(value: string | null | undefined): string | null {
 export async function getTrips(): Promise<Trip[]> {
   const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST] });
   return rows.map(toTrip);
-}
-
-/** Trips without their route geometry — for the trips list, which never draws a route. */
-export async function getTripSummaries(): Promise<TripSummary[]> {
-  const rows = await prisma.waypointTrip.findMany({
-    omit: { routeGeometry: true },
-    orderBy: [...NEWEST_FIRST],
-  });
-  return rows.map(toTripSummary);
 }
 
 export async function createTrip(input: CreateTripInput): Promise<Trip> {

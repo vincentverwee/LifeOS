@@ -21,11 +21,11 @@ export function WaypointTabBar() {
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium active:bg-accent ${
+              className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium active:bg-surface-muted ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >
-              <Icon size={22} strokeWidth={1.8} aria-hidden="true" />
+              <Icon size={24} strokeWidth={1.8} aria-hidden="true" />
               {label}
             </Link>
           );

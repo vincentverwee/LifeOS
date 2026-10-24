@@ -4,23 +4,21 @@ import { YearlyKmChart } from '@/components/waypoint/stats/YearlyKmChart';
 import { CountryBreakdown } from '@/components/waypoint/stats/CountryBreakdown';
 import { TripBreakdown } from '@/components/waypoint/stats/TripBreakdown';
 import { Badge } from '@/components/waypoint/ui/badge';
-import { getDashboardStats, getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
+import { getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
+import { getDashboardStats } from '@/lib/waypoint/stats';
 import { getYearlyStats, getCountryStats, getTripBreakdown } from '@/lib/waypoint/stats';
 import { BarChart3, Trophy } from 'lucide-react';
 
 export default async function StatsPage() {
   await connection();
-  const [stats, trips, locations] = await Promise.all([
-    getDashboardStats(),
-    getAllTripSummaries(),
-    getAllLocations(),
-  ]);
+  const [trips, locations] = await Promise.all([getAllTripSummaries(), getAllLocations()]);
+  const stats = getDashboardStats(trips, locations);
 
   return (
     <>
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Statistics</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Statistics</h2>
           <p className="mt-1 text-sm text-muted-foreground">Deep dive into your travel data</p>
         </div>
 

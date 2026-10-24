@@ -4,17 +4,15 @@ import { StatsGrid } from '@/components/waypoint/dashboard/StatsGrid';
 import { RecentTrips } from '@/components/waypoint/dashboard/RecentTrips';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { Button } from '@/components/waypoint/ui/button';
-import { getDashboardStats, getAllTrips, getAllLocations } from '@/lib/data/waypoint';
+import { getAllTrips, getAllLocations } from '@/lib/data/waypoint';
+import { getDashboardStats } from '@/lib/waypoint/stats';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { ImageDown } from 'lucide-react';
 
 export default async function DashboardPage() {
   await connection();
-  const [stats, trips, locations] = await Promise.all([
-    getDashboardStats(),
-    getAllTrips(),
-    getAllLocations(),
-  ]);
+  const [trips, locations] = await Promise.all([getAllTrips(), getAllLocations()]);
+  const stats = getDashboardStats(trips, locations);
   // The map draws every trip; only the list beside it is capped to the latest 5.
   const recentTrips = trips.slice(0, 5);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
@@ -27,7 +25,7 @@ export default async function DashboardPage() {
     <>
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Dashboard</h2>
+          <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
           <p className="mt-1 text-sm text-muted-foreground">Your travel journey at a glance</p>
         </div>
 

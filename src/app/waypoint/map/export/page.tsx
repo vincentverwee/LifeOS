@@ -270,7 +270,7 @@ export default function AllTripsExportPage() {
                 <ArrowLeft size={18} />
               </Button>
             </Link>
-            <h2 className="text-2xl font-bold tracking-tight">Export map</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Export map</h2>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
             <ImageDown size={48} className="mb-4 text-muted-foreground/40" />
@@ -368,7 +368,7 @@ export default function AllTripsExportPage() {
             </Button>
           </Link>
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">Export map — all trips</h2>
+            <h2 className="text-2xl font-semibold text-foreground">Export map — all trips</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Every trip on one map, each in its own color. Tick the trips to include, rename them
               for the legend, and set a headline.
