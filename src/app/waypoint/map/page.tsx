@@ -17,7 +17,7 @@ export default async function MapPage() {
 
   return (
     <>
-      <div className="mx-auto flex h-full max-w-7xl flex-col space-y-6">
+      <div className="mx-auto flex max-w-7xl flex-col space-y-6">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Map</h2>
@@ -31,7 +31,7 @@ export default async function MapPage() {
           </Link>
         </div>
         <MapWrapper
-          className="min-h-[500px] flex-1"
+          className="h-[70dvh] min-h-[420px]"
           locations={locations}
           routes={routes}
           tripLabels={tripLabels}
