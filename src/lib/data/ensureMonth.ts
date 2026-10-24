@@ -1,6 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { toDateInputValue } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
 
 const DEFAULT_BUDGET = 1000;
 
@@ -29,7 +29,7 @@ const MONTH_LOCK_KEY = 7_311_001;
  * Safe to call on every request — it's a single lookup when the month exists.
  */
 export async function ensureCurrentMonth(): Promise<void> {
-  const [year, month] = toDateInputValue().split("-").map(Number);
+  const [year, month] = (await getTodayKey()).split("-").map(Number);
   const startDate = new Date(Date.UTC(year, month - 1, 1));
 
   const exists = await prisma.budgetCycle.findFirst({ where: { startDate }, select: { id: true } });

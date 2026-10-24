@@ -84,6 +84,17 @@ export function labelBaseline(
   };
 }
 
+/** The month right before this one (any label), or null for the first. Trips are skipped. */
+export function previousMonth(active: PeriodEntry, all: PeriodEntry[]): PeriodEntry | null {
+  let best: PeriodEntry | null = null;
+  for (const e of all) {
+    if (e.month.kind !== "month" || e.month.id === active.month.id) continue;
+    if (e.month.startDate >= active.month.startDate) continue;
+    if (!best || e.month.startDate > best.month.startDate) best = e;
+  }
+  return best;
+}
+
 export type LabelSummary = {
   label: string;
   count: number;

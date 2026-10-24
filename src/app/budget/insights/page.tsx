@@ -8,7 +8,8 @@ import {
   labelSummaries,
   type PeriodEntry,
 } from "@/lib/insights";
-import { formatCurrency, formatCurrencyShort, formatPercent, toDateInputValue } from "@/lib/format";
+import { formatCurrency, formatCurrencyShort, formatPercent } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
@@ -32,7 +33,7 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   const searchParams = await props.searchParams;
   const requested = Array.isArray(searchParams.period) ? searchParams.period[0] : searchParams.period;
 
-  const today = toDateInputValue();
+  const today = await getTodayKey();
   const [periods, months, trips] = await Promise.all([getAllPeriods(), getAllMonths(), getAllTrips()]);
   const activePeriod = resolveActivePeriod(periods, requested, today);
 
@@ -129,6 +130,7 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
             label: "Expected total",
             value: formatCurrencyShort(stats.expectedTotal),
             tone: stats.expectedVsBudget < 0 ? "negative" : "neutral",
+            icon: stats.expectedVsBudget < 0 ? "▲" : null,
             hint:
               stats.expectedVsBudget < 0
                 ? `${formatCurrencyShort(-stats.expectedVsBudget)} over budget`
@@ -142,7 +144,11 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
       </Section>
 
       <Section title="Categories">
-        <CategoryList rows={categories} typicalLabel={baseline?.label ?? null} />
+        <CategoryList
+          rows={categories}
+          typicalLabel={baseline?.label ?? null}
+          periodKey={encodePeriodKey(activePeriod)}
+        />
       </Section>
 
       <Section title="All periods">

@@ -79,7 +79,8 @@ export function ExpenseEntryForm({
         const category = categories.find((c) => c.id === selectedCategoryId);
         const parsed = parseAmount(amount);
         setSavedMessage(
-          `Saved ${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}`
+          `Saved ${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}` +
+            (result.movedTo ? ` · in ${result.movedTo}` : "")
         );
         setAmount("");
         setNote("");
@@ -216,6 +217,7 @@ export function ExpenseEntryForm({
           <input
             type="date"
             value={date}
+            min={period.type === "trip" ? period.startDate.slice(0, 10) : undefined}
             max={today || undefined}
             onChange={(e) => setOtherDate(e.target.value)}
             className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"

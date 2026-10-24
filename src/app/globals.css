@@ -16,6 +16,7 @@
   --color-good: #0ca30c; /* status fill: ahead of plan / under budget */
   --color-critical: #d03b3b; /* status fill/text: reserved for genuinely negative states */
   --color-positive-text: #006300; /* card deltas, "under budget" text */
+  --color-warning-text: #9a5b00; /* gentle nudges, e.g. stale balances */
 
   --color-ink-muted: #898781; /* axis labels, context series */
   --color-gridline: #e1e0d9;
@@ -45,6 +46,7 @@
   --color-good: var(--color-good);
   --color-critical: var(--color-critical);
   --color-positive-text: var(--color-positive-text);
+  --color-warning-text: var(--color-warning-text);
   --color-ink-muted: var(--color-ink-muted);
   --color-gridline: var(--color-gridline);
   --color-tag-blue: var(--color-tag-blue);
@@ -76,6 +78,7 @@
     --color-good: #0ca30c;
     --color-critical: #d03b3b;
     --color-positive-text: #0ca30c;
+    --color-warning-text: #e0a33a;
 
     --color-ink-muted: #898781;
     --color-gridline: #2c2c2a;

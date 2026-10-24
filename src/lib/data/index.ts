@@ -4,3 +4,4 @@ export * from "./savings";
 export * from "./debts";
 export * from "./categories";
 export * from "./expenses";
+export * from "./settings";

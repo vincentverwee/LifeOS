@@ -1,78 +1,125 @@
 import type { Month, MonthStats } from "@/lib/monthStats";
-import { formatCurrency } from "@/lib/format";
+import { encodePeriodKey } from "@/lib/period";
+import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { PaceComparison, type PaceRow } from "@/components/dashboard/PaceComparison";
+import { TodayExpenses } from "@/components/dashboard/TodayExpenses";
 import { BalancesCard } from "@/components/month/BalancesCard";
 
 type TodayPanelProps = {
   month: Month;
   stats: MonthStats;
+  todayKey: string;
+  /** same-day comparisons (last month, typical month); empty for trips */
+  comparisons: PaceRow[];
+  /** days since bank/tricount/cash were last updated (null = never) */
+  balancesAge: number | null;
 };
 
 /** "Today at a glance" for one running period (the current month or a trip). */
-export function TodayPanel({ month, stats }: TodayPanelProps) {
+export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge }: TodayPanelProps) {
   const today = stats.today;
   if (!today) return null;
 
   const isMonth = month.kind === "month";
   const over = today.leftToday < 0;
+  const key = encodeURIComponent(encodePeriodKey({ type: isMonth ? "cycle" : "trip", id: month.id }));
+  const todaysExpenses = month.expenses.filter((e) => e.date === todayKey);
+
+  // Today's allowance as a bar: how much of it is gone.
+  const usedToday = today.allowanceToday > 0 ? Math.min(1, today.spentToday / today.allowanceToday) : 1;
 
   return (
     <section className="flex flex-col gap-4">
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <p className="text-sm text-ink-muted">
-          {isMonth ? "Left to spend today" : `${month.name} — left to spend today`}
-        </p>
-        <p
-          className={`mt-1 font-mono text-4xl font-semibold tabular-nums sm:text-5xl ${
-            over ? "text-critical" : "text-foreground"
-          }`}
-        >
-          {formatCurrency(Math.abs(today.leftToday))}
-          {over && <span className="ml-2 text-base font-medium">over</span>}
-        </p>
-        <p className="mt-2 text-sm text-ink-muted">
-          {formatCurrency(today.spentToday)} spent of today&apos;s {formatCurrency(today.allowanceToday)}{" "}
-          allowance
-        </p>
-      </div>
+      {today.budgetGoneBeforeToday ? (
+        // No allowance left to show: say how far over the month is instead.
+        <div className="rounded-xl border border-critical/40 bg-surface p-5">
+          <p className="text-sm text-ink-muted">
+            {isMonth ? "Over budget this month" : `${month.name} · over budget`}
+          </p>
+          <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-critical sm:text-5xl">
+            {formatCurrency(-today.budgetLeft)}
+          </p>
+          <div className="mt-3 h-2 rounded-full bg-critical" aria-hidden="true" />
+          <p className="mt-2 text-sm text-ink-muted">
+            {today.spentToday > 0
+              ? `${formatCurrency(today.spentToday)} of that spent today`
+              : "Nothing spent today, so it's not growing."}
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-5">
+          <p className="text-sm text-ink-muted">
+            {isMonth ? "Left to spend today" : `${month.name} · left to spend today`}
+          </p>
+          <p
+            className={`mt-1 font-mono text-4xl font-semibold tabular-nums sm:text-5xl ${
+              over ? "text-critical" : "text-foreground"
+            }`}
+          >
+            {formatCurrency(Math.abs(today.leftToday))}
+            {over && <span className="ml-2 text-base font-medium">over</span>}
+          </p>
+          <div className="mt-3 h-2 rounded-full bg-surface-muted" aria-hidden="true">
+            <div
+              className={`h-full rounded-full ${over ? "bg-critical" : "bg-accent"}`}
+              style={{ width: `${usedToday * 100}%` }}
+            />
+          </div>
+          <p className="mt-2 text-sm text-ink-muted">
+            {formatCurrency(today.spentToday)} spent of today&apos;s {formatCurrency(today.allowanceToday)}
+          </p>
+        </div>
+      )}
+
+      <PaceComparison
+        day={stats.daysElapsed}
+        daysInMonth={stats.daysInMonth}
+        spent={stats.spent}
+        rows={comparisons}
+        insightsHref={`/budget/insights?period=${key}`}
+      />
 
       <SummaryCards
         cards={[
           {
             label: isMonth ? "Left this month" : "Left on this trip",
-            value: formatCurrency(Math.abs(today.budgetLeft)),
+            value: formatCurrencyShort(Math.abs(today.budgetLeft)),
             tone: today.budgetLeft >= 0 ? "positive" : "negative",
+            icon: null,
             hint:
               today.budgetLeft >= 0
-                ? `${today.daysLeftInclToday} days to go (today included)`
+                ? `${today.daysLeftInclToday} ${today.daysLeftInclToday === 1 ? "day" : "days"} to go`
                 : "over budget",
           },
           {
-            label: "Pace",
-            value: formatCurrency(Math.abs(today.vsBudgetLine)),
+            label: "Budget line",
+            value: formatCurrencyShort(Math.abs(today.vsBudgetLine)),
             tone: today.vsBudgetLine >= 0 ? "positive" : "negative",
-            hint: today.vsBudgetLine >= 0 ? "under the budget line" : "over the budget line",
+            icon: today.vsBudgetLine >= 0 ? "▼" : "▲",
+            hint: today.vsBudgetLine >= 0 ? "under the line" : "over the line",
           },
           {
             label: "Average per day",
-            value: formatCurrency(stats.avgPerDay),
-            hint: `expected total ${formatCurrency(stats.expectedTotal)}`,
+            value: formatCurrencyShort(stats.avgPerDay),
+            icon: null,
+            hint: `on track for ${formatCurrencyShort(stats.expectedTotal)}`,
             tone: stats.expectedVsBudget < 0 ? "negative" : "neutral",
           },
-          ...(isMonth
-            ? [
-                {
-                  label: stats.outlook.rentStillDue > 0 ? "Available after rent" : "Available",
-                  value: formatCurrency(stats.outlook.available),
-                  tone: stats.outlook.available < 0 ? ("negative" as const) : ("neutral" as const),
-                  hint:
-                    stats.outlook.safePerDay !== null
-                      ? `${formatCurrency(stats.outlook.safePerDay)} safe per day`
-                      : undefined,
-                },
-              ]
-            : []),
+          // Balances, available and safe-per-day live in the card below.
+          {
+            label: "Spent so far",
+            value: formatCurrencyShort(stats.spent),
+            icon: null,
+            hint: `of ${formatCurrencyShort(month.budget)}`,
+          },
         ]}
+      />
+
+      <TodayExpenses
+        expenses={todaysExpenses}
+        total={today.spentToday}
+        href={`/budget/expenses?period=${key}`}
       />
 
       {isMonth && (
@@ -85,6 +132,7 @@ export function TodayPanel({ month, stats }: TodayPanelProps) {
           cash={month.cash}
           rent={month.rent}
           rentDay={month.rentDay}
+          updatedDaysAgo={balancesAge}
           outlook={stats.outlook}
         />
       )}

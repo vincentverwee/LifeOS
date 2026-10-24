@@ -1,54 +1,79 @@
 import Link from "next/link";
-import { connection } from "next/server";
-import {
-  getAllPeriods,
-  getDebts,
-  getPeriodData,
-  getRunningPeriods,
-  getSavingsEntries,
-} from "@/lib/data";
-import { computeMonthStats } from "@/lib/monthStats";
-import { toDateInputValue } from "@/lib/format";
+import { getAllMonths, getAllTrips, getDebts, getSavingsEntries } from "@/lib/data";
+import { computeMonthStats, cumulativeAtDay } from "@/lib/monthStats";
+import { labelBaseline, previousMonth, type PeriodEntry } from "@/lib/insights";
+import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
+import type { PaceRow } from "@/components/dashboard/PaceComparison";
 import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChart";
 import { DebtsList } from "@/components/dashboard/DebtsList";
 
-const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
+function daysBetween(fromKey: string, toKey: string): number {
+  return Math.round((Date.parse(`${toKey}T00:00:00Z`) - Date.parse(`${fromKey}T00:00:00Z`)) / 86_400_000);
+}
+
+/** Same-day comparisons for a running month: last month, and the typical month of its label. */
+function comparisonsFor(active: PeriodEntry, all: PeriodEntry[], todayKey: string): PaceRow[] {
+  if (active.month.kind !== "month") return [];
+  const day = active.stats.daysElapsed;
+  const rows: PaceRow[] = [];
+
+  const previous = previousMonth(active, all);
+  if (previous) {
+    rows.push({
+      title: previous.month.name,
+      theirs: cumulativeAtDay(previous.stats, day),
+      fullPeriod: previous.stats.daysInMonth >= day,
+    });
+  }
+
+  // Skip the typical month when it's just last month again.
+  const baseline = labelBaseline(active, all, todayKey);
+  const onlyPeerIsPrevious =
+    baseline?.peerCount === 1 && previous !== null && previous.month.label === baseline.label;
+  if (baseline && !onlyPeerIsPrevious) {
+    rows.push({
+      title: `a typical ${baseline.label} month`,
+      theirs: baseline.atDay,
+      fullPeriod: true,
+    });
+  }
+  return rows;
+}
 
 export default async function TodayPage() {
-  // "Today" must be computed per request, never at build time.
-  await connection();
-  const todayKey = toDateInputValue();
+  const tz = await getTimeZone();
+  const todayKey = dayKeyIn(tz);
 
-  const [periods, savings, debts] = await Promise.all([
-    getAllPeriods(),
+  const [months, trips, savings, debts] = await Promise.all([
+    getAllMonths(),
+    getAllTrips(),
     getSavingsEntries(),
     getDebts(),
   ]);
 
-  // Everything running today: the current month, plus any trip you're on.
-  const running = getRunningPeriods(periods, todayKey);
-  const panels = (
-    await Promise.all(
-      running.map(async (period) => {
-        const data = await getPeriodData(period);
-        return data ? { data, stats: computeMonthStats(data, todayKey) } : null;
-      })
-    )
-  ).filter((p) => p !== null);
+  const entries: PeriodEntry[] = [...months, ...trips].map((month) => ({
+    month,
+    stats: computeMonthStats(month, todayKey),
+  }));
+  // Everything running today: a trip you're on first, then the current month.
+  const running = entries
+    .filter((e) => e.stats.isCurrent)
+    .sort((a, b) => (a.month.kind === b.month.kind ? 0 : a.month.kind === "trip" ? -1 : 1));
+
+  const dateLabel = new Intl.DateTimeFormat("nl-BE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: tz,
+  }).format(new Date());
 
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
       <div className="flex items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Today</h1>
-          <p className="mt-1 text-sm capitalize text-ink-muted">
-            {dateFormatter.format(new Date())}
-          </p>
+          <p className="mt-1 text-sm text-ink-muted first-letter:uppercase">{dateLabel}</p>
         </div>
         <Link
           href="/budget/add"
@@ -58,19 +83,35 @@ export default async function TodayPage() {
         </Link>
       </div>
 
-      {panels.map(({ data, stats }) => (
-        <TodayPanel key={data.id} month={data} stats={stats} />
+      {running.map((entry) => (
+        <TodayPanel
+          key={entry.month.id}
+          month={entry.month}
+          stats={entry.stats}
+          todayKey={todayKey}
+          comparisons={comparisonsFor(entry, entries, todayKey)}
+          balancesAge={
+            entry.month.balancesUpdatedAt
+              ? daysBetween(dayKeyIn(tz, new Date(entry.month.balancesUpdatedAt)), todayKey)
+              : null
+          }
+        />
       ))}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium text-foreground">Savings trend</h2>
-        <SavingsTrendChart entries={savings} />
-      </section>
+      {/* Display-only for now: only shown once there's something in them. */}
+      {savings.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-medium text-foreground">Savings trend</h2>
+          <SavingsTrendChart entries={savings} />
+        </section>
+      )}
 
-      <section className="flex flex-col gap-3">
-        <h2 className="font-medium text-foreground">Debts</h2>
-        <DebtsList debts={debts} />
-      </section>
+      {debts.length > 0 && (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-medium text-foreground">Debts</h2>
+          <DebtsList debts={debts} />
+        </section>
+      )}
     </div>
   );
 }

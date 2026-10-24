@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { parseAmount } from "@/lib/format";
+import { formatDate, parseAmount } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
 
 function revalidateExpenseRoutes() {
+  revalidatePath("/"); // hub shows "left today"
   revalidatePath("/budget/expenses");
   revalidatePath("/budget/add");
   revalidatePath("/budget");
@@ -13,20 +15,51 @@ function revalidateExpenseRoutes() {
 
 // Date-only values are stored as UTC midnight (@db.Date), so "2026-10-24"
 // must be parsed as UTC to avoid drifting a day in other timezones.
-function parseDateOnly(value: string | undefined): Date {
-  if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00Z`);
-  const now = new Date();
-  return new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+async function parseDateOnly(value: string | undefined): Promise<Date> {
+  const key = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : await getTodayKey();
+  return new Date(`${key}T00:00:00Z`);
 }
 
 export type ExpensePeriod = { type: "cycle" | "trip"; id: string };
 
-async function periodExists(period: ExpensePeriod): Promise<boolean> {
-  const row =
-    period.type === "trip"
-      ? await prisma.trip.findUnique({ where: { id: period.id }, select: { id: true } })
-      : await prisma.budgetCycle.findUnique({ where: { id: period.id }, select: { id: true } });
-  return row !== null;
+type Target =
+  | { ok: true; period: ExpensePeriod; name: string }
+  | { ok: false; error: string };
+
+/**
+ * Where an expense on `date` belongs. A trip keeps it only inside its dates.
+ * For months the date decides: "yesterday" on the 1st goes to last month.
+ */
+async function resolveTarget(period: ExpensePeriod, date: Date): Promise<Target> {
+  if (period.type === "trip") {
+    const trip = await prisma.trip.findUnique({
+      where: { id: period.id },
+      select: { name: true, startDate: true, endDate: true },
+    });
+    if (!trip) return { ok: false, error: "That trip no longer exists." };
+    if (date < trip.startDate || date > trip.endDate) {
+      return {
+        ok: false,
+        error: `${trip.name} runs ${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}; pick a date in that range.`,
+      };
+    }
+    return { ok: true, period, name: trip.name };
+  }
+
+  const cycle = await prisma.budgetCycle.findUnique({
+    where: { id: period.id },
+    select: { name: true, startDate: true, endDate: true },
+  });
+  if (!cycle) return { ok: false, error: "That month no longer exists." };
+  if (date >= cycle.startDate && date <= cycle.endDate) return { ok: true, period, name: cycle.name };
+
+  const covering = await prisma.budgetCycle.findFirst({
+    where: { startDate: { lte: date }, endDate: { gte: date } },
+    orderBy: { startDate: "desc" },
+    select: { id: true, name: true },
+  });
+  if (!covering) return { ok: false, error: `No month covers ${formatDate(date)}.` };
+  return { ok: true, period: { type: "cycle", id: covering.id }, name: covering.name };
 }
 
 export type CreateExpenseInput = {
@@ -38,7 +71,12 @@ export type CreateExpenseInput = {
 };
 
 export type CreateExpenseResult =
-  | { ok: true; expenseId: string }
+  | {
+      ok: true;
+      expenseId: string;
+      /** set when the date put the expense in another month than the one picked */
+      movedTo: string | null;
+    }
   | { ok: false; error: string };
 
 export async function createExpense(input: CreateExpenseInput): Promise<CreateExpenseResult> {
@@ -46,27 +84,32 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
     return { ok: false, error: "Enter an amount greater than zero." };
   }
 
-  const [category, hasPeriod] = await Promise.all([
+  const date = await parseDateOnly(input.date);
+  const [category, target] = await Promise.all([
     prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true } }),
-    periodExists(input.period),
+    resolveTarget(input.period, date),
   ]);
   if (!category) return { ok: false, error: "That category no longer exists." };
-  if (!hasPeriod) return { ok: false, error: "That month or trip no longer exists." };
+  if (!target.ok) return target;
 
   const expense = await prisma.expense.create({
     data: {
       categoryId: category.id,
-      tripId: input.period.type === "trip" ? input.period.id : null,
-      cycleId: input.period.type === "cycle" ? input.period.id : null,
+      tripId: target.period.type === "trip" ? target.period.id : null,
+      cycleId: target.period.type === "cycle" ? target.period.id : null,
       amount: Math.round(input.amount * 100) / 100,
-      date: parseDateOnly(input.date),
+      date,
       note: input.note?.trim() || null,
     },
     select: { id: true },
   });
 
   revalidateExpenseRoutes();
-  return { ok: true, expenseId: expense.id };
+  return {
+    ok: true,
+    expenseId: expense.id,
+    movedTo: target.period.id !== input.period.id ? target.name : null,
+  };
 }
 
 export type CreateExpenseFormState = CreateExpenseResult | null;
@@ -117,19 +160,30 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<ExpenseM
   }
 
   const [existing, category] = await Promise.all([
-    prisma.expense.findUnique({ where: { id: input.id }, select: { id: true } }),
+    prisma.expense.findUnique({ where: { id: input.id }, select: { cycleId: true, tripId: true } }),
     prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true } }),
   ]);
   if (!existing) return { ok: false, error: "That expense no longer exists." };
   if (!category) return { ok: false, error: "That category no longer exists." };
+
+  // A new date can move the expense to another month (trips must contain it).
+  const date = await parseDateOnly(input.date);
+  const current: ExpensePeriod | null = existing.tripId
+    ? { type: "trip", id: existing.tripId }
+    : existing.cycleId
+      ? { type: "cycle", id: existing.cycleId }
+      : null;
+  const target = current ? await resolveTarget(current, date) : null;
+  if (target && !target.ok) return target;
 
   await prisma.expense.update({
     where: { id: input.id },
     data: {
       categoryId: category.id,
       amount: Math.round(input.amount * 100) / 100,
-      date: parseDateOnly(input.date),
+      date,
       note: input.note?.trim() || null,
+      ...(target?.ok && target.period.type === "cycle" ? { cycleId: target.period.id } : {}),
     },
   });
 

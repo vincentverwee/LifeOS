@@ -36,7 +36,7 @@ npm run db:studio   # Prisma Studio
 
 ```
 src/
-  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, edit/delete), /budget/insights (any month/trip vs the average of its label peers; categories, all periods), /budget/settings (new trip), /api/health
+  app/          routes: / (feature hub), /budget ("today at a glance": left today, same-day vs last month / typical month, today's expenses, balances), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, `?category=` filter, edit/delete), /budget/insights (any month/trip vs the average of its label peers; categories, all periods), /budget/settings (trips: new/edit/delete; months: budget + label), /api/health
   components/   dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
   lib/          actions/ (server actions), data/ (server-only queries), monthStats.ts (pure month math), format.ts
   generated/    Prisma Client output (generated, gitignored)
@@ -57,6 +57,9 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 - After `prisma generate`/`db:push` changes, **restart `npm run dev`** — the running server keeps the old generated client in memory.
 - Date-only columns are UTC midnight; use `dayKey()`/`toDateInputValue()` from `src/lib/format.ts` rather than `toISOString()` slices scattered around.
 - Amount inputs go through `parseAmount()` (accepts `6,8+7,4` sums).
+- **"Today" on the server** comes from `getTodayKey()` / `getTimeZone()` in `src/lib/today.ts` (browser timezone via the `tz` cookie set by `TimeZoneSync`, fallback Europe/Dublin) — never `toDateInputValue()` server-side, Vercel runs in UTC.
+- An expense's **date decides its month**: `createExpense`/`updateExpense` move it to the `BudgetCycle` that covers the date ("yesterday" on the 1st lands in last month); trips only accept dates inside the trip.
+- Pages that read the DB without searchParams/cookies need `await connection()` or they get prerendered at build time.
 
 ## Mobile-first conventions
 

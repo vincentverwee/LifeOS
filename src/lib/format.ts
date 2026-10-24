@@ -3,9 +3,12 @@ const currencyFormatter = new Intl.NumberFormat("nl-BE", {
   currency: "EUR",
 });
 
+// Every date we format is date-only (UTC midnight), so format in UTC to
+// never show the day before in timezones west of Greenwich.
 const dateFormatter = new Intl.DateTimeFormat("nl-BE", {
   day: "numeric",
   month: "short",
+  timeZone: "UTC",
 });
 
 const percentFormatter = new Intl.NumberFormat("nl-BE", {

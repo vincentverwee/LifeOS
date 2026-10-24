@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { formatCurrency, formatCurrencyShort, formatPercent } from "@/lib/format";
 
@@ -16,7 +17,16 @@ export type CategoryRow = {
 };
 
 /** Categories of the selected period. Tap one to see it across all periods. */
-export function CategoryList({ rows, typicalLabel }: { rows: CategoryRow[]; typicalLabel: string | null }) {
+export function CategoryList({
+  rows,
+  typicalLabel,
+  periodKey,
+}: {
+  rows: CategoryRow[];
+  typicalLabel: string | null;
+  /** encoded period key, for the "see expenses" link */
+  periodKey: string;
+}) {
   const [openId, setOpenId] = useState<string | null>(null);
 
   if (rows.length === 0) {
@@ -99,6 +109,12 @@ export function CategoryList({ rows, typicalLabel }: { rows: CategoryRow[]; typi
                     </li>
                   ))}
                 </ul>
+                <Link
+                  href={`/budget/expenses?period=${encodeURIComponent(periodKey)}&category=${encodeURIComponent(row.id)}`}
+                  className="mt-2 inline-flex min-h-8 items-center text-sm text-primary"
+                >
+                  See the {row.name} expenses ›
+                </Link>
               </div>
             )}
           </li>

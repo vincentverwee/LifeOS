@@ -100,15 +100,17 @@ export type BalanceOutlook = {
   /** balances minus rent that is still to be paid this month */
   available: number;
   rentStillDue: number;
-  /** what you can spend per remaining day and stay at/above zero; null when the month is over */
+  /** what you can spend per remaining day (today included) and stay at/above zero; null when the month is over */
   safePerDay: number | null;
   predictedEndBalance: number;
 };
 
 export type TodayStats = {
   spentToday: number;
-  /** what the rest of the budget allows for each remaining day, today included */
+  /** what the rest of the budget allows for each remaining day, today included (never below 0) */
   allowanceToday: number;
+  /** the month's budget was already used up before today */
+  budgetGoneBeforeToday: boolean;
   /** allowanceToday minus what's already spent today (negative = over) */
   leftToday: number;
   budgetLeft: number;
@@ -267,11 +269,13 @@ export function computeMonthStats(month: Month, todayKey: string): MonthStats {
     else if (isCurrent && daysElapsed <= month.rentDay) rentStillDue = month.rent;
   }
   const available = total - rentStillDue;
+  // Like the daily allowance, today counts as a day still to spend.
+  const spendDaysLeft = isCurrent ? daysLeft + 1 : daysLeft;
   const outlook: BalanceOutlook = {
     total,
     available,
     rentStillDue,
-    safePerDay: daysLeft > 0 ? available / daysLeft : null,
+    safePerDay: spendDaysLeft > 0 ? available / spendDaysLeft : null,
     predictedEndBalance: available - avgPerDay * daysLeft,
   };
 
@@ -308,10 +312,14 @@ function computeToday(
   const todayPoint = daily[daysElapsed - 1];
   const spentToday = todayPoint.total;
   const daysLeftInclToday = daysInMonth - daysElapsed + 1;
-  const allowanceToday = (month.budget - (spent - spentToday)) / daysLeftInclToday;
+  const leftBeforeToday = month.budget - (spent - spentToday);
+  // Once the budget is gone there's nothing to hand out: the allowance is 0,
+  // not the overspend spread over the remaining days.
+  const allowanceToday = Math.max(0, leftBeforeToday / daysLeftInclToday);
   return {
     spentToday,
     allowanceToday,
+    budgetGoneBeforeToday: leftBeforeToday < 0,
     leftToday: allowanceToday - spentToday,
     budgetLeft: month.budget - spent,
     daysLeftInclToday,

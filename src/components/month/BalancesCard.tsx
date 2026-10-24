@@ -15,8 +15,17 @@ type BalancesCardProps = {
   cash: number;
   rent: number;
   rentDay: number | null;
+  /** days since the balances were last saved; null = never */
+  updatedDaysAgo: number | null;
   outlook: BalanceOutlook;
 };
+
+function updatedText(days: number | null): string {
+  if (days === null) return "not filled in yet";
+  if (days <= 0) return "updated today";
+  if (days === 1) return "updated yesterday";
+  return `updated ${days} days ago`;
+}
 
 const FIELDS = [
   { key: "bank", label: "Bank" },
@@ -38,6 +47,7 @@ export function BalancesCard({
   cash,
   rent,
   rentDay,
+  updatedDaysAgo,
   outlook,
 }: BalancesCardProps) {
   const router = useRouter();
@@ -97,7 +107,16 @@ export function BalancesCard({
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="font-medium text-foreground">What I have</h3>
+        <div>
+          <h3 className="font-medium text-foreground">What I have</h3>
+          <p
+            className={`text-xs ${
+              updatedDaysAgo === null || updatedDaysAgo >= 3 ? "text-warning-text" : "text-ink-muted"
+            }`}
+          >
+            {updatedText(updatedDaysAgo)}
+          </p>
+        </div>
         <span className="font-mono text-sm tabular-nums text-ink-muted">
           {formatCurrency(outlook.total)}
         </span>

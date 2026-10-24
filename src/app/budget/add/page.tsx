@@ -6,7 +6,7 @@ import {
   resolveActivePeriod,
 } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
-import { toDateInputValue } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { CategoryManager } from "@/components/categories/CategoryManager";
@@ -18,7 +18,7 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
   const requestedKey = Array.isArray(requestedPeriod) ? requestedPeriod[0] : requestedPeriod;
 
   const periods = await getAllPeriods();
-  const activePeriod = resolveActivePeriod(periods, requestedKey, toDateInputValue());
+  const activePeriod = resolveActivePeriod(periods, requestedKey, await getTodayKey());
 
   if (!activePeriod) {
     return (
