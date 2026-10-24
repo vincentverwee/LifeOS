@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 /* "Meadow" — LifeOS's green/sheep visual identity. */
 :root {
@@ -58,6 +59,20 @@
   --color-tag-violet: var(--color-tag-violet);
   --color-tag-red: var(--color-tag-red);
   --color-wool: var(--color-wool);
+  /* Waypoint's shadcn tokens — only defined on Waypoint pages (see below). */
+  --color-card: var(--wp-card);
+  --color-card-foreground: var(--wp-card-foreground);
+  --color-popover: var(--wp-popover);
+  --color-popover-foreground: var(--wp-popover-foreground);
+  --color-secondary: var(--wp-secondary);
+  --color-secondary-foreground: var(--wp-secondary-foreground);
+  --color-muted: var(--wp-muted);
+  --color-muted-foreground: var(--wp-muted-foreground);
+  --color-accent-foreground: var(--wp-accent-foreground);
+  --color-destructive: var(--wp-destructive);
+  --color-destructive-foreground: var(--wp-destructive-foreground);
+  --color-input: var(--wp-input);
+  --color-ring: var(--wp-ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -163,5 +178,126 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .animate-sheep-spin {
     animation: sheep-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+/* --- Waypoint (/waypoint) ---
+   Waypoint keeps its own slate/indigo shadcn look. Its layout renders a [data-waypoint]
+   element; while that is on the page these rules re-point the shared tokens (background,
+   primary, accent, border…) at Waypoint's palette. Scoped on :root rather than on the
+   wrapper because Radix dialogs/selects portal to <body>, outside the wrapper. */
+:root:has([data-waypoint]) {
+  --background: hsl(0 0% 98%);
+  --foreground: hsl(222 47% 11%);
+  --color-primary: hsl(221 83% 53%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-accent: hsl(210 40% 96%);
+  --color-border: hsl(214 32% 91%);
+
+  --wp-card: hsl(0 0% 100%);
+  --wp-card-foreground: hsl(222 47% 11%);
+  --wp-popover: hsl(0 0% 100%);
+  --wp-popover-foreground: hsl(222 47% 11%);
+  --wp-secondary: hsl(210 40% 96%);
+  --wp-secondary-foreground: hsl(222 47% 11%);
+  --wp-muted: hsl(210 40% 96%);
+  --wp-muted-foreground: hsl(215 16% 47%);
+  --wp-accent-foreground: hsl(222 47% 11%);
+  --wp-destructive: hsl(0 84% 60%);
+  --wp-destructive-foreground: hsl(0 0% 100%);
+  --wp-input: hsl(214 32% 91%);
+  --wp-ring: hsl(221 83% 53%);
+
+  --radius-lg: 1rem;
+  --radius-md: calc(1rem - 2px);
+  --radius-sm: calc(1rem - 4px);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:has([data-waypoint]) {
+    --background: hsl(222 47% 7%);
+    --foreground: hsl(210 40% 98%);
+    --color-primary: hsl(217 91% 60%);
+    --color-primary-foreground: hsl(222 47% 7%);
+    --color-accent: hsl(217 33% 17%);
+    --color-border: hsl(217 33% 17%);
+
+    --wp-card: hsl(222 47% 10%);
+    --wp-card-foreground: hsl(210 40% 98%);
+    --wp-popover: hsl(222 47% 10%);
+    --wp-popover-foreground: hsl(210 40% 98%);
+    --wp-secondary: hsl(217 33% 17%);
+    --wp-secondary-foreground: hsl(210 40% 98%);
+    --wp-muted: hsl(217 33% 17%);
+    --wp-muted-foreground: hsl(215 20% 65%);
+    --wp-accent-foreground: hsl(210 40% 98%);
+    --wp-destructive: hsl(0 63% 50%);
+    --wp-destructive-foreground: hsl(210 40% 98%);
+    --wp-input: hsl(217 33% 17%);
+    --wp-ring: hsl(217 91% 60%);
+  }
+}
+
+/* shadcn components assume Tailwind v3's border-color default and pointer buttons. */
+:root:has([data-waypoint]) *,
+:root:has([data-waypoint]) ::before,
+:root:has([data-waypoint]) ::after {
+  border-color: var(--color-border);
+}
+:root:has([data-waypoint]) button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Entrance animations (were Framer Motion; plain keyframes keep it off the hot paths).
+   Stagger comes from an inline `animation-delay`. */
+@keyframes wp-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wp-slide-in {
+  from {
+    opacity: 0;
+    transform: translate3d(-10px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes wp-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-rise {
+  animation: wp-rise 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-slide-in {
+  animation: wp-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: wp-fade-in 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-slide-in,
+  .animate-fade-in {
+    animation-duration: 0.01ms;
+    animation-delay: 0ms !important;
   }
 }

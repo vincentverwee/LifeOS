@@ -20,7 +20,8 @@ const FEATURES: Feature[] = [
   },
   {
     name: "Waypoint",
-    description: "Places and plans worth remembering.",
+    description: "Road trips, routes and maps.",
+    href: "/waypoint",
     emoji: "📍",
   },
   {

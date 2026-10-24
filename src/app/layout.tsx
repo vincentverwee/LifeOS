@@ -43,7 +43,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <Navigation />
         <TimeZoneSync />
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 pt-5 pb-10 sm:px-6 sm:py-10">
+        <main className="mx-auto w-full max-w-3xl flex-1 has-[[data-waypoint]]:max-w-6xl px-4 pt-5 pb-10 sm:px-6 sm:py-10">
           {children}
         </main>
       </body>
