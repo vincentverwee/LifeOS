@@ -1,4 +1,5 @@
 import { SheepSpinner } from '@/components/icons/SheepSpinner';
+import { SheepPhrase } from '@/components/icons/SheepPhrase';
 
 // Shown inside the Waypoint layout (tabs stay put) while a Waypoint page loads, same as Budget.
 export default function WaypointLoading() {
@@ -9,7 +10,7 @@ export default function WaypointLoading() {
       className="flex min-h-[50vh] flex-col items-center justify-center gap-3"
     >
       <SheepSpinner size={56} />
-      <p className="text-sm text-ink-muted">Counting sheep…</p>
+      <SheepPhrase />
     </div>
   );
 }
