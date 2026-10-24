@@ -53,8 +53,12 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
 
       {activePeriod && activeEntry ? (
         <section className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold text-foreground">{activeEntry.month.name}</h2>
+          {/* Phones: the period pill doubles as the section title. */}
+          <div className="flex items-center justify-between gap-3 sm:items-end">
+            <h2 className="text-lg font-semibold text-foreground">
+              <span className="sm:hidden">Period</span>
+              <span className="hidden sm:inline">{activeEntry.month.name}</span>
+            </h2>
             <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
           </div>
           <MonthInsights active={activeEntry} all={monthEntries} />

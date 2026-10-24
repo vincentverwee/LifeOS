@@ -5,10 +5,13 @@ import { useState, useTransition } from "react";
 import type { ListExpense } from "@/lib/data/expenses";
 import { deleteExpense, updateExpense } from "@/lib/actions/expenses";
 import { formatCurrency, parseAmount } from "@/lib/format";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
+
+type CategoryOption = { id: string; name: string; isArchived?: boolean };
 
 type ExpenseListProps = {
   expenses: ListExpense[];
-  categories: { id: string; name: string }[];
+  categories: CategoryOption[];
 };
 
 const dayFormatter = new Intl.DateTimeFormat("nl-BE", {
@@ -18,11 +21,47 @@ const dayFormatter = new Intl.DateTimeFormat("nl-BE", {
   timeZone: "UTC",
 });
 
+function PencilIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
 export function ExpenseList({ expenses, categories }: ExpenseListProps) {
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
   if (expenses.length === 0) {
     return <p className="text-sm text-ink-muted">Nothing logged yet.</p>;
+  }
+
+  function remove(expense: ListExpense) {
+    if (!window.confirm(`Delete ${formatCurrency(expense.amount)} · ${expense.categoryName}?`)) return;
+    setError(null);
+    setDeletingId(expense.id);
+    startTransition(async () => {
+      const result = await deleteExpense(expense.id);
+      if (!result.ok) setError(result.error);
+      router.refresh();
+      setDeletingId(null);
+    });
   }
 
   // Group by day (newest first, as the list is already sorted), with a day total.
@@ -37,8 +76,12 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
     }
   }
 
+  const iconButton =
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted active:bg-surface-muted hover:text-foreground disabled:opacity-40";
+
   return (
     <div className="flex flex-col gap-4">
+      {error && <p className="text-sm text-critical">{error}</p>}
       {days.map((day) => (
         <section key={day.date} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between px-1 text-sm">
@@ -56,33 +99,57 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                       expense={expense}
                       categories={categories}
                       onDone={() => setEditingId(null)}
+                      onDelete={() => remove(expense)}
                     />
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(expense.id)}
-                    className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2.5 text-left active:bg-surface-muted"
+                  <div
+                    className={`flex min-h-14 items-center gap-1 py-1.5 pr-1.5 pl-3 ${
+                      deletingId === expense.id ? "opacity-50" : ""
+                    }`}
                   >
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <span
-                        className="h-3 w-3 shrink-0 rounded-full"
-                        style={{ backgroundColor: `var(--color-tag-${expense.categoryColor})` }}
-                        aria-hidden="true"
-                      />
-                      <span className="flex min-w-0 flex-col">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {expense.categoryName}
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(expense.id)}
+                      className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
+                    >
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span
+                          className="h-3 w-3 shrink-0 rounded-full"
+                          style={{ backgroundColor: `var(--color-tag-${expense.categoryColor})` }}
+                          aria-hidden="true"
+                        />
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate text-sm font-medium text-foreground">
+                            {expense.categoryName}
+                          </span>
+                          {expense.note && (
+                            <span className="truncate text-xs text-ink-muted">{expense.note}</span>
+                          )}
                         </span>
-                        {expense.note && (
-                          <span className="truncate text-xs text-ink-muted">{expense.note}</span>
-                        )}
                       </span>
-                    </span>
-                    <span className="font-mono text-base font-semibold tabular-nums text-foreground">
-                      {formatCurrency(expense.amount)}
-                    </span>
-                  </button>
+                      <span className="font-mono text-base font-semibold tabular-nums text-foreground">
+                        {formatCurrency(expense.amount)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingId(expense.id)}
+                      aria-label={`Edit ${expense.categoryName} ${formatCurrency(expense.amount)}`}
+                      className={iconButton}
+                    >
+                      <PencilIcon />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => remove(expense)}
+                      disabled={deletingId === expense.id}
+                      aria-label={`Delete ${expense.categoryName} ${formatCurrency(expense.amount)}`}
+                      className={`${iconButton} hover:!text-critical`}
+                    >
+                      {deletingId === expense.id ? <SheepSpinner size={20} /> : <TrashIcon />}
+                    </button>
+                  </div>
                 )}
               </li>
             ))}
@@ -97,10 +164,12 @@ function EditRow({
   expense,
   categories,
   onDone,
+  onDelete,
 }: {
   expense: ListExpense;
-  categories: { id: string; name: string }[];
+  categories: CategoryOption[];
   onDone: () => void;
+  onDelete: () => void;
 }) {
   const router = useRouter();
   const [amount, setAmount] = useState(String(expense.amount).replace(".", ","));
@@ -109,6 +178,9 @@ function EditRow({
   const [note, setNote] = useState(expense.note ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Archived categories stay selectable only for the expense that already uses one.
+  const options = categories.filter((c) => !c.isArchived || c.id === expense.categoryId);
 
   function save() {
     const parsed = parseAmount(amount);
@@ -134,66 +206,63 @@ function EditRow({
     });
   }
 
-  function remove() {
-    if (!window.confirm("Delete this expense?")) return;
-    startTransition(async () => {
-      const result = await deleteExpense(expense.id);
-      if (result.ok) {
-        onDone();
-        router.refresh();
-      } else {
-        setError(result.error);
-      }
-    });
-  }
-
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-ink-muted">Amount</span>
+          <input
+            type="text"
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className="rounded-lg border border-border bg-surface px-3 py-2.5 font-mono tabular-nums text-foreground"
+          />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-ink-muted">Date</span>
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          />
+        </label>
+      </div>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-ink-muted">Category</span>
+        <select
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+          className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+        >
+          {options.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+              {c.isArchived ? " (archived)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-ink-muted">Note</span>
         <input
           type="text"
-          inputMode="decimal"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          aria-label="Amount"
-          className="rounded-lg border border-border bg-surface px-3 py-2.5 font-mono tabular-nums text-foreground"
-        />
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          aria-label="Date"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Optional"
           className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
         />
-      </div>
-      <select
-        value={categoryId}
-        onChange={(e) => setCategoryId(e.target.value)}
-        aria-label="Category"
-        className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
-      >
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <input
-        type="text"
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        placeholder="Note"
-        aria-label="Note"
-        className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
-      />
+      </label>
       {error && <p className="text-sm text-critical">{error}</p>}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 pt-1">
         <button
           type="button"
           onClick={save}
           disabled={isPending}
-          className="rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
         >
+          {isPending && <SheepSpinner size={18} />}
           Save
         </button>
         <button
@@ -205,10 +274,11 @@ function EditRow({
         </button>
         <button
           type="button"
-          onClick={remove}
+          onClick={onDelete}
           disabled={isPending}
-          className="ml-auto px-3 py-2.5 text-sm text-critical disabled:opacity-50"
+          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-critical disabled:opacity-50"
         >
+          <TrashIcon />
           Delete
         </button>
       </div>

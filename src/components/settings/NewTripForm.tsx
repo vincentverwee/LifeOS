@@ -25,7 +25,7 @@ export function NewTripForm() {
     startTransition(async () => {
       const result = await createTrip({ name, totalBudget: amount, startDate, endDate });
       if (result.ok) {
-        router.push(`/budget/expenses?period=${encodeURIComponent(encodePeriodKey({ type: "trip", id: result.tripId }))}`);
+        router.push(`/budget/add?period=${encodeURIComponent(encodePeriodKey({ type: "trip", id: result.tripId }))}`);
       } else {
         setError(result.error);
       }

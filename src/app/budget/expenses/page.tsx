@@ -1,16 +1,14 @@
+import Link from "next/link";
 import {
   getAllCategories,
   getAllPeriods,
   getRecentExpenses,
-  pickEntryDefaults,
   resolveActivePeriod,
 } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
-import { toDateInputValue } from "@/lib/format";
+import { formatCurrency, toDateInputValue } from "@/lib/format";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { EmptyState } from "@/components/dashboard/EmptyState";
-import { CategoryManager } from "@/components/categories/CategoryManager";
-import { ExpenseEntryForm } from "@/components/expenses/ExpenseEntryForm";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
 
 export default async function ExpensesPage(props: PageProps<"/budget/expenses">) {
@@ -30,49 +28,36 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
     );
   }
 
-  const [allCategories, recent] = await Promise.all([
+  const [categories, expenses] = await Promise.all([
     getAllCategories(),
-    getRecentExpenses(activePeriod),
+    // Every expense of the period, so anything can be corrected.
+    getRecentExpenses(activePeriod, 1000),
   ]);
-  const activeCategories = allCategories.filter((c) => !c.isArchived);
-  const { defaultCategoryId } = pickEntryDefaults(activeCategories);
-
-  // The entry form keeps its own category state, so remount it when the list changes.
-  const formKey = [
-    encodePeriodKey(activePeriod),
-    ...activeCategories.map((c) => `${c.id}:${c.name}:${c.color}`),
-  ].join("|");
+  const total = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div className="flex flex-col gap-6 sm:gap-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Add expense</h1>
+    <div className="flex flex-col gap-5 sm:gap-6">
+      <div className="flex items-center justify-between gap-3 sm:items-end">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Expenses</h1>
+          <p className="mt-1 text-sm text-ink-muted">
+            {expenses.length} · {formatCurrency(total)}
+          </p>
+        </div>
         <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
       </div>
 
-      <ExpenseEntryForm
-        key={formKey}
-        period={activePeriod}
-        categories={activeCategories}
-        defaultCategoryId={defaultCategoryId}
+      <ExpenseList
+        expenses={expenses}
+        categories={categories.map(({ id, name, isArchived }) => ({ id, name, isArchived }))}
       />
 
-      <details id="categories" className="group scroll-mt-4 rounded-xl border border-border bg-surface p-4">
-        <summary className="flex min-h-8 cursor-pointer items-center justify-between font-medium text-foreground">
-          Edit categories ({allCategories.length})
-          <span className="text-sm font-normal text-ink-muted group-open:hidden">Show</span>
-        </summary>
-        <p className="mt-2 mb-3 text-sm text-ink-muted">
-          Shared by every month and trip. Rename, recolor, reorder or archive them here; give a
-          category a pint price to count it as beer.
-        </p>
-        <CategoryManager categories={allCategories} />
-      </details>
-
-      <section id="list" className="flex scroll-mt-4 flex-col gap-3">
-        <h2 className="font-medium text-foreground">{activePeriod.name}</h2>
-        <ExpenseList expenses={recent} categories={activeCategories} />
-      </section>
+      <Link
+        href={`/budget/add?period=${encodeURIComponent(encodePeriodKey(activePeriod))}`}
+        className="hidden self-start rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground sm:inline-block"
+      >
+        + Add expense
+      </Link>
     </div>
   );
 }

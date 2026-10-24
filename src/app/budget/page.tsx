@@ -51,7 +51,7 @@ export default async function TodayPage() {
           </p>
         </div>
         <Link
-          href="/budget/expenses"
+          href="/budget/add"
           className="hidden rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground sm:inline-block"
         >
           + Add expense

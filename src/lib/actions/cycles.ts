@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 function revalidateMonthRoutes() {
   revalidatePath("/budget");
   revalidatePath("/budget/expenses");
+  revalidatePath("/budget/add");
   revalidatePath("/budget/insights");
   revalidatePath("/budget/settings");
 }

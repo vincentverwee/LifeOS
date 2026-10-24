@@ -16,8 +16,9 @@ export function PeriodSwitcher({ periods, activeKey }: PeriodSwitcherProps) {
   const pathname = usePathname();
 
   return (
-    <label className="flex flex-col gap-1 text-sm">
-      <span className="flex items-center justify-between text-ink-muted">
+    // Phones: a compact pill that shares the title row. Larger screens: labelled select.
+    <label className="flex min-w-0 flex-col gap-1 text-sm">
+      <span className="sr-only items-center justify-between text-ink-muted sm:not-sr-only sm:flex">
         Active period
         <Link href="/budget/settings" className="py-1 text-primary">
           + New
@@ -28,7 +29,7 @@ export function PeriodSwitcher({ periods, activeKey }: PeriodSwitcherProps) {
         onChange={(event) => {
           router.push(`${pathname}?period=${encodeURIComponent(event.target.value)}`);
         }}
-        className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 font-medium text-foreground sm:w-auto"
+        className="max-w-[52vw] truncate rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground sm:max-w-none sm:rounded-lg sm:py-2.5"
       >
         {periods.map((period) => {
           const key = encodePeriodKey(period);

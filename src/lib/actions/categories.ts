@@ -35,6 +35,7 @@ function toDto(row: {
 function revalidateCategoryRoutes() {
   revalidatePath("/budget");
   revalidatePath("/budget/expenses");
+  revalidatePath("/budget/add");
   revalidatePath("/budget/insights");
 }
 

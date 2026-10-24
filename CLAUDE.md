@@ -36,7 +36,7 @@ npm run db:studio   # Prisma Studio
 
 ```
 src/
-  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/expenses (entry, list, category management), /budget/insights (any month/trip + per-category trend), /budget/settings (new trip), /api/health
+  app/          routes: / (feature hub), /budget ("today at a glance"), /budget/add (entry form + category management), /budget/expenses (all expenses of a month/trip, edit/delete), /budget/insights (any month/trip + per-category trend), /budget/settings (new trip), /api/health
   components/   dashboard/, expenses/, categories/, month/ (BalancesCard, MonthChart), insights/, settings/
   lib/          actions/ (server actions), data/ (server-only queries), monthStats.ts (pure month math), format.ts
   generated/    Prisma Client output (generated, gitignored)

@@ -6,6 +6,7 @@ import { parseAmount } from "@/lib/format";
 
 function revalidateExpenseRoutes() {
   revalidatePath("/budget/expenses");
+  revalidatePath("/budget/add");
   revalidatePath("/budget");
   revalidatePath("/budget/insights");
 }

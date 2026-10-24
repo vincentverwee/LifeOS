@@ -40,6 +40,7 @@ export async function createTrip(input: CreateTripInput): Promise<CreateTripResu
 
   revalidatePath("/budget");
   revalidatePath("/budget/expenses");
+  revalidatePath("/budget/add");
   revalidatePath("/budget/settings");
 
   return { ok: true, tripId: trip.id };

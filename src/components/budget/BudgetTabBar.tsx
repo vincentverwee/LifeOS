@@ -14,7 +14,7 @@ function Icon({ d }: { d: string }) {
 }
 
 const TODAY: Tab = { href: "/budget", label: "Today", icon: <Icon d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" /> };
-const LIST: Tab = { href: "/budget/expenses#list", label: "Expenses", icon: <Icon d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /> };
+const LIST: Tab = { href: "/budget/expenses", label: "Expenses", icon: <Icon d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /> };
 const INSIGHTS: Tab = { href: "/budget/insights", label: "Insights", icon: <Icon d="M4 20V10M10 20V4M16 20v-7M22 20H2" /> };
 const SETTINGS: Tab = {
   href: "/budget/settings",
@@ -40,7 +40,7 @@ function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
 /** Thumb-reachable bottom navigation for phones, with a raised "add" button. */
 export function BudgetTabBar() {
   const pathname = usePathname();
-  const onExpenses = pathname.startsWith("/budget/expenses");
+  const onAdd = pathname.startsWith("/budget/add");
 
   return (
     <nav
@@ -49,12 +49,12 @@ export function BudgetTabBar() {
     >
       <div className="mx-auto flex max-w-md items-end px-2">
         <TabLink tab={TODAY} active={pathname === "/budget"} />
-        <TabLink tab={LIST} active={false} />
+        <TabLink tab={LIST} active={pathname.startsWith("/budget/expenses")} />
         <div className="flex flex-1 justify-center">
           <Link
-            href="/budget/expenses"
+            href="/budget/add"
             aria-label="Add expense"
-            aria-current={onExpenses ? "page" : undefined}
+            aria-current={onAdd ? "page" : undefined}
             className="-mt-5 mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-3xl leading-none font-light text-primary-foreground shadow-lg ring-4 ring-background"
           >
             +
