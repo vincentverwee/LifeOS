@@ -27,16 +27,33 @@ export function formatPercent(value: number): string {
   return `${percentFormatter.format(value)}%`;
 }
 
+/** Largest amount any input accepts (the columns are Decimal(12, 2)). */
+export const MAX_AMOUNT = 1_000_000;
+
 /**
  * Parses a typed amount. Accepts comma decimals and simple sums such as
  * "6,8+7,4" (like adding several purchases in one spreadsheet cell).
+ * At most two decimals, so "1.234" (a Belgian thousands separator) is rejected
+ * instead of silently becoming 1,23.
  * Returns null when the input isn't a valid non-negative number/sum.
  */
 export function parseAmount(raw: string): number | null {
   const parts = raw.trim().replace(/\s+/g, "").replace(/,/g, ".").split("+");
-  if (parts.some((part) => !/^(\d+\.?\d*|\.\d+)$/.test(part))) return null;
-  const total = parts.reduce((sum, part) => sum + Number.parseFloat(part), 0);
-  return Math.round(total * 100) / 100;
+  if (parts.some((part) => !/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(part))) return null;
+  // Sum in cents so 0.1 + 0.2 stays 0.30.
+  const cents = parts.reduce((sum, part) => sum + Math.round(Number.parseFloat(part) * 100), 0);
+  if (cents > MAX_AMOUNT * 100) return null;
+  return cents / 100;
+}
+
+/**
+ * Validates a "YYYY-MM-DD" date key. Returns null for anything else, including
+ * impossible dates like "2026-02-31" that `new Date` would silently roll over.
+ */
+export function parseDateKey(raw: unknown): string | null {
+  if (typeof raw !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
+  const date = new Date(`${raw}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === raw ? raw : null;
 }
 
 /** "YYYY-MM-DD" in the user's local timezone (for <input type="date">). */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const PHRASES = [
   "Counting sheep…",
@@ -29,14 +29,18 @@ const PHRASES = [
   "Having a ewe-nique moment…",
 ];
 
-// The first render is always the default so server and client markup match;
-// a random phrase takes over right after mount.
-export function SheepPhrase() {
-  const [phrase, setPhrase] = useState(PHRASES[0]);
+// Picked once per page load in the browser.
+const clientPhrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+const subscribe = () => () => {};
 
-  useEffect(() => {
-    setPhrase(PHRASES[Math.floor(Math.random() * PHRASES.length)]);
-  }, []);
+// The server (and hydration) render the default so markup matches; React then
+// switches to the random phrase on the client.
+export function SheepPhrase() {
+  const phrase = useSyncExternalStore(
+    subscribe,
+    () => clientPhrase,
+    () => PHRASES[0]
+  );
 
   return <p className="text-sm text-ink-muted">{phrase}</p>;
 }

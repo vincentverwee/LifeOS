@@ -7,7 +7,11 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient() {
-  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) throw new Error("DATABASE_URL is not set (see .env.example).");
+  // Each serverless instance gets its own pool, and pgbouncer already pools behind it:
+  // keep it small, drop idle connections, and fail fast instead of waiting forever.
+  const pool = new Pool({ connectionString, max: 3, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 5_000 });
   const adapter = new PrismaPg(pool);
   return new PrismaClient({ adapter });
 }
