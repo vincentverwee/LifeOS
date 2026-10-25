@@ -41,9 +41,8 @@ model BudgetCycle {
   days           BudgetCycleDay[]
   expenses       Expense[]
 
-  // TODO(user): switch to @@unique([startDate]) — needs `npx prisma db push --accept-data-loss`
-  // run by hand (no duplicates exist; checked by prisma/apply-checks.ts --dry).
-  @@index([startDate])
+  // One month per start date (backs up the advisory lock in src/lib/data/ensureMonth.ts).
+  @@unique([startDate])
 }
 
 model BudgetCycleDay {
