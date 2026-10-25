@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
+import { ensureCurrentMonth } from "@/lib/data/ensureMonth";
 
 export type SettingsTrip = {
   id: string;
@@ -22,6 +23,8 @@ export type SettingsMonth = {
 
 /** Trips and months, newest first, with what was spent in each. */
 export async function getSettingsData(): Promise<{ trips: SettingsTrip[]; months: SettingsMonth[] }> {
+  // Settings may be the first page opened in a new month.
+  await ensureCurrentMonth();
   const [trips, cycles, byTrip, byCycle] = await Promise.all([
     prisma.trip.findMany({ orderBy: { startDate: "desc" } }),
     prisma.budgetCycle.findMany({ orderBy: { startDate: "desc" } }),

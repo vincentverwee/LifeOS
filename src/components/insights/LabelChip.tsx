@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { setPeriodLabel } from "@/lib/actions/cycles";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
@@ -13,7 +12,6 @@ type LabelChipProps = {
 
 /** The period's peer group ("Thuis", "Galway"). Tap to change it. Trips can't be relabelled. */
 export function LabelChip({ cycleId, label, options }: LabelChipProps) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +30,6 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
       if (result.ok) {
         setOpen(false);
         setCustom("");
-        router.refresh();
       } else {
         setError(result.error);
       }

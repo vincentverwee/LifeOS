@@ -46,6 +46,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   if (expenses.length === 0) {
@@ -55,11 +56,15 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
   function remove(expense: ListExpense) {
     if (!window.confirm(`Delete ${formatCurrency(expense.amount)} · ${expense.categoryName}?`)) return;
     setError(null);
+    setNotice(null);
     setDeletingId(expense.id);
     startTransition(async () => {
       const result = await deleteExpense(expense.id);
-      if (!result.ok) setError(result.error);
-      router.refresh();
+      // On success the action already re-rendered this page; on failure the list may be stale.
+      if (!result.ok) {
+        setError(result.error);
+        router.refresh();
+      }
       setDeletingId(null);
     });
   }
@@ -82,6 +87,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
   return (
     <div className="flex flex-col gap-4">
       {error && <p className="text-sm text-critical">{error}</p>}
+      {notice && <p className="text-sm text-positive-text">{notice}</p>}
       {days.map((day) => (
         <section key={day.date} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between px-1 text-sm">
@@ -98,7 +104,10 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                     <EditRow
                       expense={expense}
                       categories={categories}
-                      onDone={() => setEditingId(null)}
+                      onDone={(movedTo) => {
+                        setEditingId(null);
+                        setNotice(movedTo ? `Moved to ${movedTo}.` : null);
+                      }}
                       onDelete={() => remove(expense)}
                     />
                   </div>
@@ -168,10 +177,9 @@ function EditRow({
 }: {
   expense: ListExpense;
   categories: CategoryOption[];
-  onDone: () => void;
+  onDone: (movedTo?: string | null) => void;
   onDelete: () => void;
 }) {
-  const router = useRouter();
   const [amount, setAmount] = useState(String(expense.amount).replace(".", ","));
   const [date, setDate] = useState(expense.date);
   const [categoryId, setCategoryId] = useState(expense.categoryId);
@@ -198,8 +206,7 @@ function EditRow({
         note,
       });
       if (result.ok) {
-        onDone();
-        router.refresh();
+        onDone(result.movedTo);
       } else {
         setError(result.error);
       }
@@ -223,6 +230,7 @@ function EditRow({
           <span className="text-xs text-ink-muted">Date</span>
           <input
             type="date"
+            required
             value={date}
             onChange={(e) => setDate(e.target.value)}
             className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
@@ -267,7 +275,7 @@ function EditRow({
         </button>
         <button
           type="button"
-          onClick={onDone}
+          onClick={() => onDone()}
           className="btn btn-outline px-5 py-2.5 text-sm"
         >
           Cancel

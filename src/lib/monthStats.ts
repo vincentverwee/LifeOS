@@ -125,6 +125,8 @@ export type MonthStats = {
   daysElapsed: number;
   daysLeft: number;
   isCurrent: boolean;
+  /** the period hasn't started yet */
+  isFuture: boolean;
   spent: number;
   budgetUsedPercent: number;
   avgPerDay: number;
@@ -266,7 +268,8 @@ export function computeMonthStats(month: Month, todayKey: string): MonthStats {
   let rentStillDue = 0;
   if (month.rent > 0 && month.rentDay !== null) {
     if (rawElapsed < 1) rentStillDue = month.rent; // month hasn't started
-    else if (isCurrent && daysElapsed <= month.rentDay) rentStillDue = month.rent;
+    // Rent day 31 in a 30-day month is paid on the last day.
+    else if (isCurrent && daysElapsed <= Math.min(month.rentDay, daysInMonth)) rentStillDue = month.rent;
   }
   const available = total - rentStillDue;
   // Like the daily allowance, today counts as a day still to spend.
@@ -284,6 +287,7 @@ export function computeMonthStats(month: Month, todayKey: string): MonthStats {
     daysElapsed,
     daysLeft,
     isCurrent,
+    isFuture: rawElapsed < 1,
     spent,
     budgetUsedPercent: month.budget > 0 ? (spent / month.budget) * 100 : 0,
     avgPerDay,

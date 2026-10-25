@@ -16,13 +16,12 @@ export type Category = {
 
 /** Every category (including archived), in the user's order. */
 export async function getAllCategories(): Promise<Category[]> {
-  const rows = await prisma.category.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    include: {
-      _count: { select: { expenses: true } },
-      expenses: { take: 1, orderBy: { createdAt: "desc" }, select: { createdAt: true } },
-    },
-  });
+  // Usage in one grouped query instead of a count + latest-row lookup per category.
+  const [rows, usage] = await Promise.all([
+    prisma.category.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }),
+    prisma.expense.groupBy({ by: ["categoryId"], _count: { _all: true }, _max: { createdAt: true } }),
+  ]);
+  const usageById = new Map(usage.map((u) => [u.categoryId, u]));
 
   return rows.map((row) => ({
     id: row.id,
@@ -31,8 +30,8 @@ export async function getAllCategories(): Promise<Category[]> {
     sortOrder: row.sortOrder,
     isArchived: row.isArchived,
     pintPrice: row.pintPrice?.toNumber() ?? null,
-    expenseCount: row._count.expenses,
-    lastUsedAt: row.expenses[0]?.createdAt.toISOString() ?? null,
+    expenseCount: usageById.get(row.id)?._count._all ?? 0,
+    lastUsedAt: usageById.get(row.id)?._max.createdAt?.toISOString() ?? null,
   }));
 }
 

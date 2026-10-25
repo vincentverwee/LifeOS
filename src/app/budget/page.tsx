@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getAllMonths, getAllTrips, getDebts, getSavingsEntries } from "@/lib/data";
+import { Suspense } from "react";
+import { getDebts, getPeriodData, getPeriodSummaries, getSavingsEntries } from "@/lib/data";
 import { computeMonthStats, cumulativeAtDay } from "@/lib/monthStats";
 import { labelBaseline, previousMonth, type PeriodEntry } from "@/lib/insights";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -45,21 +46,29 @@ export default async function TodayPage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
 
-  const [months, trips, savings, debts] = await Promise.all([
-    getAllMonths(),
-    getAllTrips(),
-    getSavingsEntries(),
-    getDebts(),
-  ]);
-
-  const entries: PeriodEntry[] = [...months, ...trips].map((month) => ({
+  // History as per-day sums (for the comparisons), full rows only for what runs today.
+  const summaries = await getPeriodSummaries();
+  const entries: PeriodEntry[] = summaries.map((month) => ({
     month,
     stats: computeMonthStats(month, todayKey),
   }));
   // Everything running today: a trip you're on first, then the current month.
-  const running = entries
+  const runningSummaries = entries
     .filter((e) => e.stats.isCurrent)
-    .sort((a, b) => (a.month.kind === b.month.kind ? 0 : a.month.kind === "trip" ? -1 : 1));
+    .sort((a, b) =>
+      a.month.kind === b.month.kind
+        ? b.month.startDate.localeCompare(a.month.startDate)
+        : a.month.kind === "trip"
+          ? -1
+          : 1
+    );
+  const running = (
+    await Promise.all(
+      runningSummaries.map((e) => getPeriodData({ type: e.month.kind === "trip" ? "trip" : "cycle", id: e.month.id }))
+    )
+  )
+    .filter((m) => m !== null)
+    .map((month) => ({ month, stats: computeMonthStats(month, todayKey) }));
 
   const dateLabel = new Intl.DateTimeFormat("nl-BE", {
     weekday: "long",
@@ -98,7 +107,19 @@ export default async function TodayPage() {
         />
       ))}
 
-      {/* Display-only for now: only shown once there's something in them. */}
+      {/* Streams in after the Today panel. */}
+      <Suspense>
+        <SavingsAndDebts />
+      </Suspense>
+    </div>
+  );
+}
+
+/** Display-only for now: only shown once there's something in them. */
+async function SavingsAndDebts() {
+  const [savings, debts] = await Promise.all([getSavingsEntries(), getDebts()]);
+  return (
+    <>
       {savings.length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-medium text-foreground">Savings trend</h2>
@@ -112,6 +133,6 @@ export default async function TodayPage() {
           <DebtsList debts={debts} />
         </section>
       )}
-    </div>
+    </>
   );
 }

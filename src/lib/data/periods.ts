@@ -48,11 +48,13 @@ export async function getAllPeriods(): Promise<Period[]> {
   return periods;
 }
 
-/** Periods whose date range contains `todayKey` ("YYYY-MM-DD"), trips first. */
+/** Periods whose date range contains `todayKey` ("YYYY-MM-DD"), trips first, then newest first. */
 export function getRunningPeriods(periods: Period[], todayKey: string): Period[] {
   return periods
     .filter((p) => p.startDate.slice(0, 10) <= todayKey && todayKey <= p.endDate.slice(0, 10))
-    .sort((a, b) => (a.type === b.type ? 0 : a.type === "trip" ? -1 : 1));
+    .sort((a, b) =>
+      a.type === b.type ? b.startDate.localeCompare(a.startDate) : a.type === "trip" ? -1 : 1
+    );
 }
 
 /**

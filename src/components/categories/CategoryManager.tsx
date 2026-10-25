@@ -27,8 +27,11 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
     setError(null);
     startTransition(async () => {
       const result = await action();
-      if (result.ok) router.refresh();
-      else setError(result.error ?? "Something went wrong.");
+      // The action re-renders the page itself; refresh only to drop a stale list on failure.
+      if (!result.ok) {
+        setError(result.error ?? "Something went wrong.");
+        router.refresh();
+      }
     });
   }
 

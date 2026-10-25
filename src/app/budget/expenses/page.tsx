@@ -18,8 +18,8 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
   const requestedPeriod = searchParams.period;
   const requestedKey = Array.isArray(requestedPeriod) ? requestedPeriod[0] : requestedPeriod;
 
-  const periods = await getAllPeriods();
-  const activePeriod = resolveActivePeriod(periods, requestedKey, await getTodayKey());
+  const [periods, todayKey] = await Promise.all([getAllPeriods(), getTodayKey()]);
+  const activePeriod = resolveActivePeriod(periods, requestedKey, todayKey);
 
   if (!activePeriod) {
     return (
@@ -33,7 +33,7 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
   const [categories, expenses] = await Promise.all([
     getAllCategories(),
     // Every expense of the period, so anything can be corrected.
-    getRecentExpenses(activePeriod, 1000),
+    getRecentExpenses(activePeriod, null),
   ]);
   // Category chips, biggest first; ?category= narrows the list.
   const chipMap = new Map<string, FilterChip>();

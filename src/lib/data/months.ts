@@ -37,7 +37,7 @@ function findMonthRow(id: string) {
   return prisma.budgetCycle.findUnique({ where: { id }, include: { expenses: expenseInclude } });
 }
 
-function toMonth(row: MonthRow): Month {
+function toMonth(row: Omit<MonthRow, "expenses">, expenses: MonthExpense[]): Month {
   return {
     kind: "month",
     id: row.id,
@@ -52,20 +52,25 @@ function toMonth(row: MonthRow): Month {
     balancesUpdatedAt: row.balancesUpdatedAt?.toISOString() ?? null,
     rent: row.rent.toNumber(),
     rentDay: row.rentDay,
-    expenses: row.expenses.map(toExpense),
+    expenses,
   };
 }
 
 export async function getMonth(id: string): Promise<Month | null> {
   const row = await findMonthRow(id);
-  return row ? toMonth(row) : null;
+  return row ? toMonth(row, row.expenses.map(toExpense)) : null;
 }
 
-/** A trip, in the same shape as a month (no balances/rent) so stats are shared. */
-export async function getTrip(id: string): Promise<Month | null> {
-  const trip = await prisma.trip.findUnique({ where: { id }, include: { expenses: expenseInclude } });
-  if (!trip) return null;
+type TripRow = {
+  id: string;
+  name: string;
+  totalBudget: { toNumber(): number };
+  startDate: Date;
+  endDate: Date;
+};
 
+/** A trip, in the same shape as a month (no balances/rent) so stats are shared. */
+function toTripMonth(trip: TripRow, expenses: MonthExpense[]): Month {
   return {
     kind: "trip",
     id: trip.id,
@@ -80,8 +85,13 @@ export async function getTrip(id: string): Promise<Month | null> {
     balancesUpdatedAt: null,
     rent: 0,
     rentDay: null,
-    expenses: trip.expenses.map(toExpense),
+    expenses,
   };
+}
+
+export async function getTrip(id: string): Promise<Month | null> {
+  const trip = await prisma.trip.findUnique({ where: { id }, include: { expenses: expenseInclude } });
+  return trip ? toTripMonth(trip, trip.expenses.map(toExpense)) : null;
 }
 
 export async function getPeriodData(period: { type: "cycle" | "trip"; id: string }) {
@@ -90,9 +100,8 @@ export async function getPeriodData(period: { type: "cycle" | "trip"; id: string
 
 /** Every trip, oldest first (in the same shape as months). */
 export async function getAllTrips(): Promise<Month[]> {
-  const trips = await prisma.trip.findMany({ orderBy: { startDate: "asc" }, select: { id: true } });
-  const all = await Promise.all(trips.map((t) => getTrip(t.id)));
-  return all.filter((t): t is Month => t !== null);
+  const trips = await prisma.trip.findMany({ orderBy: { startDate: "asc" }, include: { expenses: expenseInclude } });
+  return trips.map((t) => toTripMonth(t, t.expenses.map(toExpense)));
 }
 
 /** Every month, oldest first (for comparisons). */
@@ -102,5 +111,52 @@ export async function getAllMonths(): Promise<Month[]> {
     orderBy: { startDate: "asc" },
     include: { expenses: expenseInclude },
   });
-  return rows.map(toMonth);
+  return rows.map((row) => toMonth(row, row.expenses.map(toExpense)));
+}
+
+/**
+ * Every month and trip (oldest first) with their expenses summed per day and
+ * category instead of one row per purchase: three small queries however much
+ * history there is. Totals, daily/cumulative curves and category stats come out
+ * the same as with the real rows; notes, beer counts and top purchases don't,
+ * so load the period you show in detail with getPeriodData().
+ */
+export async function getPeriodSummaries(): Promise<Month[]> {
+  await ensureCurrentMonth();
+  const [cycles, trips, categories, sums] = await Promise.all([
+    prisma.budgetCycle.findMany({ orderBy: { startDate: "asc" } }),
+    prisma.trip.findMany({ orderBy: { startDate: "asc" } }),
+    prisma.category.findMany({ select: { id: true, name: true, color: true, pintPrice: true } }),
+    prisma.expense.groupBy({
+      by: ["cycleId", "tripId", "date", "categoryId"],
+      _sum: { amount: true },
+      orderBy: [{ date: "asc" }],
+    }),
+  ]);
+
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+  const byPeriod = new Map<string, MonthExpense[]>();
+  for (const g of sums) {
+    const periodId = g.cycleId ?? g.tripId;
+    const category = categoryById.get(g.categoryId);
+    if (!periodId || !category) continue;
+    const date = dayKey(g.date);
+    const list = byPeriod.get(periodId) ?? [];
+    list.push({
+      id: `${periodId}:${date}:${g.categoryId}`,
+      date,
+      amount: g._sum.amount?.toNumber() ?? 0,
+      note: null,
+      categoryId: g.categoryId,
+      categoryName: category.name,
+      categoryColor: category.color,
+      pintPrice: category.pintPrice?.toNumber() ?? null,
+    });
+    byPeriod.set(periodId, list);
+  }
+
+  return [
+    ...cycles.map((c) => toMonth(c, byPeriod.get(c.id) ?? [])),
+    ...trips.map((t) => toTripMonth(t, byPeriod.get(t.id) ?? [])),
+  ].sort((a, b) => a.startDate.localeCompare(b.startDate));
 }

@@ -1,4 +1,4 @@
-import { getAllMonths, getAllPeriods, getAllTrips, resolveActivePeriod } from "@/lib/data";
+import { getPeriodData, getPeriodSummaries, resolveActivePeriod, type Period } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
 import { computeMonthStats } from "@/lib/monthStats";
 import {
@@ -33,14 +33,25 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   const searchParams = await props.searchParams;
   const requested = Array.isArray(searchParams.period) ? searchParams.period[0] : searchParams.period;
 
-  const today = await getTodayKey();
-  const [periods, months, trips] = await Promise.all([getAllPeriods(), getAllMonths(), getAllTrips()]);
+  const [today, summaries] = await Promise.all([getTodayKey(), getPeriodSummaries()]);
+  const periods: Period[] = summaries
+    .map((m) => ({
+      type: m.kind === "trip" ? ("trip" as const) : ("cycle" as const),
+      id: m.id,
+      name: m.name,
+      startDate: `${m.startDate}T00:00:00.000Z`,
+      endDate: `${m.endDate}T00:00:00.000Z`,
+    }))
+    .reverse(); // newest first, like getAllPeriods()
   const activePeriod = resolveActivePeriod(periods, requested, today);
 
-  const entries: PeriodEntry[] = [...months, ...trips]
-    .map((month) => ({ month, stats: computeMonthStats(month, today) }))
-    .sort((a, b) => a.month.startDate.localeCompare(b.month.startDate));
-  const active = activePeriod ? entries.find((e) => e.month.id === activePeriod.id) : undefined;
+  // Every period as per-day sums (for the comparisons), with the one shown in full detail.
+  const activeFull = activePeriod ? await getPeriodData(activePeriod) : null;
+  const entries: PeriodEntry[] = summaries.map((summary) => {
+    const month = activeFull && summary.id === activeFull.id ? activeFull : summary;
+    return { month, stats: computeMonthStats(month, today) };
+  });
+  const active = activeFull ? entries.find((e) => e.month.id === activeFull.id) : undefined;
 
   if (!activePeriod || !active) {
     return (
@@ -87,7 +98,9 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
         .filter((h) => h.amount > 0 || h.active),
     }));
 
-  const labels = [...new Set(months.map((m) => m.label).filter((l): l is string => !!l))];
+  const labels = [
+    ...new Set(summaries.filter((m) => m.kind === "month").map((m) => m.label).filter((l): l is string => !!l)),
+  ];
   const typical = baseline ? `typical ${baseline.label} ${formatCurrency(baseline.avgPerDay)}/day` : undefined;
 
   return (
@@ -152,7 +165,7 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
       </Section>
 
       <Section title="All periods">
-        <PeriodList entries={entries} summaries={labelSummaries(entries)} activeId={month.id} />
+        <PeriodList entries={entries} summaries={labelSummaries(entries, today)} activeId={month.id} />
       </Section>
 
       <MoreDetails stats={stats} />

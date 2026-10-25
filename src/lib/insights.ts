@@ -12,9 +12,14 @@ function dayIndex(month: Month, date: string): number {
   return Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${month.startDate}T00:00:00Z`)) / MS_PER_DAY) + 1;
 }
 
-/** The day of the period we're comparing at: today for a running period, the last day otherwise. */
+/**
+ * The day of the period we're comparing at: today for a running period, the
+ * last day for a finished one, and day 1 for one that hasn't started yet
+ * (comparing it with its peers' full totals would make it look far ahead).
+ */
 export function comparisonDay(entry: PeriodEntry): number {
-  return Math.max(1, entry.stats.daysElapsed || entry.stats.daysInMonth);
+  if (entry.stats.daysElapsed > 0) return entry.stats.daysElapsed;
+  return entry.stats.isFuture ? 1 : Math.max(1, entry.stats.daysInMonth);
 }
 
 export function isFinished(entry: PeriodEntry, todayKey: string): boolean {
@@ -102,21 +107,28 @@ export type LabelSummary = {
   avgTotal: number;
 };
 
-/** Per label: how many periods and the typical spend, newest label first. */
-export function labelSummaries(all: PeriodEntry[]): LabelSummary[] {
+/**
+ * Per label: how many periods and the typical spend, newest label first.
+ * The averages only use finished periods (a running month's partial total, or
+ * an empty future one, would drag the typical total down).
+ */
+export function labelSummaries(all: PeriodEntry[], todayKey: string): LabelSummary[] {
   const groups = new Map<string, PeriodEntry[]>();
   for (const e of all) {
     const label = e.month.label ?? "Other";
     groups.set(label, [...(groups.get(label) ?? []), e]);
   }
   return [...groups.entries()]
-    .map(([label, entries]) => ({
-      label,
-      count: entries.length,
-      avgPerDay: mean(entries.filter((e) => e.stats.daysElapsed > 0).map((e) => e.stats.avgPerDay)),
-      avgTotal: mean(entries.map((e) => e.stats.spent)),
-      newest: entries.reduce((max, e) => (e.month.startDate > max ? e.month.startDate : max), ""),
-    }))
+    .map(([label, entries]) => {
+      const finished = entries.filter((e) => isFinished(e, todayKey));
+      return {
+        label,
+        count: entries.length,
+        avgPerDay: mean(finished.map((e) => e.stats.avgPerDay)),
+        avgTotal: mean(finished.map((e) => e.stats.spent)),
+        newest: entries.reduce((max, e) => (e.month.startDate > max ? e.month.startDate : max), ""),
+      };
+    })
     .sort((a, b) => b.newest.localeCompare(a.newest))
     .map(({ label, count, avgPerDay, avgTotal }) => ({ label, count, avgPerDay, avgTotal }));
 }

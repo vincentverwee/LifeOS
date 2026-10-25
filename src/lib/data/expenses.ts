@@ -15,12 +15,12 @@ export type ListExpense = {
   categoryColor: CategoryColorSlot;
 };
 
-/** Newest expenses of a period first, for the list under the entry form. */
-export async function getRecentExpenses(period: Period, limit = 50): Promise<ListExpense[]> {
+/** Newest expenses of a period first; `limit: null` returns all of them. */
+export async function getRecentExpenses(period: Period, limit: number | null = 50): Promise<ListExpense[]> {
   const rows = await prisma.expense.findMany({
     where: period.type === "cycle" ? { cycleId: period.id } : { tripId: period.id },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    take: limit,
+    take: limit ?? undefined,
     include: { category: { select: { name: true, color: true } } },
   });
 

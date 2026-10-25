@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { getAllTripSummaries } from "@/lib/data/waypoint";
 import { getRecipesGlance } from "@/lib/data/recipes";
@@ -77,12 +78,6 @@ const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 })
 export default async function HomePage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
-  const [budget, lessons, waypoint, recipes] = await Promise.all([
-    budgetGlance(todayKey),
-    getLessonsGlance(todayKey),
-    waypointGlance(),
-    getRecipesGlance(),
-  ]);
   const fact = getFactOfTheDay(todayKey);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
@@ -116,69 +111,33 @@ export default async function HomePage() {
 
         <li>
           <FeatureTile href="/budget" name="Budget" icon={BudgetIcon}>
-            {budget ? (
-              <>
-                <p className={`font-mono text-3xl font-semibold tabular-nums ${budget.over ? "text-critical" : "text-foreground"}`}>
-                  {budget.amount}
-                </p>
-                <p className={`text-sm ${budget.over ? "text-critical" : "text-positive-text"}`}>{budget.label}</p>
-                <BudgetBar glance={budget} />
-              </>
-            ) : (
-              <p className="text-sm text-ink-muted">No period running today</p>
-            )}
+            <Suspense fallback={<TileSkeleton />}>
+              <BudgetTileBody todayKey={todayKey} />
+            </Suspense>
           </FeatureTile>
         </li>
 
         <li>
           <FeatureTile href="/lessons" name="Lessons" icon={LessonsIcon}>
-            {lessons ? (
-              <>
-                <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-                  {formatHours(lessons.todayHours).replace(" h", "")} <span className="text-lg text-ink-muted">h today</span>
-                </p>
-                <p className="text-sm text-ink-muted">
-                  {lessons.status}
-                  {lessons.nextExam &&
-                    ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
-                </p>
-                <LessonsWeek glance={lessons} />
-              </>
-            ) : (
-              <p className="text-sm text-ink-muted">No study period yet</p>
-            )}
+            <Suspense fallback={<TileSkeleton />}>
+              <LessonsTileBody todayKey={todayKey} />
+            </Suspense>
           </FeatureTile>
         </li>
 
         <li>
           <FeatureTile href="/waypoint" name="Waypoint" icon={WaypointIcon}>
-            <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-              {kmFormatter.format(waypoint.totalKm)} <span className="text-lg text-ink-muted">km</span>
-            </p>
-            <p className="text-sm text-ink-muted">
-              {waypoint.trips} {waypoint.trips === 1 ? "trip" : "trips"}
-            </p>
-            {waypoint.latest && (
-              <p className="mt-4 truncate text-sm text-foreground">
-                <span className="text-ink-muted">Latest · </span>
-                {waypoint.latest}
-              </p>
-            )}
+            <Suspense fallback={<TileSkeleton />}>
+              <WaypointTileBody />
+            </Suspense>
           </FeatureTile>
         </li>
 
         <li>
           <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
-            <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-              {recipes.toMake} <span className="text-lg text-ink-muted">to make</span>
-            </p>
-            <p className="text-sm text-ink-muted">{recipes.toMake === 0 ? "Start swiping" : "Saved from the deck"}</p>
-            {recipes.lastMade && (
-              <p className="mt-4 truncate text-sm text-foreground">
-                <span className="text-ink-muted">Last made · </span>
-                {recipes.lastMade}
-              </p>
-            )}
+            <Suspense fallback={<TileSkeleton />}>
+              <RecipesTileBody />
+            </Suspense>
           </FeatureTile>
         </li>
 
@@ -282,5 +241,84 @@ function LessonsWeek({ glance }: { glance: LessonsGlance }) {
         <span>{formatHours(glance.weekHours)}</span>
       </div>
     </div>
+  );
+}
+
+function TileSkeleton() {
+  return (
+    <div aria-hidden="true" className="flex animate-pulse flex-col gap-2">
+      <div className="h-9 w-32 rounded-lg bg-surface-muted" />
+      <div className="h-4 w-24 rounded bg-surface-muted" />
+    </div>
+  );
+}
+
+async function BudgetTileBody({ todayKey }: { todayKey: string }) {
+  const budget = await budgetGlance(todayKey);
+  if (!budget) return <p className="text-sm text-ink-muted">No period running today</p>;
+  return (
+    <>
+      <p className={`font-mono text-3xl font-semibold tabular-nums ${budget.over ? "text-critical" : "text-foreground"}`}>
+        {budget.amount}
+      </p>
+      <p className={`text-sm ${budget.over ? "text-critical" : "text-positive-text"}`}>{budget.label}</p>
+      <BudgetBar glance={budget} />
+    </>
+  );
+}
+
+async function LessonsTileBody({ todayKey }: { todayKey: string }) {
+  const lessons = await getLessonsGlance(todayKey);
+  if (!lessons) return <p className="text-sm text-ink-muted">No study period yet</p>;
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {formatHours(lessons.todayHours).replace(" h", "")} <span className="text-lg text-ink-muted">h today</span>
+      </p>
+      <p className="text-sm text-ink-muted">
+        {lessons.status}
+        {lessons.nextExam &&
+          ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
+      </p>
+      <LessonsWeek glance={lessons} />
+    </>
+  );
+}
+
+async function WaypointTileBody() {
+  const waypoint = await waypointGlance();
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {kmFormatter.format(waypoint.totalKm)} <span className="text-lg text-ink-muted">km</span>
+      </p>
+      <p className="text-sm text-ink-muted">
+        {waypoint.trips} {waypoint.trips === 1 ? "trip" : "trips"}
+      </p>
+      {waypoint.latest && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Latest · </span>
+          {waypoint.latest}
+        </p>
+      )}
+    </>
+  );
+}
+
+async function RecipesTileBody() {
+  const recipes = await getRecipesGlance();
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {recipes.toMake} <span className="text-lg text-ink-muted">to make</span>
+      </p>
+      <p className="text-sm text-ink-muted">{recipes.toMake === 0 ? "Start swiping" : "Saved from the deck"}</p>
+      {recipes.lastMade && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Last made · </span>
+          {recipes.lastMade}
+        </p>
+      )}
+    </>
   );
 }

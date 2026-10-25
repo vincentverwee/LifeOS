@@ -17,8 +17,8 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
   const requestedPeriod = searchParams.period;
   const requestedKey = Array.isArray(requestedPeriod) ? requestedPeriod[0] : requestedPeriod;
 
-  const periods = await getAllPeriods();
-  const activePeriod = resolveActivePeriod(periods, requestedKey, await getTodayKey());
+  const [periods, todayKey, allCategories] = await Promise.all([getAllPeriods(), getTodayKey(), getAllCategories()]);
+  const activePeriod = resolveActivePeriod(periods, requestedKey, todayKey);
 
   if (!activePeriod) {
     return (
@@ -29,7 +29,6 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
     );
   }
 
-  const allCategories = await getAllCategories();
   const activeCategories = allCategories.filter((c) => !c.isArchived);
   const { defaultCategoryId } = pickEntryDefaults(activeCategories);
 
