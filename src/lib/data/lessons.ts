@@ -6,20 +6,32 @@ import { isLessonStatus } from "@/lib/lessons/marks";
 import type { StudyPeriod } from "@/lib/lessons/types";
 import { computePeriodStats, phaseLabel, pickCurrentPeriod } from "@/lib/lessons/stats";
 
-/** Every study period with its courses, entries, exams and lesson grid; newest first. */
-export async function getStudyPeriods(): Promise<StudyPeriod[]> {
-  const rows = await prisma.studyPeriod.findMany({
-    orderBy: { startDate: "desc" },
-    include: {
-      courses: {
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
-        include: { exams: { orderBy: { date: "asc" } }, lessons: true },
-      },
-      entries: { orderBy: [{ date: "asc" }, { createdAt: "asc" }] },
-    },
-  });
+const fullInclude = {
+  courses: {
+    orderBy: [{ sortOrder: "asc" as const }, { code: "asc" as const }],
+    include: { exams: { orderBy: { date: "asc" as const } }, lessons: true },
+  },
+  entries: { orderBy: [{ date: "asc" as const }, { createdAt: "asc" as const }] },
+};
 
-  return rows.map((p) => ({
+function findFullPeriod(id: string) {
+  return prisma.studyPeriod.findUnique({ where: { id }, include: fullInclude });
+}
+
+type FullRow = NonNullable<Awaited<ReturnType<typeof findFullPeriod>>>;
+
+type HeaderRow = {
+  id: string;
+  name: string;
+  startDate: Date;
+  blokStart: Date;
+  endDate: Date;
+  goalHours: { toNumber(): number };
+  topDayHours: { toNumber(): number };
+};
+
+function toHeader(p: HeaderRow) {
+  return {
     id: p.id,
     name: p.name,
     startDate: dayKey(p.startDate),
@@ -27,6 +39,12 @@ export async function getStudyPeriods(): Promise<StudyPeriod[]> {
     endDate: dayKey(p.endDate),
     goalHours: p.goalHours.toNumber(),
     topDayHours: p.topDayHours.toNumber(),
+  };
+}
+
+function toStudyPeriod(p: FullRow): StudyPeriod {
+  return {
+    ...toHeader(p),
     courses: p.courses.map((c) => ({
       id: c.id,
       code: c.code,
@@ -63,11 +81,58 @@ export async function getStudyPeriods(): Promise<StudyPeriod[]> {
           status: m.status as StudyPeriod["marks"][number]["status"],
         }))
     ),
+  };
+}
+
+export type LoadedStudyPeriods = {
+  /** every period, newest first; only `period` has its courses, exams and grid */
+  periods: StudyPeriod[];
+  /** the `?period=` one, else the one running today (or the latest), in full */
+  period: StudyPeriod | null;
+};
+
+/**
+ * The period a page shows, in full, plus all periods for the switcher. With
+ * `peerEntries` the other periods carry their entries as date + hours (enough
+ * for the pace comparisons and per-period totals); without, they're headers only.
+ */
+export async function loadStudyPeriods(
+  requestedId: string | undefined,
+  todayKey: string,
+  { peerEntries = false }: { peerEntries?: boolean } = {}
+): Promise<LoadedStudyPeriods> {
+  const rows: (HeaderRow & { entries: { date: Date; hours: { toNumber(): number } }[] })[] = peerEntries
+    ? await prisma.studyPeriod.findMany({
+        orderBy: { startDate: "desc" },
+        include: { entries: { orderBy: [{ date: "asc" }, { createdAt: "asc" }], select: { date: true, hours: true } } },
+      })
+    : (await prisma.studyPeriod.findMany({ orderBy: { startDate: "desc" } })).map((p) => ({ ...p, entries: [] }));
+  const lean: StudyPeriod[] = rows.map((p) => ({
+    ...toHeader(p),
+    courses: [],
+    exams: [],
+    marks: [],
+    entries: p.entries.map((e, i) => ({
+      id: `${p.id}:${i}`,
+      date: dayKey(e.date),
+      hours: e.hours.toNumber(),
+      courseId: null,
+      note: null,
+    })),
   }));
+
+  const picked = resolveStudyPeriod(lean, requestedId, todayKey);
+  const row = picked ? await findFullPeriod(picked.id) : null;
+  const period = row ? toStudyPeriod(row) : null;
+  return { periods: period ? lean.map((p) => (p.id === period.id ? period : p)) : lean, period };
 }
 
 /** The `?period=` one, else the period running today (or the latest). */
-export function resolveStudyPeriod(periods: StudyPeriod[], requestedId: string | undefined, todayKey: string) {
+export function resolveStudyPeriod<T extends { id: string; startDate: string; endDate: string }>(
+  periods: T[],
+  requestedId: string | undefined,
+  todayKey: string
+): T | null {
   return periods.find((p) => p.id === requestedId) ?? pickCurrentPeriod(periods, todayKey);
 }
 
@@ -82,7 +147,7 @@ export type LessonsGlance = {
 
 /** For the home tile. */
 export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance | null> {
-  const period = pickCurrentPeriod(await getStudyPeriods(), todayKey);
+  const { period } = await loadStudyPeriods(undefined, todayKey);
   if (!period) return null;
   const stats = computePeriodStats(period, todayKey);
   const next = stats.upcomingExams[0];

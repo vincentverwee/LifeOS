@@ -60,12 +60,17 @@ export function StudyEntryForm({ periodId, startDate, endDate, courses }: StudyE
     () => toDateInputValue(),
     () => ""
   );
+  // Between periods (or viewing an old one) today can fall outside this period:
+  // "Other" then starts on the period's last day instead of an out-of-range date.
+  const notStarted = !!today && today < startDate;
+  const lastDay = notStarted ? startDate : today && today < endDate ? today : endDate;
+  const todayInPeriod = !!today && today >= startDate && today <= endDate;
   const date =
     dateChoice === "today"
       ? today
       : dateChoice === "yesterday"
         ? today && shiftDays(today, -1)
-        : (otherDate ?? today);
+        : (otherDate ?? (todayInPeriod ? today : lastDay));
 
   const [state, formAction] = useActionState(async (prev: StudyEntryFormState, formData: FormData) => {
     const result = await createStudyEntriesFromForm(prev, formData);
@@ -193,12 +198,19 @@ export function StudyEntryForm({ periodId, startDate, endDate, courses }: StudyE
           {segment("yesterday", "Yesterday")}
           {segment("other", dateChoice === "other" && date ? formatDate(date) : "Other…")}
         </div>
+        {today && !todayInPeriod && dateChoice !== "other" && (
+          <p className="text-sm text-warning-text">
+            {notStarted
+              ? `This period starts on ${formatDate(startDate)}.`
+              : "Today is outside this period; it goes to whichever period covers it."}
+          </p>
+        )}
         {dateChoice === "other" && (
           <input
             type="date"
             value={date}
             min={startDate}
-            max={today && today < endDate ? today : endDate}
+            max={lastDay}
             onChange={(e) => setOtherDate(e.target.value)}
             className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
           />

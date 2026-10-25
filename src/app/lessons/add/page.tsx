@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { getStudyPeriods, resolveStudyPeriod } from "@/lib/data/lessons";
+import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { StudyEntryForm } from "@/components/lessons/StudyEntryForm";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 export default async function AddStudyTimePage({ searchParams }: PageProps<"/lessons/add">) {
   const { period: requested } = await searchParams;
-  const periods = await getStudyPeriods();
-  const period = resolveStudyPeriod(periods, typeof requested === "string" ? requested : undefined, await getTodayKey());
+  const todayKey = await getTodayKey();
+  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey);
 
   return (
     <div className="flex flex-col gap-6">

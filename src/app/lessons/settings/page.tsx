@@ -1,12 +1,12 @@
-import { getStudyPeriods, resolveStudyPeriod } from "@/lib/data/lessons";
+import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { CourseManager, DeletePeriodButton, ExamManager, StudyPeriodForm } from "@/components/lessons/StudySettings";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 export default async function LessonsSettingsPage({ searchParams }: PageProps<"/lessons/settings">) {
   const { period: requested } = await searchParams;
-  const periods = await getStudyPeriods();
-  const period = resolveStudyPeriod(periods, typeof requested === "string" ? requested : undefined, await getTodayKey());
+  const todayKey = await getTodayKey();
+  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey);
 
   return (
     <div className="flex flex-col gap-6">

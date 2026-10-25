@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { getStudyPeriods, resolveStudyPeriod } from "@/lib/data/lessons";
+import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, countdownChart } from "@/lib/lessons/stats";
 import { CATEGORY_COLOR_SLOTS } from "@/lib/categoryPalette";
 import { formatDate, formatHours, formatPercent } from "@/lib/format";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
-import { CountdownChart, StudyWeekdayChart, WeeklyChart, type ChartSeries } from "@/components/lessons/StudyCharts";
+import type { ChartSeries } from "@/components/lessons/StudyCharts";
+import { CountdownChart, StudyWeekdayChart, WeeklyChart } from "@/components/lessons/StudyChartsLazy";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
@@ -23,8 +24,7 @@ const hoursOrDash = (n: number | null) => (n === null ? "–" : formatHours(n));
 export default async function LessonsInsightsPage({ searchParams }: PageProps<"/lessons/insights">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const periods = await getStudyPeriods();
-  const period = resolveStudyPeriod(periods, typeof requested === "string" ? requested : undefined, todayKey);
+  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true });
 
   if (!period) {
     return (
@@ -45,7 +45,9 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
   const series: ChartSeries[] = chart.series.map((s) => ({ ...s, color: colorOf(s.key) }));
   const finished = period.endDate < todayKey;
   const maxCourse = Math.max(0, ...stats.courses.map((c) => c.hours));
-  const summaries = chronological.map((p) => ({ period: p, stats: computePeriodStats(p, todayKey) })).reverse();
+  const summaries = chronological
+    .map((p) => ({ period: p, stats: p.id === period.id ? stats : computePeriodStats(p, todayKey) }))
+    .reverse();
 
   return (
     <div className="flex flex-col gap-4">
@@ -59,11 +61,11 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
           label="Total"
           value={formatHours(stats.total)}
           hint={
-            pace
+            pace && pace.loggedCount > 0
               ? `${pace.mine >= pace.avg.theirs ? "+" : "−"}${formatHours(Math.abs(Math.round((pace.mine - pace.avg.theirs) * 100) / 100))} vs earlier`
               : undefined
           }
-          tone={pace ? (pace.mine >= pace.avg.theirs ? "positive" : "negative") : "neutral"}
+          tone={pace && pace.loggedCount > 0 ? (pace.mine >= pace.avg.theirs ? "positive" : "negative") : "neutral"}
         />
         <SummaryCard
           label="Days studied"

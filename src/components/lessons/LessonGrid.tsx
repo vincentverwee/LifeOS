@@ -1,7 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import type { LessonMark, StudyCourse } from "@/lib/lessons/types";
 import { LESSON_STATUSES, LESSON_STATUS_INFO, attendance, type LessonKind, type LessonStatus } from "@/lib/lessons/marks";
 import { setLessonMark } from "@/lib/actions/lessons";
@@ -19,33 +18,42 @@ function weekStart(startDate: string, week: number): string {
 
 /** Marks keyed by cell, updated optimistically while the server action runs. */
 function useMarks(initial: LessonMark[]) {
-  const router = useRouter();
   const [marks, setMarks] = useState(() => new Map(initial.map((m) => [cellKey(m), m.status])));
+  // What the server last confirmed per cell, and the newest request per cell: a failed
+  // tap only rolls back when no later tap on that cell is on its way, and then to the
+  // confirmed status rather than to whatever the screen showed before it.
+  const confirmed = useRef(new Map(initial.map((m) => [cellKey(m), m.status])));
+  const latest = useRef(new Map<string, number>());
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function set(cell: Cell, status: LessonStatus | null) {
-    const previous = marks.get(cellKey(cell));
+    const key = cellKey(cell);
+    const seq = (latest.current.get(key) ?? 0) + 1;
+    latest.current.set(key, seq);
     setMarks((prev) => {
       const next = new Map(prev);
-      if (status) next.set(cellKey(cell), status);
-      else next.delete(cellKey(cell));
+      if (status) next.set(key, status);
+      else next.delete(key);
       return next;
     });
     setError(null);
     startTransition(async () => {
       const result = await setLessonMark({ ...cell, status });
-      if (!result.ok) {
-        setError(result.error);
-        setMarks((prev) => {
-          const next = new Map(prev);
-          if (previous) next.set(cellKey(cell), previous);
-          else next.delete(cellKey(cell));
-          return next;
-        });
+      if (result.ok) {
+        if (status) confirmed.current.set(key, status);
+        else confirmed.current.delete(key);
         return;
       }
-      router.refresh();
+      if (latest.current.get(key) !== seq) return;
+      setError(result.error);
+      const back = confirmed.current.get(key);
+      setMarks((prev) => {
+        const next = new Map(prev);
+        if (back) next.set(key, back);
+        else next.delete(key);
+        return next;
+      });
     });
   }
 

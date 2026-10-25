@@ -310,9 +310,11 @@ export type Pace = {
   avg: { theirs: number; last7: number; total: number; remaining: number };
 };
 
-/** Earlier, finished periods with logged hours. */
+/** Earlier, finished periods with logged hours (earlier than the one viewed, also when that one is old). */
 export function peerPeriods(active: StudyPeriod, all: StudyPeriod[], todayKey: string): StudyPeriod[] {
-  return all.filter((p) => p.id !== active.id && isFinished(p, todayKey) && p.entries.length > 0);
+  return all.filter(
+    (p) => p.id !== active.id && isFinished(p, todayKey) && p.endDate < active.endDate && p.entries.length > 0
+  );
 }
 
 export function comparePace(active: StudyPeriod, all: StudyPeriod[], todayKey: string): Pace | null {
@@ -382,7 +384,10 @@ export function countdownChart(
       // the filled part runs up to the first logged day so both parts connect
       point[filledKey(c.period.id)] = known && x <= c.first && c.cumulative.has(x) ? at(c, x) : null;
     }
-    const peerValues = curves.filter((c) => c.period.id !== active.id).map((c) => at(c, x));
+    // Like comparePace: periods that are all filled in at this point only echo the others.
+    const peerCurves = curves.filter((c) => c.period.id !== active.id);
+    const logged = peerCurves.filter((c) => x >= c.first);
+    const peerValues = (logged.length ? logged : peerCurves).map((c) => at(c, x));
     point.avg = peerValues.length ? round2(peerValues.reduce((a, b) => a + b, 0) / peerValues.length) : null;
     points.push(point);
   }

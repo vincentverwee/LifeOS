@@ -21,9 +21,8 @@ import { SheepSpinner } from "@/components/icons/SheepSpinner";
 const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
 const label = "text-xs text-ink-muted";
 
-/** Runs a server action, shows its error, refreshes the page on success. */
+/** Runs a server action and shows its error (on success the action re-renders the page itself). */
 function useAction() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   function run<R extends LessonsResult | { ok: true; id: string }>(
@@ -35,7 +34,6 @@ function useAction() {
       const result = await action();
       if (!result.ok) return setError(result.error);
       onOk?.(result as R);
-      router.refresh();
     });
   }
   return { error, setError, isPending, run };

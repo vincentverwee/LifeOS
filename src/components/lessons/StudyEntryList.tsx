@@ -1,12 +1,11 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { StudyCourse, StudyEntry } from "@/lib/lessons/types";
 import { deleteStudyEntry, updateStudyEntry } from "@/lib/actions/lessons";
 import { Sheet } from "@/components/recipes/Sheet";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
-import { formatHours, parseHours } from "@/lib/format";
+import { formatHours, parseHours, toDateInputValue } from "@/lib/format";
 
 const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
 
@@ -83,7 +82,6 @@ export function StudyEntryList({ entries, courses, groupByDay = false, empty = "
 }
 
 function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses: StudyCourse[]; onDone: () => void }) {
-  const router = useRouter();
   const [hours, setHours] = useState(String(entry.hours).replace(".", ","));
   const [courseId, setCourseId] = useState(entry.courseId ?? "");
   const [date, setDate] = useState(entry.date);
@@ -98,8 +96,7 @@ function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses:
     startTransition(async () => {
       const result = await updateStudyEntry({ id: entry.id, hours: parsed, courseId: courseId || null, date, note });
       if (!result.ok) return setError(result.error);
-      onDone();
-      router.refresh();
+      onDone(); // the action already re-rendered the page
     });
   }
 
@@ -108,7 +105,6 @@ function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses:
       const result = await deleteStudyEntry(entry.id);
       if (!result.ok) return setError(result.error);
       onDone();
-      router.refresh();
     });
   }
 
@@ -127,7 +123,14 @@ function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses:
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-xs text-ink-muted">Date</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+          <input
+            type="date"
+            required
+            max={toDateInputValue()}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={input}
+          />
         </label>
         <label className="col-span-2 flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Course</span>

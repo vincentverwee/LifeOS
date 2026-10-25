@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getStudyPeriods, resolveStudyPeriod } from "@/lib/data/lessons";
+import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { formatHours } from "@/lib/format";
 import { StudyEntryList } from "@/components/lessons/StudyEntryList";
@@ -7,8 +7,8 @@ import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 export default async function StudyLogPage({ searchParams }: PageProps<"/lessons/log">) {
   const { period: requested } = await searchParams;
-  const periods = await getStudyPeriods();
-  const period = resolveStudyPeriod(periods, typeof requested === "string" ? requested : undefined, await getTodayKey());
+  const todayKey = await getTodayKey();
+  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey);
   const total = period ? Math.round(period.entries.reduce((s, e) => s + e.hours, 0) * 100) / 100 : 0;
 
   return (

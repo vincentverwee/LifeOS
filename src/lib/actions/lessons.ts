@@ -3,7 +3,8 @@
 import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { formatDate, parseHours } from "@/lib/format";
+import { formatDate, parseDateKey, parseHours } from "@/lib/format";
+import { knownError } from "@/lib/prismaErrors";
 import { getTodayKey } from "@/lib/today";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus, type LessonKind } from "@/lib/lessons/marks";
@@ -13,12 +14,10 @@ function revalidateLessonRoutes() {
   revalidatePath("/lessons", "layout");
 }
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const utc = (key: string) => new Date(`${key}T00:00:00Z`);
 
-async function parseDateOnly(value: unknown): Promise<Date> {
-  return utc(typeof value === "string" && DATE_RE.test(value) ? value : await getTodayKey());
-}
+/** Weeks in the lesson grid are capped well above any real semester. */
+const MAX_WEEK = 60;
 
 export type LessonsResult = { ok: true } | { ok: false; error: string };
 
@@ -43,12 +42,14 @@ async function resolvePeriod(periodId: string, date: Date) {
   return { ok: false as const, error: `No study period covers ${formatDate(date)}.` };
 }
 
-/** Splits `hours` equally over the courses; the last one takes the rounding rest. */
+/**
+ * Splits `hours` equally over the courses in whole hundredths: the first ones
+ * take the leftover hundredths, so the parts always add up and none is negative.
+ */
 function splitHours(hours: number, parts: number): number[] {
-  const share = Math.round((hours / parts) * 100) / 100;
-  return Array.from({ length: parts }, (_, i) =>
-    i === parts - 1 ? Math.round((hours - share * (parts - 1)) * 100) / 100 : share
-  );
+  const cents = Math.round(hours * 100);
+  const base = Math.floor(cents / parts);
+  return Array.from({ length: parts }, (_, i) => (base + (i < cents % parts ? 1 : 0)) / 100);
 }
 
 export type StudyEntryFormState = ({ ok: true; hours: number; movedTo: string | null } | { ok: false; error: string }) | null;
@@ -68,7 +69,11 @@ export async function createStudyEntriesFromForm(
   if (hours > 24) return { ok: false, error: "That's more than a day." };
   if (hours === 0 && !note) return { ok: false, error: "Enter the hours studied, or add a note for a day off." };
 
-  const date = await parseDateOnly(formData.get("date"));
+  // No date (the form sends "" before hydration) means today; a bad one is an error.
+  const rawDate = formData.get("date");
+  const dateKey = rawDate ? parseDateKey(rawDate) : await getTodayKey();
+  if (!dateKey) return { ok: false, error: "Pick a valid date." };
+  const date = utc(dateKey);
   const target = await resolvePeriod(periodId, date);
   if (!target.ok) return target;
 
@@ -79,14 +84,21 @@ export async function createStudyEntriesFromForm(
     return { ok: false, error: "Those courses belong to another period; pick them again." };
   }
 
-  const shares = courses.length && hours > 0 ? splitHours(hours, courses.length) : [hours];
+  if (hours > 0 && Math.round(hours * 100) < courses.length) {
+    return { ok: false, error: "Too little time to split over that many courses." };
+  }
+
+  // Studied time is split over the courses. A 0 h day off is one row: it keeps
+  // its course only when exactly one was picked.
+  const split = courses.length > 0 && hours > 0;
+  const shares = split ? splitHours(hours, courses.length) : [hours];
   await prisma.studyEntry.createMany({
     data: shares.map((share, i) => ({
       periodId: target.period.id,
-      courseId: courses.length && hours > 0 ? courses[i].id : (courses[0]?.id ?? null),
+      courseId: split ? courses[i].id : courses.length === 1 ? courses[0].id : null,
       date,
       hours: share,
-      note: i === 0 ? note : null,
+      note: i === 0 ? (note?.slice(0, 500) ?? null) : null,
     })),
   });
 
@@ -105,9 +117,16 @@ export async function updateStudyEntry(input: {
   if (!Number.isFinite(input.hours) || input.hours < 0 || input.hours > 24) {
     return { ok: false, error: "Enter between 0 and 24 hours." };
   }
+  const note = input.note?.trim().slice(0, 500) || null;
+  if (input.hours === 0 && !note) return { ok: false, error: "A 0 h entry needs a note (a day off)." };
+  // Editing never falls back to today: a cleared date field is a mistake.
+  const dateKey = parseDateKey(input.date);
+  if (!dateKey) return { ok: false, error: "Pick a valid date." };
+  if (dateKey > (await getTodayKey())) return { ok: false, error: "That date is in the future." };
+
   const existing = await prisma.studyEntry.findUnique({ where: { id: input.id }, select: { periodId: true } });
   if (!existing) return { ok: false, error: "That entry no longer exists." };
-  const date = await parseDateOnly(input.date);
+  const date = utc(dateKey);
   const target = await resolvePeriod(existing.periodId, date);
   if (!target.ok) return target;
   if (input.courseId) {
@@ -115,16 +134,20 @@ export async function updateStudyEntry(input: {
     if (!course) return { ok: false, error: "That course isn't part of this period." };
   }
 
-  await prisma.studyEntry.update({
-    where: { id: input.id },
-    data: {
-      periodId: target.period.id,
-      courseId: input.courseId,
-      date,
-      hours: Math.round(input.hours * 100) / 100,
-      note: input.note?.trim() || null,
-    },
-  });
+  try {
+    await prisma.studyEntry.update({
+      where: { id: input.id },
+      data: {
+        periodId: target.period.id,
+        courseId: input.courseId,
+        date,
+        hours: Math.round(input.hours * 100) / 100,
+        note,
+      },
+    });
+  } catch (e) {
+    return knownError(e, { P2025: "That entry no longer exists.", P2003: "That course no longer exists." });
+  }
   revalidateLessonRoutes();
   return { ok: true };
 }
@@ -147,7 +170,9 @@ export async function setLessonMark(input: {
   status: string | null;
 }): Promise<LessonsResult> {
   await requireAuth();
-  if (!Number.isInteger(input.week) || input.week < 1) return { ok: false, error: "Invalid week." };
+  if (!Number.isInteger(input.week) || input.week < 1 || input.week > MAX_WEEK) {
+    return { ok: false, error: "Invalid week." };
+  }
   if (input.kind !== "HC" && input.kind !== "WC") return { ok: false, error: "Invalid lesson kind." };
   const where = { courseId_week_kind: { courseId: input.courseId, week: input.week, kind: input.kind } };
 
@@ -155,11 +180,16 @@ export async function setLessonMark(input: {
     await prisma.lessonMark.deleteMany({ where: { courseId: input.courseId, week: input.week, kind: input.kind } });
   } else {
     if (!isLessonStatus(input.status)) return { ok: false, error: "Unknown status." };
-    await prisma.lessonMark.upsert({
-      where,
-      create: { courseId: input.courseId, week: input.week, kind: input.kind, status: input.status },
-      update: { status: input.status },
-    });
+    try {
+      await prisma.lessonMark.upsert({
+        where,
+        create: { courseId: input.courseId, week: input.week, kind: input.kind, status: input.status },
+        update: { status: input.status },
+      });
+    } catch (e) {
+      // P2002: a parallel tap created the cell first; P2003: the course was deleted.
+      return knownError(e, { P2002: "That cell changed meanwhile; tap again.", P2003: "That course no longer exists." });
+    }
   }
   revalidateLessonRoutes();
   return { ok: true };
@@ -176,11 +206,14 @@ export type StudyPeriodInput = {
   topDayHours: number;
 };
 
-function validatePeriod(input: StudyPeriodInput): string | null {
+function validatePeriod(input: StudyPeriodInput, { requireMonday = true } = {}): string | null {
   if (!input.name.trim()) return "Give the period a name.";
-  if (![input.startDate, input.blokStart, input.endDate].every((d) => DATE_RE.test(d))) {
+  if (input.name.trim().length > 60) return "Keep the name under 60 characters.";
+  if (![input.startDate, input.blokStart, input.endDate].every((d) => parseDateKey(d))) {
     return "Pick the start, blok start and last exam dates.";
   }
+  // Lesson weeks are 7-day blocks from the start, so they must line up with Mon-Sun weeks.
+  if (requireMonday && utc(input.startDate).getUTCDay() !== 1) return "The start date must be a Monday (lesson week 1).";
   if (!(input.startDate <= input.blokStart && input.blokStart <= input.endDate)) {
     return "Dates must be in order: start ≤ blok start ≤ last exam.";
   }
@@ -206,24 +239,32 @@ export async function createStudyPeriod(
   await requireAuth();
   const error = validatePeriod(input);
   if (error) return { ok: false, error };
-  if (await prisma.studyPeriod.findUnique({ where: { name: input.name.trim() } })) {
-    return { ok: false, error: "A period with that name already exists." };
+  let period;
+  try {
+    period = await prisma.studyPeriod.create({ data: periodData(input), select: { id: true } });
+  } catch (e) {
+    return knownError(e, { P2002: "A period with that name already exists." });
   }
-  const period = await prisma.studyPeriod.create({ data: periodData(input), select: { id: true } });
   revalidateLessonRoutes();
   return { ok: true, id: period.id };
 }
 
 export async function updateStudyPeriod(input: StudyPeriodInput & { id: string }): Promise<LessonsResult> {
   await requireAuth();
-  const error = validatePeriod(input);
-  if (error) return { ok: false, error };
-  const clash = await prisma.studyPeriod.findFirst({
-    where: { name: input.name.trim(), id: { not: input.id } },
-    select: { id: true },
+  // Older imported periods may start on another weekday; only a changed start must be a Monday.
+  const current = await prisma.studyPeriod.findUnique({ where: { id: input.id }, select: { startDate: true } });
+  const error = validatePeriod(input, {
+    requireMonday: !current || current.startDate.toISOString().slice(0, 10) !== input.startDate,
   });
-  if (clash) return { ok: false, error: "A period with that name already exists." };
-  await prisma.studyPeriod.update({ where: { id: input.id }, data: periodData(input) });
+  if (error) return { ok: false, error };
+  try {
+    await prisma.studyPeriod.update({ where: { id: input.id }, data: periodData(input) });
+  } catch (e) {
+    return knownError(e, {
+      P2002: "A period with that name already exists.",
+      P2025: "That period no longer exists.",
+    });
+  }
   revalidateLessonRoutes();
   return { ok: true };
 }
@@ -241,6 +282,8 @@ export type StudyCourseInput = { code: string; name: string; color: string; hasW
 
 function validateCourse(input: StudyCourseInput): string | null {
   if (!input.code.trim()) return "Give the course a short code, e.g. DBT.";
+  if (input.code.trim().length > 12) return "Keep the code short (12 characters at most).";
+  if (input.name.trim().length > 80) return "Keep the name under 80 characters.";
   if (!isCategoryColorSlot(input.color)) return "Pick a colour.";
   return null;
 }
@@ -250,20 +293,24 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
   const error = validateCourse(input);
   if (error) return { ok: false, error };
   const code = input.code.trim();
-  if (await prisma.studyCourse.findFirst({ where: { periodId, code } })) {
-    return { ok: false, error: `${code} already exists in this period.` };
-  }
   const last = await prisma.studyCourse.findFirst({ where: { periodId }, orderBy: { sortOrder: "desc" } });
-  await prisma.studyCourse.create({
-    data: {
-      periodId,
-      code,
-      name: input.name.trim() || code,
-      color: input.color,
-      hasWc: input.hasWc,
-      sortOrder: (last?.sortOrder ?? 0) + 10,
-    },
-  });
+  try {
+    await prisma.studyCourse.create({
+      data: {
+        periodId,
+        code,
+        name: input.name.trim() || code,
+        color: input.color,
+        hasWc: input.hasWc,
+        sortOrder: (last?.sortOrder ?? 0) + 10,
+      },
+    });
+  } catch (e) {
+    return knownError(e, {
+      P2002: `${code} already exists in this period.`,
+      P2003: "That period no longer exists.",
+    });
+  }
   revalidateLessonRoutes();
   return { ok: true };
 }
@@ -272,15 +319,18 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
   await requireAuth();
   const error = validateCourse(input);
   if (error) return { ok: false, error };
-  const course = await prisma.studyCourse.findUnique({ where: { id }, select: { periodId: true } });
-  if (!course) return { ok: false, error: "That course no longer exists." };
   const code = input.code.trim();
-  const clash = await prisma.studyCourse.findFirst({ where: { periodId: course.periodId, code, id: { not: id } } });
-  if (clash) return { ok: false, error: `${code} already exists in this period.` };
-  await prisma.studyCourse.update({
-    where: { id },
-    data: { code, name: input.name.trim() || code, color: input.color, hasWc: input.hasWc },
-  });
+  try {
+    await prisma.studyCourse.update({
+      where: { id },
+      data: { code, name: input.name.trim() || code, color: input.color, hasWc: input.hasWc },
+    });
+  } catch (e) {
+    return knownError(e, {
+      P2002: `${code} already exists in this period.`,
+      P2025: "That course no longer exists.",
+    });
+  }
   revalidateLessonRoutes();
   return { ok: true };
 }
@@ -302,12 +352,12 @@ export async function createStudyExam(input: {
   note: string | null;
 }): Promise<LessonsResult> {
   await requireAuth();
-  if (!DATE_RE.test(input.date)) return { ok: false, error: "Pick a date." };
+  if (!parseDateKey(input.date)) return { ok: false, error: "Pick a date." };
   if (input.kind !== "exam" && input.kind !== "test") return { ok: false, error: "Invalid kind." };
   const course = await prisma.studyCourse.findUnique({ where: { id: input.courseId }, select: { id: true } });
   if (!course) return { ok: false, error: "Pick a course." };
   await prisma.studyExam.create({
-    data: { courseId: course.id, date: utc(input.date), kind: input.kind, note: input.note?.trim() || null },
+    data: { courseId: course.id, date: utc(input.date), kind: input.kind, note: input.note?.trim().slice(0, 200) || null },
   });
   revalidateLessonRoutes();
   return { ok: true };

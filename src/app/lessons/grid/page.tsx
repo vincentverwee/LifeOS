@@ -1,4 +1,4 @@
-import { getStudyPeriods, resolveStudyPeriod } from "@/lib/data/lessons";
+import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { lessonWeekCount, lessonWeekOf } from "@/lib/lessons/stats";
 import { LessonGrid } from "@/components/lessons/LessonGrid";
@@ -7,8 +7,7 @@ import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 export default async function LessonGridPage({ searchParams }: PageProps<"/lessons/grid">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const periods = await getStudyPeriods();
-  const period = resolveStudyPeriod(periods, typeof requested === "string" ? requested : undefined, todayKey);
+  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey);
 
   return (
     <div className="flex flex-col gap-4">
