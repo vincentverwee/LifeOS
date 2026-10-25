@@ -3,6 +3,7 @@
 import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { knownError } from "@/lib/prismaErrors";
 import {
   CATEGORY_COLOR_SLOTS,
   isCategoryColorSlot,
@@ -58,24 +59,30 @@ export async function createCategory(input: {
   await requireAuth();
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Category name can't be empty." };
-  if (!(await isNameFree(name))) return { ok: false, error: `"${name}" already exists.` };
+  if (name.length > 60) return { ok: false, error: "Keep the name under 60 characters." };
   if (input.color !== undefined && !isCategoryColorSlot(input.color)) {
     return { ok: false, error: "Pick a color." };
   }
 
-  const last = await prisma.category.findFirst({
-    orderBy: { sortOrder: "desc" },
-    select: { sortOrder: true },
-  });
-  const count = await prisma.category.count();
+  const [free, last, count] = await Promise.all([
+    isNameFree(name),
+    prisma.category.findFirst({ orderBy: { sortOrder: "desc" }, select: { sortOrder: true } }),
+    prisma.category.count(),
+  ]);
+  if (!free) return { ok: false, error: `"${name}" already exists.` };
 
-  const category = await prisma.category.create({
-    data: {
-      name,
-      color: input.color ?? CATEGORY_COLOR_SLOTS[count % CATEGORY_COLOR_SLOTS.length],
-      sortOrder: (last?.sortOrder ?? -10) + 10,
-    },
-  });
+  let category;
+  try {
+    category = await prisma.category.create({
+      data: {
+        name,
+        color: input.color ?? CATEGORY_COLOR_SLOTS[count % CATEGORY_COLOR_SLOTS.length],
+        sortOrder: (last?.sortOrder ?? -10) + 10,
+      },
+    });
+  } catch (e) {
+    return knownError(e, { P2002: `"${name}" already exists.` });
+  }
 
   revalidateCategoryRoutes();
   return { ok: true, category: toDto(category) };
@@ -96,6 +103,7 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Catego
   if (input.name !== undefined) {
     const name = input.name.trim();
     if (!name) return { ok: false, error: "Category name can't be empty." };
+    if (name.length > 60) return { ok: false, error: "Keep the name under 60 characters." };
     if (!(await isNameFree(name, input.id))) return { ok: false, error: `"${name}" already exists.` };
     data.name = name;
   }
@@ -110,20 +118,25 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Catego
     data.pintPrice = input.pintPrice;
   }
 
-  const existing = await prisma.category.findUnique({ where: { id: input.id }, select: { id: true } });
-  if (!existing) return { ok: false, error: "That category no longer exists." };
-
-  const category = await prisma.category.update({ where: { id: input.id }, data });
+  let category;
+  try {
+    category = await prisma.category.update({ where: { id: input.id }, data });
+  } catch (e) {
+    return knownError(e, { P2025: "That category no longer exists.", P2002: `"${data.name}" already exists.` });
+  }
   revalidateCategoryRoutes();
   return { ok: true, category: toDto(category) };
 }
 
 export async function reorderCategories(input: { orderedIds: string[] }): Promise<SimpleResult> {
   await requireAuth();
+  const ids = input.orderedIds;
+  if (!Array.isArray(ids) || ids.some((id) => typeof id !== "string") || new Set(ids).size !== ids.length) {
+    return { ok: false, error: "Couldn't save that order." };
+  }
+  // updateMany: an id deleted in the meantime is skipped instead of failing the batch.
   await prisma.$transaction(
-    input.orderedIds.map((id, index) =>
-      prisma.category.update({ where: { id }, data: { sortOrder: index * 10 } })
-    )
+    ids.map((id, index) => prisma.category.updateMany({ where: { id }, data: { sortOrder: index * 10 } }))
   );
   revalidateCategoryRoutes();
   return { ok: true };
@@ -134,26 +147,26 @@ export async function setCategoryArchived(input: {
   archived: boolean;
 }): Promise<SimpleResult> {
   await requireAuth();
-  const existing = await prisma.category.findUnique({ where: { id: input.id }, select: { id: true } });
-  if (!existing) return { ok: false, error: "That category no longer exists." };
-
-  await prisma.category.update({ where: { id: input.id }, data: { isArchived: input.archived } });
+  const { count } = await prisma.category.updateMany({
+    where: { id: input.id },
+    data: { isArchived: input.archived },
+  });
+  if (count === 0) return { ok: false, error: "That category no longer exists." };
   revalidateCategoryRoutes();
   return { ok: true };
 }
 
 export async function deleteCategory(input: { id: string }): Promise<SimpleResult> {
   await requireAuth();
-  const usage = await prisma.category.findUnique({
-    where: { id: input.id },
-    select: { _count: { select: { expenses: true } } },
-  });
-  if (!usage) return { ok: false, error: "That category no longer exists." };
-  if (usage._count.expenses > 0) {
-    return { ok: false, error: "This category has expenses — archive it instead of deleting it." };
+  // The database refuses (onDelete: Restrict) while expenses still use it.
+  try {
+    await prisma.category.delete({ where: { id: input.id } });
+  } catch (e) {
+    return knownError(e, {
+      P2003: "This category has expenses — archive it instead of deleting it.",
+      P2025: "That category no longer exists.",
+    });
   }
-
-  await prisma.category.delete({ where: { id: input.id } });
   revalidateCategoryRoutes();
   return { ok: true };
 }

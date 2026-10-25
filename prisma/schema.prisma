@@ -41,6 +41,8 @@ model BudgetCycle {
   days           BudgetCycleDay[]
   expenses       Expense[]
 
+  // TODO(user): switch to @@unique([startDate]) — needs `npx prisma db push --accept-data-loss`
+  // run by hand (no duplicates exist; checked by prisma/apply-checks.ts --dry).
   @@index([startDate])
 }
 
@@ -103,11 +105,13 @@ model Category {
 }
 
 // Belongs to exactly one period: a month (cycleId) or a trip (tripId), enforced
-// in the mutation layer (src/lib/actions/expenses.ts).
+// in the mutation layer (src/lib/actions/expenses.ts) and by the CHECK constraint
+// expense_one_target (prisma/apply-checks.ts, db push can't create it).
+// Categories in use can't be deleted (Restrict): archive them instead.
 model Expense {
   id         String       @id @default(cuid())
   categoryId String
-  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   tripId     String?
   trip       Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
   cycleId    String?
@@ -279,6 +283,7 @@ model StudyEntry {
   createdAt DateTime     @default(now())
 
   @@index([periodId, date])
+  @@index([courseId])
 }
 
 // kind: "exam" | "test"
@@ -291,6 +296,7 @@ model StudyExam {
   note     String?
 
   @@index([date])
+  @@index([courseId])
 }
 
 // One cell of the lesson grid: course × week × HC/WC. Status keys live in
