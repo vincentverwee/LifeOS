@@ -17,9 +17,10 @@ export function CategoryChip({ name, color, selected, onClick, className }: Cate
     />
   );
 
-  const classes = `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
+  const base = `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium whitespace-nowrap ${
     selected ? "border-primary bg-surface-muted text-foreground" : "border-border bg-surface text-foreground"
   } ${className ?? ""}`;
+  const classes = onClick ? `btn ${base} hover:bg-surface-muted active:bg-surface-muted` : base;
 
   if (!onClick) {
     return (

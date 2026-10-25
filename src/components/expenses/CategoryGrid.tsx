@@ -46,10 +46,10 @@ export function CategoryGrid({ categories, selectedId, onSelect, onCreated }: Ca
               role="radio"
               aria-checked={selected}
               onClick={() => onSelect(category.id)}
-              className={`flex min-h-14 items-center gap-2.5 rounded-xl border-2 px-3 py-2 text-left text-sm font-medium transition-colors ${
+              className={`btn flex min-h-14 justify-start gap-2.5 rounded-2xl border-2 px-4 py-2 text-left text-sm ${
                 selected
                   ? "border-primary bg-surface-muted text-foreground"
-                  : "border-border bg-surface text-foreground hover:border-ink-muted"
+                  : "border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted"
               }`}
             >
               <span
@@ -71,7 +71,7 @@ export function CategoryGrid({ categories, selectedId, onSelect, onCreated }: Ca
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex min-h-14 items-center justify-center rounded-xl border-2 border-dashed border-border px-3 py-2 text-sm font-medium text-ink-muted hover:border-ink-muted"
+            className="btn flex min-h-14 rounded-2xl border-2 border-dashed border-border px-3 py-2 text-sm text-ink-muted hover:bg-surface-muted active:bg-surface-muted"
           >
             + New
           </button>
@@ -93,20 +93,20 @@ export function CategoryGrid({ categories, selectedId, onSelect, onCreated }: Ca
               if (e.key === "Escape") setAdding(false);
             }}
             placeholder="New category name"
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
+            className="min-w-0 flex-1 rounded-full border border-border bg-surface px-4 py-2 text-sm text-foreground"
           />
           <button
             type="button"
             onClick={create}
             disabled={!name.trim() || isPending}
-            className="rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            className="btn btn-primary px-4 py-2 text-sm"
           >
             Add
           </button>
           <button
             type="button"
             onClick={() => setAdding(false)}
-            className="rounded-lg border border-border px-3 py-2 text-sm text-ink-muted"
+            className="btn btn-outline px-4 py-2 text-sm"
           >
             Cancel
           </button>

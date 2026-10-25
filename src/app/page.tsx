@@ -181,7 +181,7 @@ function FeatureTile({
   return (
     <Link
       href={href}
-      className="group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-primary active:bg-surface-muted"
+      className="tap group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-primary"
     >
       <div className="flex items-center gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">

@@ -17,7 +17,7 @@ export default async function SavedRecipesPage() {
         ) : (
           <p className="mt-3 text-ink-muted">
             Nothing saved yet.{" "}
-            <Link href="/recipes" className="font-medium text-primary underline-offset-2 hover:underline">
+            <Link href="/recipes" className="btn btn-ghost -mx-1 inline-flex min-h-9 px-3">
               Start swiping
             </Link>
           </p>
@@ -41,9 +41,9 @@ function RecipeList({ recipes }: { recipes: SavedRecipeSummary[] }) {
         <li key={recipe.id}>
           <Link
             href={`/recipes/${recipe.id}`}
-            className="flex h-full items-center gap-3 rounded-2xl border border-border bg-surface p-2.5 transition-colors hover:border-primary active:bg-surface-muted"
+            className="tap flex h-full items-center gap-3 rounded-2xl border border-border bg-surface p-2.5"
           >
-            <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-surface-muted">
+            <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl bg-surface-muted">
               {recipe.image && <Image src={recipe.image} alt="" fill sizes="80px" className="object-cover" />}
             </div>
             <div className="min-w-0 flex-1">

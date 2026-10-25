@@ -42,7 +42,7 @@ export function PeriodList({ entries, summaries, activeId }: PeriodListProps) {
                     <Link
                       href={`/budget/insights?period=${encodeURIComponent(key)}`}
                       aria-current={active ? "page" : undefined}
-                      className={`flex min-h-14 flex-col justify-center gap-1.5 px-3 py-2.5 active:bg-surface-muted ${
+                      className={`tap flex min-h-14 flex-col justify-center gap-1.5 px-3 py-2.5 ${
                         active ? "bg-surface-muted" : "bg-surface"
                       }`}
                     >

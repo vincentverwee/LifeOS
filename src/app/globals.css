@@ -149,6 +149,37 @@ textarea {
   }
 }
 
+/* Buttons, shared by every feature. `btn` is the feedback: pill shape, a tint on
+   hover, a darker tint plus a slight press-in on tap (touch screens have no hover,
+   so the tap state is what makes a button feel responsive), focus ring, dimmed
+   when disabled. Pair it with one colour: btn-primary / btn-outline / btn-danger /
+   btn-destructive / btn-ghost. Size and display stay at the call site. */
+@utility btn {
+  @apply touch-manipulation items-center justify-center gap-2 rounded-full font-medium select-none;
+  @apply transition-[background-color,border-color,color,transform] duration-100;
+  @apply focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none;
+  @apply active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80;
+}
+@utility btn-outline {
+  @apply border border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted;
+}
+@utility btn-danger {
+  @apply border border-border bg-surface text-critical hover:bg-critical/10 active:bg-critical/15;
+}
+@utility btn-destructive {
+  @apply bg-critical text-primary-foreground hover:bg-critical/90 active:bg-critical/80;
+}
+@utility btn-ghost {
+  @apply text-primary hover:bg-surface-muted active:bg-surface-muted;
+}
+/* Tappable rows and cards: same tints as btn-outline, no press-in. */
+@utility tap {
+  @apply touch-manipulation transition-colors duration-100 select-none hover:bg-surface-muted/60 active:bg-surface-muted;
+}
+
 /* Clearance for the fixed bottom tab bar (see BudgetTabBar). */
 .pb-tabbar {
   padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));

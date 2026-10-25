@@ -75,7 +75,7 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
 
       <Link
         href={`/budget/add?${periodParam}`}
-        className="hidden self-start rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground sm:inline-block"
+        className="btn btn-primary hidden self-start px-5 py-2.5 text-sm font-semibold sm:inline-flex"
       >
         + Add expense
       </Link>

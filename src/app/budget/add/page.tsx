@@ -67,7 +67,7 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
 
       <Link
         href={`/budget/expenses?period=${encodeURIComponent(encodePeriodKey(activePeriod))}`}
-        className="flex min-h-12 items-center justify-between rounded-xl border border-border bg-surface px-4 py-3 text-sm font-medium text-foreground"
+        className="btn btn-outline flex min-h-12 justify-between px-5 py-3 text-sm"
       >
         Edit or delete expenses in {activePeriod.name}
         <span aria-hidden="true" className="text-ink-muted">›</span>

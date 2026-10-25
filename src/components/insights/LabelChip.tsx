@@ -45,7 +45,7 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="inline-flex min-h-9 items-center gap-1.5 self-start rounded-full bg-surface-muted px-3 py-1 text-xs font-medium text-foreground"
+        className="btn inline-flex min-h-9 gap-1.5 self-start bg-surface-muted px-3 py-1 text-xs text-foreground hover:bg-gridline active:bg-gridline"
       >
         {isPending ? <SheepSpinner size={14} /> : null}
         Compared with: {label ?? "no label"}
@@ -61,10 +61,10 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
               type="button"
               disabled={isPending}
               onClick={() => choose(option)}
-              className={`min-h-10 rounded-full border px-4 text-sm font-medium ${
+              className={`btn min-h-10 border px-4 text-sm ${
                 option === label
                   ? "border-primary bg-surface-muted text-foreground"
-                  : "border-border text-foreground"
+                  : "border-border text-foreground hover:bg-surface-muted active:bg-surface-muted"
               }`}
             >
               {option}
@@ -87,7 +87,7 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
             <button
               type="submit"
               disabled={!custom.trim() || isPending}
-              className="rounded-lg border border-primary bg-primary px-3 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="btn btn-primary px-4 py-2 text-sm"
             >
               Set
             </button>

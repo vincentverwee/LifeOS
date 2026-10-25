@@ -44,7 +44,7 @@ export function CategoryList({
               type="button"
               onClick={() => setOpenId(open ? null : row.id)}
               aria-expanded={open}
-              className="flex min-h-14 w-full flex-col justify-center gap-1.5 rounded-lg px-1 py-2.5 text-left active:bg-surface-muted"
+              className="tap flex min-h-14 w-full flex-col justify-center gap-1.5 rounded-2xl px-2 py-2.5 text-left"
             >
               <span className="flex w-full items-baseline justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-2">
@@ -111,7 +111,7 @@ export function CategoryList({
                 </ul>
                 <Link
                   href={`/budget/expenses?period=${encodeURIComponent(periodKey)}&category=${encodeURIComponent(row.id)}`}
-                  className="mt-2 inline-flex min-h-8 items-center text-sm text-primary"
+                  className="btn btn-ghost -mx-3 mt-2 inline-flex min-h-9 px-3 text-sm"
                 >
                   See the {row.name} expenses ›
                 </Link>

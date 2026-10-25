@@ -14,9 +14,9 @@ type CategoryFilterProps = {
 export function CategoryFilter({ chips, activeId, hrefFor }: CategoryFilterProps) {
   if (chips.length < 2) return null;
 
-  const chip = "flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm whitespace-nowrap";
+  const chip = "btn flex min-h-10 shrink-0 gap-1.5 border px-3.5 text-sm whitespace-nowrap";
   const on = "border-primary bg-primary text-primary-foreground";
-  const off = "border-border bg-surface text-foreground";
+  const off = "border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted";
 
   return (
     <nav aria-label="Filter by category" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">

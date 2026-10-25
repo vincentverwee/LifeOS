@@ -81,7 +81,7 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
               <button
                 type="button"
                 onClick={() => setEditingId(category.id)}
-                className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2 text-left active:bg-surface-muted"
+                className="tap flex min-h-14 w-full items-center justify-between gap-3 px-3 py-2 text-left"
               >
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span
@@ -131,7 +131,7 @@ function ColorDots({
           aria-label={slot}
           aria-pressed={value === slot}
           onClick={() => onChange(slot)}
-          className={`h-8 w-8 rounded-full ${
+          className={`btn h-8 w-8 ${
             value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""
           }`}
           style={{ backgroundColor: `var(--color-tag-${slot})` }}
@@ -172,7 +172,7 @@ function CategoryCreateForm({
           type="button"
           onClick={submit}
           disabled={!name.trim()}
-          className="rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary px-5 py-2.5 text-sm"
         >
           Add
         </button>
@@ -211,7 +211,7 @@ function CategoryEditRow({
   const pintValue = pint.trim() ? parseAmount(pint) : null;
   const pintInvalid = pint.trim() !== "" && (pintValue === null || pintValue <= 0);
   const secondary =
-    "rounded-lg border border-border px-3 py-2.5 text-sm text-foreground disabled:opacity-40";
+    "btn btn-outline px-4 py-2.5 text-sm";
 
   return (
     <div className="flex flex-col gap-3">
@@ -251,7 +251,7 @@ function CategoryEditRow({
           type="button"
           onClick={() => window.confirm(`Delete "${category.name}"?`) && onDelete()}
           disabled={category.expenseCount > 0 || busy}
-          className="rounded-lg border border-border px-3 py-2.5 text-sm text-critical disabled:opacity-40"
+          className="btn btn-danger px-4 py-2.5 text-sm"
         >
           Delete
         </button>
@@ -267,14 +267,14 @@ function CategoryEditRow({
           type="button"
           disabled={pintInvalid || !name.trim()}
           onClick={() => onSave(name.trim(), color, pintValue)}
-          className="flex-1 rounded-lg border border-primary bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary flex-1 px-4 py-2.5 text-sm"
         >
           Save
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-lg border border-border px-3 py-2.5 text-sm text-ink-muted"
+          className="btn btn-outline flex-1 px-4 py-2.5 text-sm"
         >
           Cancel
         </button>

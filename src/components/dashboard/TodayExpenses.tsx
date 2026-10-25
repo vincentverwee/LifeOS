@@ -23,7 +23,7 @@ export function TodayExpenses({ expenses, total, href }: TodayExpensesProps) {
         <ul>
           {[...expenses].reverse().map((e) => (
             <li key={e.id} className="border-t border-border first:border-t-0">
-              <Link href={href} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2 active:bg-surface-muted">
+              <Link href={href} className="tap flex min-h-12 items-center justify-between gap-3 px-4 py-2">
                 <span className="flex min-w-0 items-center gap-2.5">
                   <span
                     className="h-2.5 w-2.5 shrink-0 rounded-full"

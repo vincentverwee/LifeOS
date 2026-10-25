@@ -3,38 +3,30 @@ import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/waypoint/utils';
 
-// `touch-manipulation` + `select-none` remove the mobile double-tap-zoom delay and the
-// long-press text selection. Every variant also carries an `active:` state: on a touch screen
-// there is no hover, so without one a tap gives no feedback until the next screen paints, which
-// is what made the buttons feel unresponsive even when the handler fired immediately.
-const buttonVariants = cva(
-  'inline-flex touch-manipulation select-none items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-colors duration-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50',
-  {
-    variants: {
-      variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80',
-        destructive:
-          'bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80',
-        outline:
-          'border border-input bg-background hover:bg-surface-muted hover:text-foreground active:bg-surface-muted/80',
-        secondary:
-          'bg-secondary text-secondary-foreground hover:bg-secondary/80 active:bg-secondary/70',
-        ghost: 'hover:bg-surface-muted hover:text-foreground active:bg-surface-muted/80',
-        link: 'text-primary underline-offset-4 hover:underline active:opacity-70',
-      },
-      size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-lg px-3',
-        lg: 'h-11 rounded-xl px-8',
-        icon: 'h-10 w-10',
-      },
+// Feedback (hover tint, tap tint + press-in, focus ring, disabled) comes from the shared
+// `btn` utilities in globals.css, so Waypoint buttons behave like Budget's and Recipes'.
+const buttonVariants = cva('btn inline-flex whitespace-nowrap text-sm', {
+  variants: {
+    variant: {
+      default: 'btn-primary',
+      destructive: 'btn-destructive',
+      outline: 'btn-outline',
+      secondary: 'bg-secondary text-secondary-foreground hover:bg-gridline active:bg-gridline',
+      ghost: 'hover:bg-surface-muted hover:text-foreground active:bg-surface-muted',
+      link: 'text-primary underline-offset-4 hover:underline active:opacity-70',
     },
-    defaultVariants: {
-      variant: 'default',
-      size: 'default',
+    size: {
+      default: 'h-10 px-5 py-2',
+      sm: 'h-9 px-4',
+      lg: 'h-11 px-8',
+      icon: 'h-10 w-10',
     },
-  }
-);
+  },
+  defaultVariants: {
+    variant: 'default',
+    size: 'default',
+  },
+});
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,

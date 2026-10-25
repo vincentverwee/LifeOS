@@ -52,7 +52,7 @@ export function TripList({ trips }: { trips: TripRow[] }) {
                 <button
                   type="button"
                   onClick={() => setEditingId(trip.id)}
-                  className="min-h-11 rounded-lg px-3 text-sm text-primary active:bg-surface-muted"
+                  className="btn btn-ghost min-h-11 px-4 text-sm"
                 >
                   Edit
                 </button>
@@ -60,7 +60,7 @@ export function TripList({ trips }: { trips: TripRow[] }) {
                   type="button"
                   onClick={() => remove(trip)}
                   disabled={isPending}
-                  className="min-h-11 rounded-lg px-3 text-sm text-critical active:bg-surface-muted disabled:opacity-50"
+                  className="btn min-h-11 px-4 text-sm text-critical hover:bg-critical/10 active:bg-critical/15"
                 >
                   Delete
                 </button>

@@ -77,7 +77,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
   }
 
   const iconButton =
-    "flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted active:bg-surface-muted hover:text-foreground disabled:opacity-40";
+    "btn flex h-11 w-11 shrink-0 text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted";
 
   return (
     <div className="flex flex-col gap-4">
@@ -111,7 +111,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                     <button
                       type="button"
                       onClick={() => setEditingId(expense.id)}
-                      className="flex min-w-0 flex-1 items-center justify-between gap-3 py-1 text-left"
+                      className="tap -ml-2 flex min-w-0 flex-1 items-center justify-between gap-3 rounded-2xl py-1 pr-2 pl-2 text-left"
                     >
                       <span className="flex min-w-0 items-center gap-2.5">
                         <span
@@ -260,7 +260,7 @@ function EditRow({
           type="button"
           onClick={save}
           disabled={isPending}
-          className="inline-flex items-center gap-2 rounded-lg border border-primary bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary inline-flex px-5 py-2.5 text-sm"
         >
           {isPending && <SheepSpinner size={18} />}
           Save
@@ -268,7 +268,7 @@ function EditRow({
         <button
           type="button"
           onClick={onDone}
-          className="rounded-lg border border-border px-4 py-2.5 text-sm text-ink-muted"
+          className="btn btn-outline px-5 py-2.5 text-sm"
         >
           Cancel
         </button>
@@ -276,7 +276,7 @@ function EditRow({
           type="button"
           onClick={onDelete}
           disabled={isPending}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2.5 text-sm text-critical disabled:opacity-50"
+          className="btn btn-danger ml-auto inline-flex gap-1.5 px-4 py-2.5 text-sm"
         >
           <TrashIcon />
           Delete

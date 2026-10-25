@@ -28,7 +28,7 @@ export function Sheet({
               {title}
             </DialogPrimitive.Title>
             <DialogPrimitive.Close
-              className="-mr-2 -mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-surface-muted"
+              className="btn -mr-2 -mt-1 flex h-10 w-10 shrink-0 text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted"
               aria-label="Close"
             >
               <X size={20} aria-hidden="true" />

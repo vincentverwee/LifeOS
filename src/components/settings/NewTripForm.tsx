@@ -110,7 +110,7 @@ export function NewTripForm({ trip, onDone }: NewTripFormProps) {
       type="button"
       onClick={submit}
       disabled={isPending}
-      className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+      className="btn btn-primary flex-1 px-4 py-3 text-sm font-semibold"
     >
       {isPending ? (
         <span className="inline-flex items-center justify-center gap-2">
@@ -135,7 +135,7 @@ export function NewTripForm({ trip, onDone }: NewTripFormProps) {
           <button
             type="button"
             onClick={onDone}
-            className="rounded-xl border border-border px-4 py-3 text-sm text-ink-muted"
+            className="btn btn-outline px-5 py-3 text-sm"
           >
             Cancel
           </button>

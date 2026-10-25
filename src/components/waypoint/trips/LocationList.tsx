@@ -136,7 +136,7 @@ export function LocationList({
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                destructive
                                 onClick={() => onRemove(loc.id)}
                               >
                                 Remove

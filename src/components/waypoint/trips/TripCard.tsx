@@ -111,7 +111,7 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      destructive
                       onClick={() => onDelete(trip.id)}
                     >
                       Delete

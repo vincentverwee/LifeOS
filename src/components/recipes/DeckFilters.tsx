@@ -17,8 +17,8 @@ function Chip({ selected, onClick, children }: { selected: boolean; onClick: () 
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      className={`min-h-10 rounded-full border px-3.5 text-sm font-medium capitalize ${
-        selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:bg-surface-muted"
+      className={`btn min-h-10 border px-3.5 text-sm capitalize ${
+        selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted"
       }`}
     >
       {children}
@@ -54,7 +54,7 @@ export function DeckFilters({ filters }: { filters: Filters }) {
       <button
         type="button"
         onClick={openSheet}
-        className="flex min-h-11 w-full items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-left text-sm hover:bg-surface-muted"
+        className="btn btn-outline flex min-h-11 w-full justify-start px-4 text-left text-sm font-normal"
       >
         <SlidersHorizontal size={18} aria-hidden="true" className={active ? "text-primary" : "text-ink-muted"} />
         <span className="flex-1 truncate font-medium capitalize text-foreground">{summary(filters)}</span>
@@ -108,7 +108,7 @@ export function DeckFilters({ filters }: { filters: Filters }) {
           <button
             type="button"
             onClick={apply}
-            className="sticky bottom-0 min-h-12 rounded-xl bg-primary font-semibold text-primary-foreground"
+            className="btn btn-primary sticky bottom-0 flex min-h-12 font-semibold"
           >
             Show recipes
           </button>

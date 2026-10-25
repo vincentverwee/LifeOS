@@ -44,13 +44,13 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
           max={todayKey}
           onChange={(e) => setDate(e.target.value)}
           aria-label="Day you made it"
-          className="min-h-12 flex-1 rounded-xl border border-border bg-background px-3 text-foreground"
+          className="min-h-12 flex-1 rounded-full border border-border bg-background px-4 text-foreground"
         />
         <button
           type="button"
           disabled={pending || !date}
           onClick={() => run(() => markRecipeMade(id, date))}
-          className="min-h-12 flex-1 rounded-xl bg-primary px-4 font-semibold text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary flex min-h-12 flex-1 px-5 font-semibold"
         >
           {madeOn ? "Change date" : "Mark as made"}
         </button>
@@ -61,7 +61,7 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
             type="button"
             disabled={pending}
             onClick={() => run(() => markRecipeMade(id, null))}
-            className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium text-foreground hover:bg-surface-muted disabled:opacity-50"
+            className="btn btn-outline min-h-11 px-5 text-sm"
           >
             Not made yet
           </button>
@@ -71,7 +71,7 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
             <button
               type="button"
               disabled={pending}
-              className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium text-critical hover:bg-surface-muted disabled:opacity-50"
+              className="btn btn-danger min-h-11 px-5 text-sm"
             >
               Remove
             </button>
@@ -84,7 +84,7 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
             <AlertDialogFooter>
               <AlertDialogCancel>Keep it</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-critical text-primary-foreground hover:bg-critical/90"
+                destructive
                 onClick={() => run(() => removeSavedRecipe(id), () => router.replace("/recipes/saved"))}
               >
                 Remove

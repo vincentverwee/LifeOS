@@ -59,7 +59,7 @@ export function PaceComparison({ day, daysInMonth, spent, rows, insightsHref }: 
         })}
       </ul>
 
-      <Link href={insightsHref} className="mt-3 inline-flex min-h-8 items-center text-sm text-primary">
+      <Link href={insightsHref} className="btn btn-ghost -mx-3 mt-3 inline-flex min-h-9 px-3 text-sm">
         See insights ›
       </Link>
     </section>

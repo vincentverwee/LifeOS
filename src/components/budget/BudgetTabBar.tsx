@@ -17,7 +17,7 @@ function TabLink({ tab, active }: { tab: Tab; active: boolean }) {
     <Link
       href={tab.href}
       aria-current={active ? "page" : undefined}
-      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${
+      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium active:bg-surface-muted ${
         active ? "text-primary" : "text-ink-muted"
       }`}
     >
@@ -45,7 +45,7 @@ export function BudgetTabBar() {
             href="/budget/add"
             aria-label="Add expense"
             aria-current={onAdd ? "page" : undefined}
-            className="-mt-5 mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-3xl leading-none font-light text-primary-foreground shadow-lg ring-4 ring-background"
+            className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 text-3xl leading-none font-light shadow-lg ring-4 ring-background"
           >
             +
           </Link>

@@ -156,7 +156,7 @@ export function SwipeDeck({
           onClick={() => swipe("left")}
           disabled={!top}
           aria-label="Skip"
-          className="flex h-16 w-16 items-center justify-center rounded-full border border-border bg-surface text-critical shadow-sm transition-transform active:scale-90 disabled:opacity-40"
+          className="btn btn-danger flex h-16 w-16 shadow-sm"
         >
           <X size={30} strokeWidth={2.5} aria-hidden="true" />
         </button>
@@ -165,7 +165,7 @@ export function SwipeDeck({
           onClick={() => swipe("right")}
           disabled={!top}
           aria-label="Want to make"
-          className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm transition-transform active:scale-90 disabled:opacity-40"
+          className="btn btn-primary flex h-16 w-16 shadow-sm"
         >
           <Heart size={28} strokeWidth={2.5} fill="currentColor" aria-hidden="true" />
         </button>
@@ -252,7 +252,7 @@ function DeckCard({
               onClick={onInfo}
               onPointerDownCapture={(e) => e.stopPropagation()}
               aria-label="Ingredients and steps"
-              className="absolute right-3 bottom-3 flex h-11 w-11 items-center justify-center rounded-full bg-surface/90 text-foreground shadow"
+              className="btn absolute right-3 bottom-3 flex h-11 w-11 bg-surface/90 text-foreground shadow hover:bg-surface active:bg-surface-muted"
             >
               <Info size={22} aria-hidden="true" />
             </button>
@@ -297,13 +297,13 @@ function EmptyDeck({
           <button
             type="button"
             onClick={onRetry}
-            className="min-h-11 rounded-xl border border-border px-4 text-sm font-medium text-foreground hover:bg-surface-muted"
+            className="btn btn-outline min-h-11 px-5 text-sm"
           >
             Try again
           </button>
           <Link
             href="/recipes/saved"
-            className="flex min-h-11 items-center rounded-xl bg-primary px-4 text-sm font-medium text-primary-foreground"
+            className="btn btn-primary flex min-h-11 px-5 text-sm"
           >
             Saved recipes
           </Link>

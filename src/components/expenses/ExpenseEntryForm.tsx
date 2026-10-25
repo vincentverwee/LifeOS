@@ -24,7 +24,7 @@ function SubmitButton({ label }: { label: string }) {
     <button
       type="submit"
       disabled={pending}
-      className="w-full rounded-xl bg-primary px-4 py-3.5 text-base font-semibold text-primary-foreground shadow-md disabled:opacity-60 sm:shadow-none"
+      className="btn btn-primary flex w-full px-4 py-3.5 text-base font-semibold shadow-md sm:shadow-none"
     >
       {pending ? (
         <span className="inline-flex items-center justify-center gap-2">
@@ -122,8 +122,8 @@ export function ExpenseEntryForm({
       type="button"
       onClick={() => setDateChoice(choice)}
       aria-pressed={dateChoice === choice}
-      className={`flex-1 rounded-lg px-3 py-2 text-sm font-medium ${
-        dateChoice === choice ? "bg-surface text-foreground shadow-sm" : "text-ink-muted"
+      className={`btn flex-1 px-3 py-2 text-sm ${
+        dateChoice === choice ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"
       }`}
     >
       {label}
@@ -157,14 +157,14 @@ export function ExpenseEntryForm({
             }}
             placeholder="0,00"
             required
-            className="min-w-0 flex-1 rounded-xl border border-border bg-surface px-4 py-3 font-mono text-3xl font-semibold tabular-nums text-foreground"
+            className="min-w-0 flex-1 rounded-2xl border border-border bg-surface px-4 py-3 font-mono text-3xl font-semibold tabular-nums text-foreground"
           />
           <button
             type="button"
             onClick={appendPlus}
             aria-label="Add another amount"
             title="Add another amount (sum)"
-            className="w-16 shrink-0 rounded-xl border border-border bg-surface-muted text-3xl font-light text-foreground"
+            className="btn flex w-16 shrink-0 rounded-2xl border border-border bg-surface-muted text-3xl font-light text-foreground hover:bg-gridline active:bg-gridline"
           >
             +
           </button>
@@ -208,7 +208,7 @@ export function ExpenseEntryForm({
 
       <div className="flex flex-col gap-2">
         <span className="text-sm text-ink-muted">Date</span>
-        <div className="flex gap-1 rounded-xl bg-surface-muted p-1">
+        <div className="flex gap-1 rounded-full bg-surface-muted p-1">
           {segment("today", "Today")}
           {segment("yesterday", "Yesterday")}
           {segment("other", dateChoice === "other" && date ? formatDate(date) : "Other…")}
@@ -242,7 +242,7 @@ export function ExpenseEntryForm({
         <button
           type="button"
           onClick={() => setShowNote(true)}
-          className="self-start py-1 text-sm text-primary"
+          className="btn btn-ghost -mx-3 inline-flex min-h-9 self-start px-3 text-sm"
         >
           + Add note
         </button>

@@ -189,7 +189,7 @@ export function BalancesCard({
           type="button"
           onClick={save}
           disabled={invalid || rentInvalid || budgetInvalid || isPending}
-          className="rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary px-5 py-2.5 text-sm font-semibold"
         >
           {isPending ? (
             <span className="inline-flex items-center justify-center gap-2">

@@ -43,7 +43,7 @@ export function MonthList({ months, labels }: { months: MonthRow[]; labels: stri
               <button
                 type="button"
                 onClick={() => setEditingId(month.id)}
-                className="min-h-11 rounded-lg px-3 text-sm text-primary active:bg-surface-muted"
+                className="btn btn-ghost min-h-11 px-4 text-sm"
               >
                 Edit
               </button>
@@ -113,7 +113,7 @@ function EditMonth({ month, onDone }: { month: MonthRow; onDone: () => void }) {
           type="button"
           onClick={save}
           disabled={isPending}
-          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+          className="btn btn-primary inline-flex flex-1 px-4 py-3 text-sm font-semibold"
         >
           {isPending && <SheepSpinner size={18} />}
           Save
@@ -121,7 +121,7 @@ function EditMonth({ month, onDone }: { month: MonthRow; onDone: () => void }) {
         <button
           type="button"
           onClick={onDone}
-          className="rounded-xl border border-border px-4 py-3 text-sm text-ink-muted"
+          className="btn btn-outline px-5 py-3 text-sm"
         >
           Cancel
         </button>
