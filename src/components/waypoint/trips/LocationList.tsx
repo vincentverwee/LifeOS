@@ -88,42 +88,42 @@ export function LocationList({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-10 w-10 sm:h-8 sm:w-8"
                         onClick={() => setExpandedId(isExpanded ? null : loc.id)}
                         title="Edit dates & notes"
                       >
-                        <CalendarDays size={13} />
+                        <CalendarDays size={16} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-10 w-10 sm:h-8 sm:w-8"
                         onClick={() => onMoveUp(loc.id)}
                         disabled={isFirst || disabled}
                         title="Move up"
                       >
-                        <ChevronUp size={13} />
+                        <ChevronUp size={16} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-10 w-10 sm:h-8 sm:w-8"
                         onClick={() => onMoveDown(loc.id)}
                         disabled={isLast || disabled}
                         title="Move down"
                       >
-                        <ChevronDown size={13} />
+                        <ChevronDown size={16} />
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            className="ml-1.5 h-10 w-10 text-destructive hover:text-destructive sm:ml-0 sm:h-8 sm:w-8"
                             disabled={disabled}
                             title="Remove"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={16} />
                           </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
@@ -155,7 +155,7 @@ export function LocationList({
                           <Input
                             type="date"
                             defaultValue={loc.arrival_date ?? ''}
-                            className="h-8 text-xs"
+                            className="h-11 text-sm sm:h-9"
                             onBlur={(e) =>
                               e.target.value !== (loc.arrival_date ?? '') &&
                               onUpdateDates(loc.id, e.target.value, loc.departure_date ?? '')
@@ -169,7 +169,7 @@ export function LocationList({
                           <Input
                             type="date"
                             defaultValue={loc.departure_date ?? ''}
-                            className="h-8 text-xs"
+                            className="h-11 text-sm sm:h-9"
                             onBlur={(e) =>
                               e.target.value !== (loc.departure_date ?? '') &&
                               onUpdateDates(loc.id, loc.arrival_date ?? '', e.target.value)

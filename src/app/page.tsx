@@ -95,21 +95,6 @@ export default async function HomePage() {
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <li>
-          <div className="relative h-full min-h-48 overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
-            <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 opacity-15" />
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold">Fact of the day</h2>
-              {fact.theme !== "Sheep" && (
-                <span className="rounded-full bg-primary-foreground/15 px-2.5 py-0.5 text-xs font-medium">
-                  {fact.theme}
-                </span>
-              )}
-            </div>
-            <p className="relative mt-4 text-lg leading-snug">{fact.text}</p>
-          </div>
-        </li>
-
-        <li>
           <FeatureTile href="/budget" name="Budget" icon={BudgetIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <BudgetTileBody todayKey={todayKey} />
@@ -141,19 +126,26 @@ export default async function HomePage() {
           </FeatureTile>
         </li>
 
-        <li>
-          <div
-            className="flex h-full min-h-20 items-center justify-center rounded-2xl border border-dashed border-border p-5 text-sm text-ink-muted"
-            aria-label="More features coming soon"
-          >
-            More coming soon
+        {/* After the features, so they are the first thing on a phone. */}
+        <li className="sm:col-span-2">
+          <div className="relative h-full overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
+            <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 opacity-15" />
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Fact of the day</h2>
+              {fact.theme !== "Sheep" && (
+                <span className="rounded-full bg-primary-foreground/15 px-2.5 py-0.5 text-xs font-medium">
+                  {fact.theme}
+                </span>
+              )}
+            </div>
+            <p className="relative mt-2 text-base leading-snug">{fact.text}</p>
           </div>
         </li>
       </ul>
 
       {!authDisabled() && (
         <form action={logout} className="flex justify-center">
-          <button type="submit" className="btn btn-ghost text-sm">
+          <button type="submit" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
             Log out
           </button>
         </form>

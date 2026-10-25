@@ -17,21 +17,24 @@ export default async function MapPage() {
 
   return (
     <>
-      <div className="mx-auto flex max-w-7xl flex-col space-y-6">
-        <div className="flex items-start justify-between gap-3">
+      <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:gap-6">
+        <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="text-2xl font-semibold text-foreground">Map</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Explore your routes</p>
+            <p className="mt-1 hidden text-sm text-muted-foreground sm:block">Explore your routes</p>
           </div>
-          <Link href="/waypoint/map/export" title="Export the whole map as an image">
-            <Button variant="outline" size="sm" className="gap-1.5">
+          <Button asChild variant="outline" size="sm" className="gap-1.5">
+            <Link href="/waypoint/map/export" title="Export the whole map as an image">
               <ImageDown size={15} />
               Export map
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
         <MapWrapper
-          className="h-[70dvh] min-h-[420px]"
+          // Phones: exactly the space between the header and the tab bar, so the page itself
+          // doesn't scroll and every swipe goes to the map.
+          className="h-[calc(100svh-14rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[360px] sm:h-[70dvh] sm:min-h-[420px]"
+          cooperativeGestures={false}
           locations={locations}
           routes={routes}
           tripLabels={tripLabels}

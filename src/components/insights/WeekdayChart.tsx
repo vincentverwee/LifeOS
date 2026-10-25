@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTooltipTrigger } from "@/lib/useTooltipTrigger";
 import type { WeekdayStat } from "@/lib/monthStats";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
@@ -25,6 +26,7 @@ function WeekdayTooltip({
 }
 
 export function WeekdayChart({ weekdays }: { weekdays: WeekdayStat[] }) {
+  const tooltipTrigger = useTooltipTrigger();
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={weekdays} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
@@ -42,7 +44,7 @@ export function WeekdayChart({ weekdays }: { weekdays: WeekdayStat[] }) {
           tickLine={false}
           width={52}
         />
-        <Tooltip content={<WeekdayTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
+        <Tooltip trigger={tooltipTrigger} content={<WeekdayTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
         <Bar
           dataKey="avgPerDay"
           fill="var(--color-accent)"

@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/waypoint/ui/card';
 import { Trip, Location } from '@/lib/waypoint/types';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
+import { useElementWidth } from '@/lib/waypoint/useElementWidth';
 import {
   EXPORT_FORMATS,
   DESIGN_WIDTH,
@@ -232,6 +233,8 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
   // We capture the on-screen preview itself: it's already mounted, loaded and fitted, so there's
   // no second hidden map whose cold load we'd have to race. WYSIWYG.
   const previewRef = useRef<HTMLDivElement>(null);
+  // The preview never gets wider than its column (a 375px phone has ~343px, less than the max).
+  const [previewBoxRef, previewBoxWidth] = useElementWidth<HTMLDivElement>();
 
   // Colors are assigned across ALL trips, not just the included ones, so a trip keeps its hue
   // when you tick others off and on.
@@ -242,11 +245,11 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
       <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="flex items-center gap-3">
-            <Link href="/waypoint">
-              <Button variant="ghost" size="icon">
+            <Button asChild variant="ghost" size="icon">
+              <Link href="/waypoint">
                 <ArrowLeft size={18} />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <h2 className="text-2xl font-semibold text-foreground">Export map</h2>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
@@ -262,7 +265,10 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
   }
 
   const format = FORMATS.find((f) => f.id === formatId) ?? FORMATS[0];
-  const previewScale = Math.min(1, PREVIEW_MAX_WIDTH / format.width);
+  const previewScale = Math.min(
+    1,
+    Math.min(PREVIEW_MAX_WIDTH, previewBoxWidth ?? PREVIEW_MAX_WIDTH) / format.width
+  );
   const previewWidth = Math.round(format.width * previewScale);
   const previewHeight = Math.round(format.height * previewScale);
 
@@ -337,11 +343,11 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
     <>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3">
-          <Link href="/waypoint">
-            <Button variant="ghost" size="icon">
+          <Button asChild variant="ghost" size="icon">
+            <Link href="/waypoint">
               <ArrowLeft size={18} />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div>
             <h2 className="text-2xl font-semibold text-foreground">Export map — all trips</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -363,11 +369,11 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                         ({includedTrips.length}/{trips.length})
                       </span>
                     </Label>
-                    <div className="flex gap-1">
+                    <div className="-mr-3 flex items-center">
                       <button
                         type="button"
                         onClick={() => setAll(true)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="btn btn-ghost inline-flex min-h-11 px-3 text-sm text-muted-foreground hover:text-foreground sm:min-h-8"
                       >
                         All
                       </button>
@@ -375,13 +381,13 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                       <button
                         type="button"
                         onClick={() => setAll(false)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="btn btn-ghost inline-flex min-h-11 px-3 text-sm text-muted-foreground hover:text-foreground sm:min-h-8"
                       >
                         None
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-80 space-y-1 overflow-y-auto rounded-xl border border-border/60 p-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border/60 p-1">
                     {trips.map((trip) => {
                       const on = included.has(trip.id);
                       const custom = customLabels[trip.id] ?? '';
@@ -395,7 +401,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                           <button
                             type="button"
                             onClick={() => toggleTrip(trip.id)}
-                            className="flex shrink-0 items-center gap-2"
+                            className="-my-1 flex min-h-11 shrink-0 items-center gap-2 px-1 sm:min-h-0"
                             title={on ? 'On the map — click to remove' : 'Click to add to the map'}
                           >
                             <span
@@ -672,7 +678,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
             </Card>
           </div>
 
-          <div className="flex items-start justify-center">
+          <div ref={previewBoxRef} className="flex min-w-0 items-start justify-center">
             {/* Rendered at FULL export resolution, only *displayed* shrunk via a transform on the
                 scaler below — previewRef itself is untransformed, so it captures 1:1. */}
             <div style={{ width: previewWidth, height: previewHeight, overflow: 'hidden' }}>

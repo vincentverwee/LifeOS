@@ -247,6 +247,10 @@ interface MapViewProps {
   reserveBottom?: number;
   /** Show the zoom/compass control. Off for exports so it doesn't appear in the captured image. */
   showControls?: boolean;
+  /** On touch screens, one finger scrolls the page and two fingers move the map, so a map inside
+   *  a scrolling page can't trap the swipe. Off for the full-screen map page, where the map is
+   *  the page. */
+  cooperativeGestures?: boolean;
   /** Forces the WebGL canvas' pixel ratio instead of the device default. The export/capture map
    *  passes `1` so its buffer equals the (already full-resolution) container — a 1920px container
    *  at the phone's devicePixelRatio 2–3 would otherwise blow past iOS's ~4096px WebGL canvas limit
@@ -281,6 +285,7 @@ export default function MapView({
   labelOverrides,
   reserveBottom,
   showControls = true,
+  cooperativeGestures = true,
   pixelRatio,
   preserveDrawingBuffer = false,
   onReady,
@@ -312,6 +317,7 @@ export default function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    const touch = window.matchMedia('(pointer: coarse)').matches;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -324,8 +330,10 @@ export default function MapView({
       preserveDrawingBuffer,
       // Cap the buffer for the export map (passes 1) so it stays within iOS's WebGL canvas limit.
       ...(pixelRatio != null ? { pixelRatio } : {}),
+      cooperativeGestures: touch && cooperativeGestures,
     });
-    if (showControls) map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    // Phones pinch to zoom; the small +/- buttons only get in the way there.
+    if (showControls && !touch) map.addControl(new maplibregl.NavigationControl(), 'top-right');
 
     // Tap-to-focus (only when a selection handler is wired — dashboard + world map). One global
     // click: hit-test the corridor + dot layers; a hit selects that trip, empty map deselects.
@@ -391,7 +399,7 @@ export default function MapView({
       mapRef.current = null;
       setLoaded(false);
     };
-  }, [showControls, pixelRatio, preserveDrawingBuffer]);
+  }, [showControls, cooperativeGestures, pixelRatio, preserveDrawingBuffer]);
 
   useEffect(() => {
     const map = mapRef.current;

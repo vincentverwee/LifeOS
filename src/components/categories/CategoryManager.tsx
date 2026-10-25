@@ -134,7 +134,7 @@ function ColorDots({
           aria-label={slot}
           aria-pressed={value === slot}
           onClick={() => onChange(slot)}
-          className={`btn h-8 w-8 ${
+          className={`btn h-10 w-10 ${
             value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""
           }`}
           style={{ backgroundColor: `var(--color-tag-${slot})` }}

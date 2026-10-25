@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Month, MonthStats } from "@/lib/monthStats";
 import { encodePeriodKey } from "@/lib/period";
 import { formatCurrency, formatCurrencyShort } from "@/lib/format";
@@ -14,10 +15,12 @@ type TodayPanelProps = {
   comparisons: PaceRow[];
   /** days since bank/tricount/cash were last updated (null = never) */
   balancesAge: number | null;
+  /** only the allowance hero: for a second running period (a trip during a month) */
+  compact?: boolean;
 };
 
 /** "Today at a glance" for one running period (the current month or a trip). */
-export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge }: TodayPanelProps) {
+export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge, compact = false }: TodayPanelProps) {
   const today = stats.today;
   if (!today) return null;
 
@@ -72,69 +75,75 @@ export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge }:
         </div>
       )}
 
-      <PaceComparison
-        day={stats.daysElapsed}
-        daysInMonth={stats.daysInMonth}
-        spent={stats.spent}
-        rows={comparisons}
-        insightsHref={`/budget/insights?period=${key}`}
-      />
+      {compact ? (
+        <Link
+          href={`/budget/expenses?period=${key}`}
+          className="btn btn-ghost -mt-2 inline-flex min-h-11 self-start px-3 text-sm"
+        >
+          {month.name} expenses ›
+        </Link>
+      ) : (
+        <>
+          <PaceComparison
+            day={stats.daysElapsed}
+            daysInMonth={stats.daysInMonth}
+            spent={stats.spent}
+            rows={comparisons}
+            insightsHref={`/budget/insights?period=${key}`}
+          />
 
-      <SummaryCards
-        cards={[
-          {
-            label: isMonth ? "Left this month" : "Left on this trip",
-            value: formatCurrencyShort(Math.abs(today.budgetLeft)),
-            tone: today.budgetLeft >= 0 ? "positive" : "negative",
-            icon: null,
-            hint:
-              today.budgetLeft >= 0
-                ? `${today.daysLeftInclToday} ${today.daysLeftInclToday === 1 ? "day" : "days"} to go`
-                : "over budget",
-          },
-          {
-            label: "Budget line",
-            value: formatCurrencyShort(Math.abs(today.vsBudgetLine)),
-            tone: today.vsBudgetLine >= 0 ? "positive" : "negative",
-            icon: today.vsBudgetLine >= 0 ? "▼" : "▲",
-            hint: today.vsBudgetLine >= 0 ? "under the line" : "over the line",
-          },
-          {
-            label: "Average per day",
-            value: formatCurrencyShort(stats.avgPerDay),
-            icon: null,
-            hint: `on track for ${formatCurrencyShort(stats.expectedTotal)}`,
-            tone: stats.expectedVsBudget < 0 ? "negative" : "neutral",
-          },
-          // Balances, available and safe-per-day live in the card below.
-          {
-            label: "Spent so far",
-            value: formatCurrencyShort(stats.spent),
-            icon: null,
-            hint: `of ${formatCurrencyShort(month.budget)}`,
-          },
-        ]}
-      />
+          <SummaryCards
+            cards={[
+              {
+                label: isMonth ? "Left this month" : "Left on this trip",
+                value: formatCurrencyShort(Math.abs(today.budgetLeft)),
+                tone: today.budgetLeft >= 0 ? "positive" : "negative",
+                icon: null,
+                hint:
+                  today.budgetLeft >= 0
+                    ? `${today.daysLeftInclToday} ${today.daysLeftInclToday === 1 ? "day" : "days"} to go`
+                    : "over budget",
+              },
+              {
+                label: "Budget line",
+                value: formatCurrencyShort(Math.abs(today.vsBudgetLine)),
+                tone: today.vsBudgetLine >= 0 ? "positive" : "negative",
+                icon: today.vsBudgetLine >= 0 ? "▼" : "▲",
+                hint: today.vsBudgetLine >= 0 ? "under the line" : "over the line",
+              },
+              {
+                label: "Average per day",
+                value: formatCurrencyShort(stats.avgPerDay),
+                icon: null,
+                hint: `on track for ${formatCurrencyShort(stats.expectedTotal)}`,
+                tone: stats.expectedVsBudget < 0 ? "negative" : "neutral",
+              },
+              // Spent so far is in the pace card above; balances, available and safe-per-day
+              // live in the card below.
+            ]}
+          />
 
-      <TodayExpenses
-        expenses={todaysExpenses}
-        total={today.spentToday}
-        href={`/budget/expenses?period=${key}`}
-      />
+          <TodayExpenses
+            expenses={todaysExpenses}
+            total={today.spentToday}
+            href={`/budget/expenses?period=${key}`}
+          />
 
-      {isMonth && (
-        <BalancesCard
-          key={`${month.id}:${month.balancesUpdatedAt ?? ""}:${month.budget}:${month.rent}:${month.rentDay ?? ""}`}
-          cycleId={month.id}
-          budget={month.budget}
-          bank={month.bank}
-          tricount={month.tricount}
-          cash={month.cash}
-          rent={month.rent}
-          rentDay={month.rentDay}
-          updatedDaysAgo={balancesAge}
-          outlook={stats.outlook}
-        />
+          {isMonth && (
+            <BalancesCard
+              key={`${month.id}:${month.balancesUpdatedAt ?? ""}:${month.budget}:${month.rent}:${month.rentDay ?? ""}`}
+              cycleId={month.id}
+              budget={month.budget}
+              bank={month.bank}
+              tricount={month.tricount}
+              cash={month.cash}
+              rent={month.rent}
+              rentDay={month.rentDay}
+              updatedDaysAgo={balancesAge}
+              outlook={stats.outlook}
+            />
+          )}
+        </>
       )}
     </section>
   );

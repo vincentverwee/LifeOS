@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useTooltipTrigger } from "@/lib/useTooltipTrigger";
 import type { SavingsEntry } from "@/lib/data/savings";
 import { formatCurrency, formatCurrencyCompact, formatDate } from "@/lib/format";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
@@ -31,6 +32,7 @@ type SavingsTrendChartProps = {
 };
 
 export function SavingsTrendChart({ entries }: SavingsTrendChartProps) {
+  const tooltipTrigger = useTooltipTrigger();
   if (entries.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
@@ -69,7 +71,7 @@ export function SavingsTrendChart({ entries }: SavingsTrendChartProps) {
           tickLine={false}
           width={52}
         />
-        <Tooltip content={<SavingsTooltip />} cursor={{ stroke: "var(--color-ink-muted)" }} />
+        <Tooltip trigger={tooltipTrigger} content={<SavingsTooltip />} cursor={{ stroke: "var(--color-ink-muted)" }} />
         <Line
           dataKey="runningTotal"
           stroke="var(--color-accent)"

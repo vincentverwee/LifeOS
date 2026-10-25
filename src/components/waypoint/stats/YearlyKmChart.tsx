@@ -19,24 +19,28 @@ export function YearlyKmChart({ data }: YearlyKmChartProps) {
             Add start dates to your trips to see yearly totals
           </p>
         ) : (
-          <div className="flex items-end gap-4 border-t border-border pt-4">
+          // Horizontal bars: any number of years fits a phone, and the values are always visible.
+          <ul className="space-y-3">
             {data.map((entry) => (
-              <div
-                key={entry.year}
-                className="flex flex-1 flex-col items-center gap-2"
-                title={`${entry.year}: ${entry.totalKm.toLocaleString()} km · ${entry.tripsCount} trip${entry.tripsCount === 1 ? '' : 's'}`}
-              >
-                <span className='font-mono text-xs font-medium tabular-nums'>{entry.totalKm.toLocaleString()}</span>
-                <div className="flex h-40 w-full max-w-16 items-end">
+              <li key={entry.year} className="space-y-1">
+                <div className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="font-medium">
+                    {entry.year}
+                    <span className="ml-1.5 font-normal text-muted-foreground">
+                      · {entry.tripsCount} trip{entry.tripsCount === 1 ? '' : 's'}
+                    </span>
+                  </span>
+                  <span className="font-mono tabular-nums">{entry.totalKm.toLocaleString()} km</span>
+                </div>
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted/40">
                   <div
-                    className="w-full rounded-t-md bg-primary"
-                    style={{ height: `${(entry.totalKm / maxKm) * 100}%` }}
+                    className="h-full rounded-full bg-primary"
+                    style={{ width: `${(entry.totalKm / maxKm) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-muted-foreground">{entry.year}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </CardContent>
     </Card>

@@ -10,17 +10,21 @@ type CategoryFilterProps = {
   hrefFor: (id: string | null) => string;
 };
 
-/** A swipeable row of the period's categories; tap one to show only its expenses. */
+/** A swipeable row of the period's categories; tap one to show only its expenses. Sticks to the
+ *  top of the screen so the filter stays reachable down a long list. */
 export function CategoryFilter({ chips, activeId, hrefFor }: CategoryFilterProps) {
   if (chips.length < 2) return null;
 
-  const chip = "btn flex min-h-10 shrink-0 gap-1.5 border px-3.5 text-sm whitespace-nowrap";
+  const chip = "btn flex min-h-11 shrink-0 snap-start gap-1.5 border px-3.5 text-sm whitespace-nowrap";
   const on = "border-primary bg-primary text-primary-foreground";
   const off = "border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted";
 
   return (
-    <nav aria-label="Filter by category" className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <ul className="flex gap-2 pb-1">
+    <nav
+      aria-label="Filter by category"
+      className="sticky top-[env(safe-area-inset-top)] z-20 -mx-4 snap-x scroll-px-4 overflow-x-auto bg-background/95 px-4 py-2 backdrop-blur [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      <ul className="flex gap-2">
         <li>
           <Link href={hrefFor(null)} className={`${chip} ${activeId === null ? on : off}`} scroll={false}>
             All

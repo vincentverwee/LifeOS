@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { formatCurrency, formatCurrencyShort, formatPercent } from "@/lib/format";
+import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 
 export type CategoryRow = {
   id: string;
@@ -16,7 +16,11 @@ export type CategoryRow = {
   history: { periodId: string; name: string; label: string | null; amount: number; active: boolean }[];
 };
 
-/** Categories of the selected period. Tap one to see it across all periods. */
+/** History lines shown before "Show all". */
+const HISTORY_SHOWN = 6;
+
+/** Categories of the selected period. Tap one to see it across recent periods. Several can be
+ *  open at once, so opening a row never collapses one above it and jumps the page. */
 export function CategoryList({
   rows,
   typicalLabel,
@@ -27,7 +31,13 @@ export function CategoryList({
   /** encoded period key, for the "see expenses" link */
   periodKey: string;
 }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openIds, setOpenIds] = useState<ReadonlySet<string>>(new Set());
+  const [fullIds, setFullIds] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (set: ReadonlySet<string>, id: string) => {
+    const next = new Set(set);
+    if (!next.delete(id)) next.add(id);
+    return next;
+  };
 
   if (rows.length === 0) {
     return <p className="text-sm text-ink-muted">No spending in this period yet.</p>;
@@ -36,13 +46,15 @@ export function CategoryList({
   return (
     <ul className="-mx-1 flex flex-col">
       {rows.map((row) => {
-        const open = openId === row.id;
-        const max = Math.max(1, ...row.history.map((h) => h.amount));
+        const open = openIds.has(row.id);
+        const full = fullIds.has(row.id);
+        const history = full ? row.history : row.history.slice(-HISTORY_SHOWN);
+        const max = Math.max(1, ...history.map((h) => h.amount));
         return (
           <li key={row.id} className="border-b border-border last:border-b-0">
             <button
               type="button"
-              onClick={() => setOpenId(open ? null : row.id)}
+              onClick={() => setOpenIds((ids) => toggle(ids, row.id))}
               aria-expanded={open}
               className="tap flex min-h-14 w-full flex-col justify-center gap-1.5 rounded-2xl px-2 py-2.5 text-left"
             >
@@ -66,19 +78,16 @@ export function CategoryList({
                   </span>
                 </span>
               </span>
-              <span className="flex w-full items-center gap-2">
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-muted" aria-hidden="true">
-                  <span
-                    className="block h-full rounded-full"
-                    style={{ width: `${Math.min(100, row.percent)}%`, backgroundColor: `var(--color-tag-${row.color})` }}
-                  />
-                </span>
-                <span className="w-9 text-right text-xs text-ink-muted">{formatPercent(row.percent)}</span>
+              <span className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted" aria-hidden="true">
+                <span
+                  className="block h-full rounded-full"
+                  style={{ width: `${Math.min(100, row.percent)}%`, backgroundColor: `var(--color-tag-${row.color})` }}
+                />
               </span>
             </button>
 
             {open && (
-              <div className="px-1 pb-3">
+              <div className="animate-fade-in px-1 pb-3">
                 <p className="mb-2 text-xs text-ink-muted">
                   {row.name} per period
                   {row.delta !== null && typicalLabel
@@ -86,7 +95,7 @@ export function CategoryList({
                     : ""}
                 </p>
                 <ul className="flex flex-col gap-1.5">
-                  {row.history.map((h) => (
+                  {history.map((h) => (
                     <li key={h.periodId} className="flex items-center gap-2 text-xs">
                       <span
                         className={`w-28 shrink-0 truncate ${h.active ? "font-semibold text-foreground" : "text-ink-muted"}`}
@@ -109,12 +118,23 @@ export function CategoryList({
                     </li>
                   ))}
                 </ul>
-                <Link
+                <div className="mt-1 flex flex-wrap items-center gap-x-2">
+                  {row.history.length > HISTORY_SHOWN && (
+                    <button
+                      type="button"
+                      onClick={() => setFullIds((ids) => toggle(ids, row.id))}
+                      className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm"
+                    >
+                      {full ? "Show fewer" : `Show all ${row.history.length}`}
+                    </button>
+                  )}
+                  <Link
                   href={`/budget/expenses?period=${encodeURIComponent(periodKey)}&category=${encodeURIComponent(row.id)}`}
-                  className="btn btn-ghost -mx-3 mt-2 inline-flex min-h-9 px-3 text-sm"
-                >
-                  See the {row.name} expenses ›
-                </Link>
+                    className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm"
+                  >
+                    See the {row.name} expenses ›
+                  </Link>
+                </div>
               </div>
             )}
           </li>

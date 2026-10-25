@@ -15,11 +15,12 @@ const buttonVariants = cva('btn inline-flex whitespace-nowrap text-sm', {
       ghost: 'hover:bg-surface-muted hover:text-foreground active:bg-surface-muted',
       link: 'text-primary underline-offset-4 hover:underline active:opacity-70',
     },
+    // Phones get a 44px tap height; from sm up (mouse) the compact sizes.
     size: {
-      default: 'h-10 px-5 py-2',
-      sm: 'h-9 px-4',
+      default: 'h-11 px-5 py-2 sm:h-10',
+      sm: 'h-11 px-4 sm:h-9',
       lg: 'h-11 px-8',
-      icon: 'h-10 w-10',
+      icon: 'h-11 w-11 sm:h-10 sm:w-10',
     },
   },
   defaultVariants: {

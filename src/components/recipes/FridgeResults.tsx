@@ -98,7 +98,7 @@ export function FridgeResults({ matches, savedIds }: { matches: FridgeMatch[]; s
 
       {needsMore.length > 0 && (
         <details className="group">
-          <summary className="btn btn-ghost -mx-3 inline-flex min-h-10 cursor-pointer list-none px-3 text-sm">
+          <summary className="btn btn-ghost -mx-3 inline-flex min-h-11 cursor-pointer list-none px-3 text-sm">
             {needsMore.length} more that need 3+ things
             <span aria-hidden="true" className="transition-transform group-open:rotate-180">
               ⌄

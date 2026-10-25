@@ -8,7 +8,7 @@ import {
   labelSummaries,
   type PeriodEntry,
 } from "@/lib/insights";
-import { formatCurrency, formatCurrencyShort, formatPercent } from "@/lib/format";
+import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
@@ -19,6 +19,7 @@ import { CategoryList, type CategoryRow } from "@/components/insights/CategoryLi
 import { PeriodList } from "@/components/insights/PeriodList";
 import { LabelChip } from "@/components/insights/LabelChip";
 import { MoreDetails } from "@/components/insights/MoreDetails";
+import { Disclosure } from "@/components/Disclosure";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -65,7 +66,6 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   const { month, stats } = active;
   const day = comparisonDay(active);
   const baseline = labelBaseline(active, entries, today);
-  const remaining = month.budget - stats.spent;
 
   // Cumulative chart: this period vs the typical peer period vs the budget line.
   const chart: ComparePoint[] = stats.daily.map((point, i) => ({
@@ -119,19 +119,9 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
 
       <InsightsHero month={month} stats={stats} baseline={baseline} day={day} />
 
+      {/* Spent / left are in the hero; these are the two numbers it doesn't show. */}
       <SummaryCards
         cards={[
-          {
-            label: "Spent",
-            value: formatCurrencyShort(stats.spent),
-            hint: `${formatPercent(stats.budgetUsedPercent)} of ${formatCurrencyShort(month.budget)}`,
-          },
-          {
-            label: remaining >= 0 ? "Left in budget" : "Over budget",
-            value: formatCurrencyShort(Math.abs(remaining)),
-            tone: remaining >= 0 ? "positive" : "negative",
-            icon: null,
-          },
           {
             label: "Average per day",
             value: formatCurrencyShort(stats.avgPerDay),
@@ -164,9 +154,9 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
         />
       </Section>
 
-      <Section title="All periods">
+      <Disclosure title="All periods">
         <PeriodList entries={entries} summaries={labelSummaries(entries, today)} activeId={month.id} />
-      </Section>
+      </Disclosure>
 
       <MoreDetails stats={stats} />
     </div>

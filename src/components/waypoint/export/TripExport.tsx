@@ -3,6 +3,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
+import { useElementWidth } from '@/lib/waypoint/useElementWidth';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { Button } from '@/components/waypoint/ui/button';
 import { Label } from '@/components/waypoint/ui/label';
@@ -210,6 +211,8 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
   // and upscale it to the target resolution — no hidden second map to race, which is what kept
   // breaking on iOS (blank/unfitted map). What you see in the preview is exactly what exports.
   const previewRef = useRef<HTMLDivElement>(null);
+  // The preview never gets wider than its column (a 375px phone has ~343px, less than the max).
+  const [previewBoxRef, previewBoxWidth] = useElementWidth<HTMLDivElement>();
 
   useEffect(() => {
     if (locations.length < 2) return;
@@ -244,11 +247,11 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
       <>
         <div className="mx-auto max-w-5xl space-y-4">
           <div className="flex items-center gap-3">
-            <Link href={`/waypoint/trips/${id}`}>
-              <Button variant="ghost" size="icon">
+            <Button asChild variant="ghost" size="icon">
+              <Link href={`/waypoint/trips/${id}`}>
                 <ArrowLeft size={18} />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
             <h2 className="text-2xl font-semibold text-foreground">Export</h2>
           </div>
           <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
@@ -264,7 +267,10 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
   }
 
   const format = FORMATS.find((f) => f.id === formatId) ?? FORMATS[0];
-  const previewScale = Math.min(1, PREVIEW_MAX_WIDTH / format.width);
+  const previewScale = Math.min(
+    1,
+    Math.min(PREVIEW_MAX_WIDTH, previewBoxWidth ?? PREVIEW_MAX_WIDTH) / format.width
+  );
   const previewWidth = Math.round(format.width * previewScale);
   const previewHeight = Math.round(format.height * previewScale);
 
@@ -351,11 +357,11 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
     <>
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center gap-3">
-          <Link href={`/waypoint/trips/${id}`}>
-            <Button variant="ghost" size="icon">
+          <Button asChild variant="ghost" size="icon">
+            <Link href={`/waypoint/trips/${id}`}>
               <ArrowLeft size={18} />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div>
             <h2 className="text-2xl font-semibold text-foreground">Export — {trip.title}</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -378,11 +384,11 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                         ({includedList.length}/{locations.length})
                       </span>
                     </Label>
-                    <div className="flex gap-1">
+                    <div className="-mr-3 flex items-center">
                       <button
                         type="button"
                         onClick={() => setAll(true)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="btn btn-ghost inline-flex min-h-11 px-3 text-sm text-muted-foreground hover:text-foreground sm:min-h-8"
                       >
                         All
                       </button>
@@ -390,13 +396,13 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                       <button
                         type="button"
                         onClick={() => setAll(false)}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        className="btn btn-ghost inline-flex min-h-11 px-3 text-sm text-muted-foreground hover:text-foreground sm:min-h-8"
                       >
                         None
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-80 space-y-1 overflow-y-auto rounded-xl border border-border/60 p-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border/60 p-1">
                     {/* Displayed latest-stop-first (reversed), but the number badge still shows
                         each stop's true visit order (1 = trip start). */}
                     {locations
@@ -417,7 +423,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                             <button
                               type="button"
                               onClick={() => toggleStop(loc.id)}
-                              className="flex shrink-0 items-center gap-2"
+                              className="-my-1 flex min-h-11 shrink-0 items-center gap-2 px-1 sm:min-h-0"
                               title={
                                 on ? 'Featured — click to hide its label' : 'Click to feature this stop'
                               }
@@ -613,7 +619,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
             </Card>
           </div>
 
-          <div className="flex items-start justify-center">
+          <div ref={previewBoxRef} className="flex min-w-0 items-start justify-center">
             {/* The preview renders the stage at FULL export resolution (so MapLibre draws its
                 native dense detail, small labels, thin route line and a normal-size attribution)
                 and is only *displayed* shrunk to fit the panel via a CSS transform on the scaler

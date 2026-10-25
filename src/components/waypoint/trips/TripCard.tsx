@@ -84,7 +84,8 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                // Always visible on touch screens (no hover there); revealed on hover with a mouse.
+                className="transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100"
                 onClick={() => onEdit(trip)}
               >
                 <Pencil size={14} />
@@ -95,7 +96,7 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                    className="text-destructive transition-opacity hover:text-destructive [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-visible:opacity-100"
                   >
                     <Trash2 size={14} />
                   </Button>
@@ -120,11 +121,11 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                 </AlertDialogContent>
               </AlertDialog>
 
-              <Link href={`/waypoint/trips/${trip.id}`}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button asChild variant="ghost" size="icon">
+                <Link href={`/waypoint/trips/${trip.id}`}>
                   <ChevronRight size={16} />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         </CardContent>

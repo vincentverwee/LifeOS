@@ -149,12 +149,12 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
     <>
       <div className="mx-auto max-w-5xl space-y-6">
         {/* Back + header */}
-        <div className="flex items-start gap-4">
-          <Link href="/waypoint/trips">
-            <Button variant="ghost" size="icon" className="mt-1 shrink-0">
+        <div className="flex items-start gap-2 sm:gap-4">
+          <Button asChild variant="ghost" size="icon" className="-ml-3 shrink-0 sm:mt-1 sm:ml-0">
+            <Link href="/waypoint/trips" aria-label="All trips">
               <ArrowLeft size={18} />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -179,20 +179,22 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
                 </div>
               </div>
               <div className="flex shrink-0 gap-2">
-                <Link href={`/waypoint/trips/${id}/export`}>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <ImageDown size={14} />
-                    Export
-                  </Button>
-                </Link>
+                {/* Icon-only on phones, so the trip title keeps its room. */}
+                <Button asChild variant="outline" size="sm" className="w-11 gap-2 px-0 sm:w-auto sm:px-4">
+                  <Link href={`/waypoint/trips/${id}/export`} aria-label="Export">
+                    <ImageDown size={16} />
+                    <span className="hidden sm:inline">Export</span>
+                  </Link>
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="gap-2"
+                  className="w-11 gap-2 px-0 sm:w-auto sm:px-4"
                   onClick={() => setEditOpen(true)}
+                  aria-label="Edit"
                 >
-                  <Pencil size={14} />
-                  Edit
+                  <Pencil size={16} />
+                  <span className="hidden sm:inline">Edit</span>
                 </Button>
               </div>
             </div>
@@ -247,7 +249,7 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
               )}
             </h3>
             <MapWrapper
-              className="h-[400px] lg:h-[500px]"
+              className="h-[min(400px,55svh)] lg:h-[500px]"
               locations={locations}
               routeGeometry={displayedRouteGeometry}
             />

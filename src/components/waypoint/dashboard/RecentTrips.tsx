@@ -30,10 +30,11 @@ export function RecentTrips({ trips }: RecentTripsProps) {
           // now it starts immediately and staggers 30ms.
           <div
             key={trip.id}
-            className="animate-slide-in flex items-center justify-between rounded-xl bg-muted/50 p-4 transition-colors hover:bg-muted"
+            className="animate-slide-in flex items-center justify-between rounded-xl bg-muted/50 pr-3 transition-colors hover:bg-muted"
             style={{ animationDelay: `${i * 30}ms` }}
           >
-            <div className="min-w-0 space-y-1">
+            {/* The row opens the trip; export stays a separate button. */}
+            <Link href={`/waypoint/trips/${trip.id}`} className="tap min-w-0 flex-1 space-y-1 rounded-xl p-4">
               <p className="truncate text-sm font-medium">{trip.title}</p>
               {trip.start_date && (
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -41,7 +42,7 @@ export function RecentTrips({ trips }: RecentTripsProps) {
                   {formatDate(trip.start_date)}
                 </p>
               )}
-            </div>
+            </Link>
             <div className="ml-3 flex shrink-0 items-center gap-2">
               {trip.total_km && (
                 <Badge variant="secondary" className="gap-1 text-xs">
@@ -49,12 +50,12 @@ export function RecentTrips({ trips }: RecentTripsProps) {
                   {trip.total_km.toLocaleString()} km
                 </Badge>
               )}
-              <Link href={`/waypoint/trips/${trip.id}/export`} title={`Export ${trip.title} as an image`}>
-                <Button variant="outline" size="icon" className="h-8 w-8">
+              <Button asChild variant="outline" size="icon">
+                <Link href={`/waypoint/trips/${trip.id}/export`} title={`Export ${trip.title} as an image`}>
                   <ImageDown size={15} />
                   <span className="sr-only">Export {trip.title}</span>
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
         ))}

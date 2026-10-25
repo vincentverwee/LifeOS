@@ -135,7 +135,7 @@ export function SwipeDeck({ filters }: { filters: DeckFilters }) {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative h-[clamp(360px,calc(100svh-21rem),600px)] w-full max-w-sm">
+      <div className="relative h-[clamp(320px,calc(100svh-21rem-env(safe-area-inset-top)-env(safe-area-inset-bottom)),600px)] w-full max-w-sm">
         {top ? (
           cards
             .slice(0, 3)
@@ -299,7 +299,7 @@ function DeckCard({
             type="button"
             onClick={onInfo}
             onPointerDownCapture={(e) => e.stopPropagation()}
-            className="btn btn-outline inline-flex min-h-10 shrink-0 gap-1.5 px-4 text-sm"
+            className="btn btn-outline inline-flex min-h-11 shrink-0 gap-1.5 px-4 text-sm"
           >
             <Info size={16} aria-hidden="true" />
             Full recipe
