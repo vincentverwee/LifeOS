@@ -19,11 +19,19 @@ const KEYS: { digit: string; letters: string }[] = [
 /** "0:30" */
 const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
+/** A tiny tick on Android (iOS Safari has no vibration API; it simply does nothing). */
+const tick = (ms = 8) => navigator.vibrate?.(ms);
+
 /** Lock-screen passcode: dots, a phone keypad, submits on the last digit. */
 export function PasscodeForm({ length, next }: { length: number; next: string }) {
   const [code, setCode] = useState("");
+  // The latest code without waiting for a re-render, so two very fast taps both count.
+  const codeRef = useRef("");
   const [state, dispatch, pending] = useActionState<LoginState, FormData>(login, null);
   const [lockedFor, setLockedFor] = useState(0);
+  // The key that was just hit (touch or keyboard), lit up briefly like on iOS.
+  const [flash, setFlash] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const shakeRef = useRef<HTMLDivElement>(null);
 
   // A failed try: clear the dots, shake them, buzz, and start the lockout countdown if any.
@@ -35,7 +43,8 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
   }
   useEffect(() => {
     if (!state) return;
-    navigator.vibrate?.(200);
+    codeRef.current = "";
+    tick(200);
     const dots = shakeRef.current;
     dots?.classList.remove("animate-shake");
     void dots?.offsetWidth; // restart the animation on every failure
@@ -50,10 +59,20 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
 
   const locked = lockedFor > 0;
   const disabled = pending || locked;
+  const full = code.length === length;
+
+  function light(key: string) {
+    setFlash(key);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlash(null), 150);
+  }
 
   function press(digit: string) {
-    if (disabled || code.length >= length) return;
-    const nextCode = code + digit;
+    if (disabled || codeRef.current.length >= length) return;
+    light(digit);
+    tick();
+    const nextCode = codeRef.current + digit;
+    codeRef.current = nextCode;
     setCode(nextCode);
     if (nextCode.length === length) {
       const formData = new FormData();
@@ -63,11 +82,15 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
     }
   }
 
-  function erase() {
-    if (!disabled) setCode((c) => c.slice(0, -1));
+  function erase(all = false) {
+    if (disabled || !codeRef.current) return;
+    light("delete");
+    tick();
+    codeRef.current = all ? "" : codeRef.current.slice(0, -1);
+    setCode(codeRef.current);
   }
 
-  // Hardware keyboard: digits and Backspace.
+  // Hardware keyboard: digits, Backspace, Escape (clear).
   const pressRef = useRef(press);
   const eraseRef = useRef(erase);
   useEffect(() => {
@@ -76,9 +99,10 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
   });
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
       if (/^\d$/.test(e.key)) pressRef.current(e.key);
       else if (e.key === "Backspace") eraseRef.current();
+      else if (e.key === "Escape") eraseRef.current(true);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -86,18 +110,22 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
 
   const status = locked
     ? `Try again in ${clock(lockedFor)}`
-    : state && !pending
-      ? state.error
-      : "";
+    : pending && full
+      ? "Checking…"
+      : state
+        ? state.error
+        : "";
 
-  const key =
-    "btn flex h-[4.75rem] w-[4.75rem] flex-col items-center justify-center rounded-full bg-surface-muted text-foreground hover:bg-gridline active:bg-gridline disabled:opacity-40 sm:h-20 sm:w-20";
+  const keyClass = (id: string) =>
+    `flex h-[4.75rem] w-[4.75rem] touch-manipulation select-none flex-col items-center justify-center rounded-full text-foreground transition-[background-color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 sm:h-20 sm:w-20 ${
+      flash === id ? "scale-95 bg-ink-muted/45 duration-0" : "bg-surface-muted duration-300 hover:bg-gridline"
+    }`;
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-xs flex-col items-center justify-center gap-8 px-4 py-10">
       <div className="flex flex-col items-center gap-3">
-        <SheepMark className="h-12 w-12 text-primary" />
-        <h1 className="text-xl font-medium text-foreground">Enter Passcode</h1>
+        <SheepMark className={`h-12 w-12 text-primary transition-transform duration-300 ${pending && full ? "scale-110" : ""}`} />
+        <h1 className="text-xl font-medium text-foreground">{locked ? "Locked" : "Enter Passcode"}</h1>
       </div>
 
       <div className="flex flex-col items-center gap-3">
@@ -105,48 +133,82 @@ export function PasscodeForm({ length, next }: { length: number; next: string })
           ref={shakeRef}
           role="img"
           aria-label={`${code.length} of ${length} digits entered`}
-          className={`flex gap-5 ${pending ? "animate-pulse" : ""}`}
+          className={`flex gap-5 ${pending && full ? "animate-pulse" : ""}`}
         >
-          {Array.from({ length }, (_, i) => (
-            <span
-              key={i}
-              className={`h-3.5 w-3.5 rounded-full border-[1.5px] border-foreground transition-colors duration-100 ${
-                i < code.length ? "bg-foreground" : "bg-transparent"
-              }`}
-            />
-          ))}
+          {Array.from({ length }, (_, i) => {
+            const filled = i < code.length;
+            return (
+              <span
+                // Remounted when it fills, so the pop animation plays for each digit.
+                key={`${i}-${filled}`}
+                className={`h-3.5 w-3.5 rounded-full border-[1.5px] ${
+                  filled
+                    ? `animate-dot-pop ${pending && full ? "border-primary bg-primary" : "border-foreground bg-foreground"}`
+                    : "border-foreground bg-transparent"
+                }`}
+              />
+            );
+          })}
         </div>
-        <p aria-live="polite" className="min-h-5 text-sm text-critical">
+        <p
+          aria-live="polite"
+          className={`min-h-5 text-sm transition-colors ${pending && full ? "text-ink-muted" : "text-critical"}`}
+        >
           {status}
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-x-6 gap-y-4">
         {KEYS.map(({ digit, letters }) => (
-          <button key={digit} type="button" disabled={locked} onClick={() => press(digit)} className={key}>
+          <Key key={digit} disabled={locked} onPress={() => press(digit)} className={keyClass(digit)}>
             <span className="text-3xl leading-none font-light">{digit}</span>
             <span className="mt-0.5 h-3 text-[0.6rem] font-semibold tracking-[0.2em] text-ink-muted" aria-hidden="true">
               {letters}
             </span>
-          </button>
+          </Key>
         ))}
         <span aria-hidden="true" />
-        <button type="button" disabled={locked} onClick={() => press("0")} className={key}>
+        <Key disabled={locked} onPress={() => press("0")} className={keyClass("0")}>
           <span className="text-3xl leading-none font-light">0</span>
-        </button>
-        <button
-          type="button"
-          onClick={erase}
+        </Key>
+        <Key
+          onPress={() => erase()}
           disabled={disabled || code.length === 0}
           aria-label="Delete"
-          className="btn flex h-[4.75rem] w-[4.75rem] items-center justify-center rounded-full text-foreground disabled:opacity-0 sm:h-20 sm:w-20"
+          className={`flex h-[4.75rem] w-[4.75rem] touch-manipulation select-none items-center justify-center rounded-full text-foreground transition-[opacity,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-0 sm:h-20 sm:w-20 ${
+            flash === "delete" ? "scale-90 opacity-60" : ""
+          }`}
         >
           <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
             <path d="M9 5h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-6-7 6-7Z" strokeLinejoin="round" />
             <path d="m12 9.5 5 5m0-5-5 5" strokeLinecap="round" />
           </svg>
-        </button>
+        </Key>
       </div>
     </div>
+  );
+}
+
+/**
+ * A keypad key that acts on touch-down, not on release (that's what makes the iOS keypad
+ * feel instant). onClick only handles keyboard activation of a focused key (Enter/Space).
+ */
+function Key({
+  onPress,
+  ...props
+}: { onPress: () => void } & Omit<React.ComponentProps<"button">, "onClick" | "onPointerDown" | "type">) {
+  return (
+    <button
+      type="button"
+      {...props}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        e.preventDefault(); // no focus ring or text selection on tap
+        onPress();
+      }}
+      onClick={(e) => {
+        if (e.detail === 0) onPress();
+      }}
+    />
   );
 }

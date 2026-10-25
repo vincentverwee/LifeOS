@@ -292,3 +292,26 @@ textarea {
     animation: none;
   }
 }
+
+/* Passcode dot filling in: a quick pop. */
+@keyframes dot-pop {
+  0% {
+    transform: scale(0.6);
+  }
+  60% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+.animate-dot-pop {
+  animation: dot-pop 0.18s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dot-pop {
+    animation: none;
+  }
+}
