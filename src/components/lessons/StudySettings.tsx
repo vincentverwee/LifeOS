@@ -159,10 +159,9 @@ function ColorPicker({ value, onChange }: { value: CategoryColorSlot; onChange: 
           aria-checked={value === slot}
           aria-label={slot}
           onClick={() => onChange(slot)}
-          className={`btn h-9 w-9 border-2 ${value === slot ? "border-foreground" : "border-transparent"}`}
-        >
-          <span className="h-5 w-5 rounded-full" style={{ backgroundColor: `var(--color-tag-${slot})` }} />
-        </button>
+          className={`btn h-9 w-9 ${value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""}`}
+          style={{ backgroundColor: `var(--color-tag-${slot})` }}
+        />
       ))}
     </div>
   );
