@@ -32,3 +32,15 @@ export function WaypointIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Recipes: a cloche on a plate. */
+export function RecipesIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M8 33a16 16 0 0 1 32 0z" />
+      <path d="M5 38h38" />
+      <circle cx="24" cy="13.5" r="2.5" />
+      <path d="M17 24a9 9 0 0 1 5-4" />
+    </svg>
+  );
+}

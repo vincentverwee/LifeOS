@@ -192,3 +192,29 @@ model WaypointLocation {
 
   @@index([tripId, visitOrder])
 }
+
+// --- Recipes: liked recipes from the swipe deck ---
+// A snapshot of the Spoonacular recipe is stored so the saved list and the
+// detail view cost no API quota and keep working when the daily quota is gone.
+
+model SavedRecipe {
+  id             String    @id @default(cuid())
+  spoonacularId  Int       @unique
+  title          String
+  image          String?
+  readyInMinutes Int?
+  servings       Int?
+  cuisines       String[]
+  dishTypes      String[]
+  sourceUrl      String?
+  summary        String?
+  // RecipeIngredient[] and string[] (see src/lib/recipes/types.ts).
+  ingredients    Json
+  steps          Json
+  likedAt        DateTime  @default(now())
+  // null = still to make.
+  madeOn         DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+
+  @@index([madeOn, likedAt])
+}

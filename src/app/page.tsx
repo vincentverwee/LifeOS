@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { getAllTripSummaries } from "@/lib/data/waypoint";
+import { getRecipesGlance } from "@/lib/data/recipes";
 import { computeMonthStats } from "@/lib/monthStats";
 import { formatCurrency, formatCurrencyShort } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BudgetIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BudgetIcon, RecipesIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
 
 type BudgetGlance = {
@@ -73,7 +74,7 @@ const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 })
 export default async function HomePage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
-  const [budget, waypoint] = await Promise.all([budgetGlance(todayKey), waypointGlance()]);
+  const [budget, waypoint, recipes] = await Promise.all([budgetGlance(todayKey), waypointGlance(), getRecipesGlance()]);
   const fact = getFactOfTheDay(todayKey);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
@@ -133,6 +134,21 @@ export default async function HomePage() {
               <p className="mt-4 truncate text-sm text-foreground">
                 <span className="text-ink-muted">Latest · </span>
                 {waypoint.latest}
+              </p>
+            )}
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
+            <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+              {recipes.toMake} <span className="text-lg text-ink-muted">to make</span>
+            </p>
+            <p className="text-sm text-ink-muted">{recipes.toMake === 0 ? "Start swiping" : "Saved from the deck"}</p>
+            {recipes.lastMade && (
+              <p className="mt-4 truncate text-sm text-foreground">
+                <span className="text-ink-muted">Last made · </span>
+                {recipes.lastMade}
               </p>
             )}
           </FeatureTile>
