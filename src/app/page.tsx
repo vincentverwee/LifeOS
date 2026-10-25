@@ -2,11 +2,12 @@ import Link from "next/link";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { getAllTripSummaries } from "@/lib/data/waypoint";
 import { getRecipesGlance } from "@/lib/data/recipes";
+import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { computeMonthStats } from "@/lib/monthStats";
-import { formatCurrency, formatCurrencyShort } from "@/lib/format";
+import { formatCurrency, formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BudgetIcon, RecipesIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BudgetIcon, LessonsIcon, RecipesIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
 
 type BudgetGlance = {
@@ -74,7 +75,12 @@ const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 })
 export default async function HomePage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
-  const [budget, waypoint, recipes] = await Promise.all([budgetGlance(todayKey), waypointGlance(), getRecipesGlance()]);
+  const [budget, lessons, waypoint, recipes] = await Promise.all([
+    budgetGlance(todayKey),
+    getLessonsGlance(todayKey),
+    waypointGlance(),
+    getRecipesGlance(),
+  ]);
   const fact = getFactOfTheDay(todayKey);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
@@ -118,6 +124,26 @@ export default async function HomePage() {
               </>
             ) : (
               <p className="text-sm text-ink-muted">No period running today</p>
+            )}
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/lessons" name="Lessons" icon={LessonsIcon}>
+            {lessons ? (
+              <>
+                <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+                  {formatHours(lessons.todayHours).replace(" h", "")} <span className="text-lg text-ink-muted">h today</span>
+                </p>
+                <p className="text-sm text-ink-muted">
+                  {lessons.status}
+                  {lessons.nextExam &&
+                    ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
+                </p>
+                <LessonsWeek glance={lessons} />
+              </>
+            ) : (
+              <p className="text-sm text-ink-muted">No study period yet</p>
             )}
           </FeatureTile>
         </li>
@@ -221,6 +247,29 @@ function BudgetBar({ glance }: { glance: BudgetGlance }) {
         <span>
           {glance.daysLeft} {glance.daysLeft === 1 ? "day" : "days"} left
         </span>
+      </div>
+    </div>
+  );
+}
+
+/** This week's hours, one small bar per day, scaled to the daily goal. */
+function LessonsWeek({ glance }: { glance: LessonsGlance }) {
+  const top = Math.max(glance.goalHours, ...glance.week.map((d) => d.hours));
+  return (
+    <div className="mt-auto pt-4">
+      <div className="flex h-8 items-end gap-1">
+        {glance.week.map((d) => (
+          <div key={d.label} className="flex h-full flex-1 items-end rounded-sm bg-surface-muted">
+            <div
+              className={`w-full rounded-sm ${d.hours >= glance.goalHours ? "bg-good" : "bg-accent"}`}
+              style={{ height: `${(d.hours / top) * 100}%` }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between font-mono text-xs tabular-nums text-ink-muted">
+        <span>This week</span>
+        <span>{formatHours(glance.weekHours)}</span>
       </div>
     </div>
   );

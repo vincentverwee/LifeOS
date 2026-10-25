@@ -84,3 +84,34 @@ const wholeCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
 export function formatCurrencyShort(value: number): string {
   return Math.abs(value) >= 1000 ? wholeCurrencyFormatter.format(value) : formatCurrency(value);
 }
+
+const hoursFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 2 });
+
+/** "3,5 h" */
+export function formatHours(value: number): string {
+  return `${hoursFormatter.format(value)} h`;
+}
+
+/**
+ * Parses typed study time into hours: "1,5", "1,5+2", "1:30", "90m", "1h30".
+ * Returns null when the input isn't valid.
+ */
+export function parseHours(raw: string): number | null {
+  const parts = raw.trim().toLowerCase().replace(/\s+/g, "").replace(/,/g, ".").split("+");
+  let total = 0;
+  for (const part of parts) {
+    let match: RegExpMatchArray | null;
+    if ((match = part.match(/^(\d+):(\d{1,2})$/))) {
+      total += Number(match[1]) + Number(match[2]) / 60;
+    } else if ((match = part.match(/^(\d+(?:\.\d+)?)m(?:in)?$/))) {
+      total += Number(match[1]) / 60;
+    } else if ((match = part.match(/^(\d+)[hu](\d{1,2})m?$/))) {
+      total += Number(match[1]) + Number(match[2]) / 60;
+    } else if ((match = part.match(/^(\d+\.?\d*|\.\d+)[hu]?$/))) {
+      total += Number.parseFloat(match[1]);
+    } else {
+      return null;
+    }
+  }
+  return Math.round(total * 100) / 100;
+}

@@ -226,3 +226,82 @@ model PantryItem {
   name      String   @unique
   createdAt DateTime @default(now())
 }
+
+// --- Lessons: study hours per semester, lesson grid, exams ---
+// A StudyPeriod is one semester: lessons from startDate (Monday of week 1),
+// the blok from blokStart, exams until endDate (the last exam). Insights line
+// periods up on endDate ("N days before the last exam").
+
+model StudyPeriod {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  startDate   DateTime      @db.Date
+  blokStart   DateTime      @db.Date
+  endDate     DateTime      @db.Date
+  goalHours   Decimal       @default(7) @db.Decimal(4, 2)
+  topDayHours Decimal       @default(8.5) @db.Decimal(4, 2)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  courses     StudyCourse[]
+  entries     StudyEntry[]
+
+  @@index([startDate])
+}
+
+// "color" is a palette slot key, like Category.color.
+model StudyCourse {
+  id        String       @id @default(cuid())
+  periodId  String
+  period    StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  code      String
+  name      String
+  color     String       @default("blue")
+  sortOrder Int          @default(0)
+  hasWc     Boolean      @default(false)
+  entries   StudyEntry[]
+  exams     StudyExam[]
+  lessons   LessonMark[]
+
+  @@unique([periodId, code])
+}
+
+// One row per (day, course). Studying several courses in one go is split
+// equally over them. A 0 h row with a note is a logged day off.
+model StudyEntry {
+  id        String       @id @default(cuid())
+  periodId  String
+  period    StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  courseId  String?
+  course    StudyCourse? @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  date      DateTime     @db.Date
+  hours     Decimal      @db.Decimal(4, 2)
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([periodId, date])
+}
+
+// kind: "exam" | "test"
+model StudyExam {
+  id       String      @id @default(cuid())
+  courseId String
+  course   StudyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  date     DateTime    @db.Date
+  kind     String      @default("exam")
+  note     String?
+
+  @@index([date])
+}
+
+// One cell of the lesson grid: course × week × HC/WC. Status keys live in
+// src/lib/lessons/marks.ts.
+model LessonMark {
+  id       String      @id @default(cuid())
+  courseId String
+  course   StudyCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  week     Int
+  kind     String
+  status   String
+
+  @@unique([courseId, week, kind])
+}

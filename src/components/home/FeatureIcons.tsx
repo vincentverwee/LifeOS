@@ -21,6 +21,17 @@ export function BudgetIcon({ className }: IconProps) {
   );
 }
 
+/** Lessons: an open book with a bookmark. */
+export function LessonsIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M24 13c-4-3.5-10-4-17-3v26c7-1 13-.5 17 3 4-3.5 10-4 17-3V10c-7-1-13-.5-17 3z" />
+      <path d="M24 13v26" />
+      <path d="M31 9.5V20l3-2.5 3 2.5V9.3" />
+    </svg>
+  );
+}
+
 /** Waypoint: a map pin at the end of a dashed route. */
 export function WaypointIcon({ className }: IconProps) {
   return (
