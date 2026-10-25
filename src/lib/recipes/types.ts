@@ -28,7 +28,22 @@ export type DeckFilters = {
   maxReadyTime?: number;
 };
 
-export type DeckResult = { ok: true; cards: RecipeCard[] } | { ok: false; error: string };
+/** `quotaLeft`: Spoonacular points left today, as reported with the batch (null if unknown). */
+export type DeckResult = { ok: true; cards: RecipeCard[]; quotaLeft: number | null } | { ok: false; error: string };
+
+export type RecipeInfoResult = { ok: true; card: RecipeCard } | { ok: false; error: string };
+
+/** A recipe from the "what can I make" search, with what you have and what you'd need to buy. */
+export type FridgeMatch = {
+  /** Spoonacular recipe id. */
+  id: number;
+  title: string;
+  image: string | null;
+  used: string[];
+  missing: string[];
+};
+
+export type FridgeResult = { ok: true; matches: FridgeMatch[] } | { ok: false; error: string };
 
 // Values Spoonacular's complexSearch accepts for `cuisine` and `type`.
 export const CUISINES = [

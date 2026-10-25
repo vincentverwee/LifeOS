@@ -218,3 +218,11 @@ model SavedRecipe {
 
   @@index([madeOn, likedAt])
 }
+
+// What's in the fridge/cupboard, for the "what can I make" search on /recipes/fridge.
+model PantryItem {
+  id        String   @id @default(cuid())
+  // Trimmed and lowercased.
+  name      String   @unique
+  createdAt DateTime @default(now())
+}

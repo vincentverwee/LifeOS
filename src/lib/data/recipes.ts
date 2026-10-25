@@ -75,3 +75,22 @@ export async function getRecipesGlance(): Promise<RecipesGlance> {
   ]);
   return { toMake, lastMade: lastMade?.title ?? null };
 }
+
+export type PantryEntry = { id: string; name: string };
+
+export async function getPantry(): Promise<PantryEntry[]> {
+  return prisma.pantryItem.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
+}
+
+/** Ingredient names from saved recipes, for autocomplete in the pantry input (costs no API quota). */
+export async function getIngredientSuggestions(): Promise<string[]> {
+  const rows = await prisma.savedRecipe.findMany({ select: { ingredients: true } });
+  const names = new Set<string>();
+  for (const row of rows) {
+    for (const ingredient of row.ingredients as RecipeIngredient[]) {
+      const name = ingredient.name?.trim().toLowerCase();
+      if (name) names.add(name);
+    }
+  }
+  return [...names].sort();
+}
