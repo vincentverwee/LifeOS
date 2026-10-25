@@ -11,7 +11,7 @@ import { ImageDown } from 'lucide-react';
 
 export default async function DashboardPage() {
   await connection();
-  const [trips, locations] = await Promise.all([getAllTrips(), getAllLocations()]);
+  const [trips, locations] = await Promise.all([getAllTrips({ simplify: 0.0005 }), getAllLocations()]);
   const stats = getDashboardStats(trips, locations);
   // The map draws every trip; only the list beside it is capped to the latest 5.
   const recentTrips = trips.slice(0, 5);

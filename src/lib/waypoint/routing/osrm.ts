@@ -1,4 +1,5 @@
 const OSRM_BASE_URL = 'https://router.project-osrm.org';
+const TIMEOUT_MS = 10_000;
 
 export interface RoutePoint {
   latitude: number;
@@ -18,6 +19,8 @@ export interface RouteResult {
  * compiled in (exclude=toll and exclude=motorway both 400), so route_preference
  * cannot actually influence the path here — it's stored for display only until a
  * routing backend with toll data (GraphHopper/Valhalla) replaces this.
+ *
+ * Never throws: a timeout, network error or unexpected answer returns null.
  */
 export async function calculateRoute(points: RoutePoint[]): Promise<RouteResult | null> {
   if (points.length < 2) return null;
@@ -25,16 +28,20 @@ export async function calculateRoute(points: RoutePoint[]): Promise<RouteResult 
   const coords = points.map((p) => `${p.longitude},${p.latitude}`).join(';');
   const url = `${OSRM_BASE_URL}/route/v1/driving/${coords}?overview=full&geometries=geojson`;
 
-  const res = await fetch(url);
-  if (!res.ok) return null;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(TIMEOUT_MS), cache: 'no-store' });
+    if (!res.ok) return null;
 
-  const data = await res.json();
-  if (data.code !== 'Ok' || !data.routes?.length) return null;
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.length) return null;
 
-  const route = data.routes[0];
-  return {
-    distanceKm: Math.round((route.distance / 1000) * 10) / 10,
-    geometry: route.geometry as GeoJSON.LineString,
-    legsKm: route.legs.map((leg: { distance: number }) => Math.round((leg.distance / 1000) * 10) / 10),
-  };
+    const route = data.routes[0];
+    return {
+      distanceKm: Math.round((route.distance / 1000) * 10) / 10,
+      geometry: route.geometry as GeoJSON.LineString,
+      legsKm: route.legs.map((leg: { distance: number }) => Math.round((leg.distance / 1000) * 10) / 10),
+    };
+  } catch {
+    return null;
+  }
 }

@@ -8,7 +8,7 @@ import { ImageDown } from 'lucide-react';
 
 export default async function MapPage() {
   await connection();
-  const [locations, trips] = await Promise.all([getAllLocations(), getAllTrips()]);
+  const [locations, trips] = await Promise.all([getAllLocations(), getAllTrips({ simplify: 0.0005 })]);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
   const routes = trips

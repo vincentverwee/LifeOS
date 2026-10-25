@@ -8,7 +8,7 @@ interface TripBreakdownProps {
 }
 
 function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString('en-GB', {
+  return new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'UTC',
     day: 'numeric',
     month: 'short',
     year: 'numeric',

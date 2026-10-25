@@ -12,17 +12,10 @@ export interface GeocodingResult {
   };
 }
 
-export async function searchPlaces(query: string): Promise<GeocodingResult[]> {
-  if (!query || query.length < 2) return [];
-
-  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=6&addressdetails=1`;
-
-  const res = await fetch(url, {
-    headers: {
-      'User-Agent': 'Waypoint/1.0 (travel journal app)',
-    },
-  });
-
+/** Searches places through our own /api/waypoint/geocode proxy (see that route for why). */
+export async function searchPlaces(query: string, signal?: AbortSignal): Promise<GeocodingResult[]> {
+  if (!query || query.trim().length < 2) return [];
+  const res = await fetch(`/api/waypoint/geocode?q=${encodeURIComponent(query.trim())}`, { signal });
   if (!res.ok) return [];
   return res.json();
 }

@@ -16,7 +16,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/waypoint/ui/alert-dialog';
 import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface LocationListProps {
   locations: Location[];
@@ -25,6 +24,8 @@ interface LocationListProps {
   onMoveDown: (id: string) => void;
   onUpdateDates: (id: string, arrival: string, departure: string) => void;
   onUpdateNotes: (id: string, notes: string) => void;
+  /** While a reorder/removal is saving: blocks the next one so they can't cross. */
+  disabled?: boolean;
 }
 
 export function LocationList({
@@ -34,6 +35,7 @@ export function LocationList({
   onMoveDown,
   onUpdateDates,
   onUpdateNotes,
+  disabled = false,
 }: LocationListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -57,156 +59,147 @@ export function LocationList({
       )}
 
       <div className="space-y-2">
-        <AnimatePresence initial={false}>
-          {locations.map((loc, i) => {
-            const isExpanded = expandedId === loc.id;
-            const isFirst = i === 0;
-            const isLast = i === locations.length - 1;
+        {locations.map((loc, i) => {
+          const isExpanded = expandedId === loc.id;
+          const isFirst = i === 0;
+          const isLast = i === locations.length - 1;
 
-            return (
-              <motion.div
-                key={loc.id}
-                layout
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -10 }}
-                transition={{ duration: 0.2 }}
-                className="relative"
-              >
-                <div className="flex items-start gap-3">
-                  {/* Order indicator */}
-                  <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-card text-xs font-bold text-primary">
-                    {i + 1}
-                  </div>
+          return (
+            <div
+              key={loc.id}
+              className="relative animate-in fade-in slide-in-from-left-2 duration-200"
+            >
+              <div className="flex items-start gap-3">
+                {/* Order indicator */}
+                <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-card text-xs font-bold text-primary">
+                  {i + 1}
+                </div>
 
-                  <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card">
-                    <div className="flex items-center justify-between gap-2 p-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-sm">{loc.name}</p>
-                        {loc.country && (
-                          <p className="text-xs text-muted-foreground">{loc.country}</p>
-                        )}
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-0.5">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => setExpandedId(isExpanded ? null : loc.id)}
-                          title="Edit dates & notes"
-                        >
-                          <CalendarDays size={13} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => onMoveUp(loc.id)}
-                          disabled={isFirst}
-                        >
-                          <ChevronUp size={13} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => onMoveDown(loc.id)}
-                          disabled={isLast}
-                        >
-                          <ChevronDown size={13} />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 size={13} />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Remove location?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Remove <strong>{loc.name}</strong> from this trip?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                destructive
-                                onClick={() => onRemove(loc.id)}
-                              >
-                                Remove
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
+                <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card">
+                  <div className="flex items-center justify-between gap-2 p-3">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-sm">{loc.name}</p>
+                      {loc.country && (
+                        <p className="text-xs text-muted-foreground">{loc.country}</p>
+                      )}
                     </div>
 
-                    {/* Expanded: dates and notes */}
-                    <AnimatePresence>
-                      {isExpanded && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden border-t border-border"
-                        >
-                          <div className="grid grid-cols-2 gap-3 p-3 pb-3">
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Arrival
-                              </label>
-                              <Input
-                                type="date"
-                                defaultValue={loc.arrival_date ?? ''}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  onUpdateDates(loc.id, e.target.value, loc.departure_date ?? '')
-                                }
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-medium text-muted-foreground">
-                                Departure
-                              </label>
-                              <Input
-                                type="date"
-                                defaultValue={loc.departure_date ?? ''}
-                                className="h-8 text-xs"
-                                onBlur={(e) =>
-                                  onUpdateDates(loc.id, loc.arrival_date ?? '', e.target.value)
-                                }
-                              />
-                            </div>
-                            <div className="col-span-2 space-y-1">
-                              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                                <StickyNote size={11} />
-                                Notes
-                              </label>
-                              <textarea
-                                defaultValue={loc.notes ?? ''}
-                                placeholder="Add notes about this stop…"
-                                rows={2}
-                                className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                onBlur={(e) => onUpdateNotes(loc.id, e.target.value)}
-                              />
-                            </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setExpandedId(isExpanded ? null : loc.id)}
+                        title="Edit dates & notes"
+                      >
+                        <CalendarDays size={13} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => onMoveUp(loc.id)}
+                        disabled={isFirst || disabled}
+                        title="Move up"
+                      >
+                        <ChevronUp size={13} />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => onMoveDown(loc.id)}
+                        disabled={isLast || disabled}
+                        title="Move down"
+                      >
+                        <ChevronDown size={13} />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-destructive hover:text-destructive"
+                            disabled={disabled}
+                            title="Remove"
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Remove location?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Remove <strong>{loc.name}</strong> from this trip?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction destructive onClick={() => onRemove(loc.id)}>
+                              Remove
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </div>
+
+                  {/* Expanded: dates and notes */}
+                  {isExpanded && (
+                    <div className="overflow-hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="grid grid-cols-2 gap-3 p-3 pb-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Arrival
+                          </label>
+                          <Input
+                            type="date"
+                            defaultValue={loc.arrival_date ?? ''}
+                            className="h-8 text-xs"
+                            onBlur={(e) =>
+                              e.target.value !== (loc.arrival_date ?? '') &&
+                              onUpdateDates(loc.id, e.target.value, loc.departure_date ?? '')
+                            }
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Departure
+                          </label>
+                          <Input
+                            type="date"
+                            defaultValue={loc.departure_date ?? ''}
+                            className="h-8 text-xs"
+                            onBlur={(e) =>
+                              e.target.value !== (loc.departure_date ?? '') &&
+                              onUpdateDates(loc.id, loc.arrival_date ?? '', e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="col-span-2 space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                            <StickyNote size={11} />
+                            Notes
+                          </label>
+                          <textarea
+                            defaultValue={loc.notes ?? ''}
+                            placeholder="Add notes about this stop…"
+                            rows={2}
+                            className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            onBlur={(e) =>
+                              e.target.value !== (loc.notes ?? '') &&
+                              onUpdateNotes(loc.id, e.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

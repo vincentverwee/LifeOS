@@ -1,6 +1,7 @@
 import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
+import { simplifyLine } from '@/lib/waypoint/simplify';
 import { Trip, TripSummary, Location } from '@/lib/waypoint/types';
 
 /**
@@ -12,10 +13,18 @@ const WITHOUT_GEOMETRY = { routeGeometry: true } as const;
 
 const NEWEST_FIRST = [{ startDate: { sort: 'desc', nulls: 'last' } }] as const;
 
-/** Full trips, route geometry included — for the map pages, which draw the route lines. */
-export async function getAllTrips(): Promise<Trip[]> {
+/**
+ * Full trips with their route line — for the map pages. Maps of all trips at once pass
+ * `simplify` (a tolerance in degrees, see simplifyLine): the lines are thinned to what's
+ * visible at that zoom, a fraction of the size.
+ */
+export async function getAllTrips({ simplify }: { simplify?: number } = {}): Promise<Trip[]> {
   const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST] });
-  return rows.map(toTrip);
+  const trips = rows.map(toTrip);
+  if (!simplify) return trips;
+  return trips.map((t) =>
+    t.route_geometry ? { ...t, route_geometry: simplifyLine(t.route_geometry, simplify) } : t
+  );
 }
 
 /** Trips without their route geometry — for screens that only show titles, dates and km. */
@@ -32,4 +41,17 @@ export async function getAllLocations(): Promise<Location[]> {
     orderBy: [{ tripId: 'asc' }, { visitOrder: 'asc' }],
   });
   return rows.map(toLocation);
+}
+
+/** One trip with its stops in visit order, or null when it doesn't exist. */
+export async function getTripWithLocations(
+  id: string
+): Promise<{ trip: Trip; locations: Location[] } | null> {
+  const row = await prisma.waypointTrip.findUnique({
+    where: { id },
+    include: { locations: { orderBy: { visitOrder: 'asc' } } },
+  });
+  if (!row) return null;
+  const { locations, ...trip } = row;
+  return { trip: toTrip(trip), locations: locations.map(toLocation) };
 }

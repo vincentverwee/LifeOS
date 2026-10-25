@@ -8,7 +8,7 @@ import { Location } from '@/lib/waypoint/types';
 
 interface LocationSearchProps {
   tripId: string;
-  onAdd: (loc: Omit<Location, 'id' | 'created_at' | 'updated_at'>) => void;
+  onAdd: (loc: Omit<Location, 'id' | 'created_at' | 'updated_at' | 'visit_order'>) => void;
 }
 
 export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
@@ -17,25 +17,38 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Only the newest search may show its results: a slow earlier one is aborted.
+  const requestRef = useRef<AbortController | null>(null);
 
   function handleInput(value: string) {
     setQuery(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
+    requestRef.current?.abort();
     if (!value.trim()) {
       setResults([]);
       setOpen(false);
+      setLoading(false);
       return;
     }
     debounceRef.current = setTimeout(async () => {
+      const controller = new AbortController();
+      requestRef.current = controller;
       setLoading(true);
-      const found = await searchPlaces(value);
-      setResults(found);
-      setOpen(found.length > 0);
-      setLoading(false);
+      try {
+        const found = await searchPlaces(value, controller.signal);
+        setResults(found);
+        setOpen(found.length > 0);
+      } catch {
+        if (controller.signal.aborted) return;
+        setResults([]);
+        setOpen(false);
+      } finally {
+        if (requestRef.current === controller) setLoading(false);
+      }
     }, 350);
   }
 
-  function selectResult(r: GeocodingResult, nextOrder: number) {
+  function selectResult(r: GeocodingResult) {
     onAdd({
       trip_id: tripId,
       name: r.display_name.split(',').slice(0, 2).join(',').trim(),
@@ -46,7 +59,6 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
       arrival_date: null,
       departure_date: null,
       notes: null,
-      visit_order: nextOrder,
     });
     setQuery('');
     setResults([]);
@@ -74,7 +86,7 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
             <button
               key={i}
               type="button"
-              onClick={() => selectResult(r, i)}
+              onClick={() => selectResult(r)}
               className="flex w-full items-start gap-2.5 px-4 py-3 text-left text-sm hover:bg-surface-muted transition-colors"
             >
               <MapPin size={14} className="mt-0.5 shrink-0 text-primary" />

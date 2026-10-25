@@ -11,7 +11,7 @@ export function getYearlyStats(trips: TripSummary[]): YearlyStats[] {
 
   for (const trip of trips) {
     if (!trip.start_date) continue;
-    const year = new Date(trip.start_date).getFullYear();
+    const year = new Date(trip.start_date).getUTCFullYear(); // date-only = UTC midnight
     const entry = byYear.get(year) ?? { year, totalKm: 0, tripsCount: 0 };
     entry.totalKm += trip.total_km ?? 0;
     entry.tripsCount += 1;
