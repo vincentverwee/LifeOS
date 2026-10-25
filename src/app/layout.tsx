@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
+import { StandaloneStart } from "@/components/StandaloneStart";
 import { TimeZoneSync } from "@/components/TimeZoneSync";
 import "./globals.css";
 
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <Navigation />
         <TimeZoneSync />
+        <StandaloneStart />
         <main className="mx-auto w-full max-w-3xl flex-1 has-[[data-waypoint]]:max-w-6xl px-4 pt-5 pb-10 max-sm:has-[.pb-tabbar]:pb-0 sm:px-6 sm:py-10">
           {children}
         </main>
