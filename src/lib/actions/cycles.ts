@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
@@ -23,6 +24,7 @@ export type UpdateBalancesInput = {
 // Balances are really "what I have right now", so a month that gets
 // auto-created later inherits the latest value.
 export async function updateBalances(input: UpdateBalancesInput): Promise<CycleResult> {
+  await requireAuth();
   for (const value of [input.bank, input.tricount, input.cash]) {
     if (!Number.isFinite(value)) return { ok: false, error: "Enter valid amounts." };
   }
@@ -50,6 +52,7 @@ export async function updateBalances(input: UpdateBalancesInput): Promise<CycleR
 export type UpdateRentInput = { cycleId: string; rent: number; rentDay: number | null };
 
 export async function updateRent(input: UpdateRentInput): Promise<CycleResult> {
+  await requireAuth();
   if (!Number.isFinite(input.rent) || input.rent < 0) {
     return { ok: false, error: "Rent can't be negative." };
   }
@@ -79,6 +82,7 @@ export async function updateMonthBudget(input: {
   cycleId: string;
   budget: number;
 }): Promise<CycleResult> {
+  await requireAuth();
   if (!Number.isFinite(input.budget) || input.budget <= 0) {
     return { ok: false, error: "Enter a budget greater than zero." };
   }
@@ -99,6 +103,7 @@ export async function updateMonthBudget(input: {
 }
 
 export async function setPeriodLabel(input: { cycleId: string; label: string }): Promise<CycleResult> {
+  await requireAuth();
   const label = input.label.trim();
   if (!label) return { ok: false, error: "Give the label a name." };
   if (label.length > 24) return { ok: false, error: "Keep the label under 24 characters." };

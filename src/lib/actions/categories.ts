@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import {
@@ -54,6 +55,7 @@ export async function createCategory(input: {
   name: string;
   color?: string;
 }): Promise<CategoryResult> {
+  await requireAuth();
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Category name can't be empty." };
   if (!(await isNameFree(name))) return { ok: false, error: `"${name}" already exists.` };
@@ -88,6 +90,7 @@ export type UpdateCategoryInput = {
 };
 
 export async function updateCategory(input: UpdateCategoryInput): Promise<CategoryResult> {
+  await requireAuth();
   const data: { name?: string; color?: string; pintPrice?: number | null } = {};
 
   if (input.name !== undefined) {
@@ -116,6 +119,7 @@ export async function updateCategory(input: UpdateCategoryInput): Promise<Catego
 }
 
 export async function reorderCategories(input: { orderedIds: string[] }): Promise<SimpleResult> {
+  await requireAuth();
   await prisma.$transaction(
     input.orderedIds.map((id, index) =>
       prisma.category.update({ where: { id }, data: { sortOrder: index * 10 } })
@@ -129,6 +133,7 @@ export async function setCategoryArchived(input: {
   id: string;
   archived: boolean;
 }): Promise<SimpleResult> {
+  await requireAuth();
   const existing = await prisma.category.findUnique({ where: { id: input.id }, select: { id: true } });
   if (!existing) return { ok: false, error: "That category no longer exists." };
 
@@ -138,6 +143,7 @@ export async function setCategoryArchived(input: {
 }
 
 export async function deleteCategory(input: { id: string }): Promise<SimpleResult> {
+  await requireAuth();
   const usage = await prisma.category.findUnique({
     where: { id: input.id },
     select: { _count: { select: { expenses: true } } },

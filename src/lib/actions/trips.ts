@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 
@@ -16,6 +17,7 @@ export type CreateTripResult = { ok: true; tripId: string } | { ok: false; error
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export async function createTrip(input: CreateTripInput): Promise<CreateTripResult> {
+  await requireAuth();
   const name = input.name.trim();
   if (!name) return { ok: false, error: "Give the trip a name." };
   if (!Number.isFinite(input.totalBudget) || input.totalBudget <= 0) {
@@ -65,6 +67,7 @@ function validate(input: CreateTripInput): string | null {
 export type TripResult = { ok: true } | { ok: false; error: string };
 
 export async function updateTrip(input: CreateTripInput & { id: string }): Promise<TripResult> {
+  await requireAuth();
   const error = validate(input);
   if (error) return { ok: false, error };
 
@@ -99,6 +102,7 @@ export async function updateTrip(input: CreateTripInput & { id: string }): Promi
 
 /** Deletes the trip and every expense in it. */
 export async function deleteTrip(id: string): Promise<TripResult> {
+  await requireAuth();
   const existing = await prisma.trip.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return { ok: false, error: "That trip no longer exists." };
   await prisma.trip.delete({ where: { id } });

@@ -1,5 +1,6 @@
 'use server';
 
+import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
 import { Trip, Location, RoutePreference } from '@/lib/waypoint/types';
@@ -51,11 +52,13 @@ function emptyToNull(value: string | null | undefined): string | null {
 
 /** Full trips, route geometry included — for the all-trips map export, which draws every route. */
 export async function getTrips(): Promise<Trip[]> {
+  await requireAuth();
   const rows = await prisma.waypointTrip.findMany({ orderBy: [...NEWEST_FIRST] });
   return rows.map(toTrip);
 }
 
 export async function createTrip(input: CreateTripInput): Promise<Trip> {
+  await requireAuth();
   const row = await prisma.waypointTrip.create({
     data: {
       title: requireTitle(input.title),
@@ -69,6 +72,7 @@ export async function createTrip(input: CreateTripInput): Promise<Trip> {
 }
 
 export async function updateTrip(id: string, input: UpdateTripInput): Promise<Trip> {
+  await requireAuth();
   const row = await prisma.waypointTrip.update({
     where: { id },
     data: {
@@ -85,12 +89,14 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
 }
 
 export async function deleteTrip(id: string): Promise<void> {
+  await requireAuth();
   await prisma.waypointTrip.delete({ where: { id } });
 }
 
 export async function getTripWithLocations(
   id: string
 ): Promise<{ trip: Trip; locations: Location[] }> {
+  await requireAuth();
   const row = await prisma.waypointTrip.findUnique({
     where: { id },
     include: { locations: { orderBy: { visitOrder: 'asc' } } },
@@ -102,6 +108,7 @@ export async function getTripWithLocations(
 
 /** Persists the recalculated total distance and route line for a trip. */
 export async function updateTripRoute(id: string, input: UpdateTripRouteInput): Promise<void> {
+  await requireAuth();
   await prisma.waypointTrip.update({
     where: { id },
     data: {
@@ -114,6 +121,7 @@ export async function updateTripRoute(id: string, input: UpdateTripRouteInput): 
 // --- Location CRUD ---
 
 export async function getAllLocations(): Promise<Location[]> {
+  await requireAuth();
   const rows = await prisma.waypointLocation.findMany({
     orderBy: [{ tripId: 'asc' }, { visitOrder: 'asc' }],
   });
@@ -121,6 +129,7 @@ export async function getAllLocations(): Promise<Location[]> {
 }
 
 export async function createLocation(input: CreateLocationInput): Promise<Location> {
+  await requireAuth();
   const row = await prisma.waypointLocation.create({
     data: {
       tripId: input.trip_id,
@@ -139,10 +148,12 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
 }
 
 export async function deleteLocation(id: string): Promise<void> {
+  await requireAuth();
   await prisma.waypointLocation.delete({ where: { id } });
 }
 
 export async function updateLocation(id: string, input: UpdateLocationInput): Promise<void> {
+  await requireAuth();
   await prisma.waypointLocation.update({
     where: { id },
     data: {
@@ -160,6 +171,7 @@ export async function updateLocation(id: string, input: UpdateLocationInput): Pr
 export async function reorderLocations(
   locations: Pick<Location, 'id' | 'visit_order'>[]
 ): Promise<void> {
+  await requireAuth();
   await prisma.$transaction(
     locations.map(({ id, visit_order }) =>
       prisma.waypointLocation.update({ where: { id }, data: { visitOrder: visit_order } })

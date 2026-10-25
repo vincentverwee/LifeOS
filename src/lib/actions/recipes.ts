@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { fetchDeck, fetchRecipeInfo, findByIngredients } from "@/lib/recipes/spoonacular";
@@ -12,6 +13,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** A fresh batch for the swipe deck, minus recipes that are already saved. */
 export async function loadDeck(filters: DeckFilters): Promise<DeckResult> {
+  await requireAuth();
   const [result, saved] = await Promise.all([fetchDeck(filters), getSavedSpoonacularIds()]);
   if (!result.ok) return result;
   return { ...result, cards: result.cards.filter((card) => !saved.has(card.id)) };
@@ -19,6 +21,7 @@ export async function loadDeck(filters: DeckFilters): Promise<DeckResult> {
 
 /** Right swipe: stores a snapshot of the recipe in the saved list. */
 export async function likeRecipe(card: RecipeCard): Promise<RecipeResult> {
+  await requireAuth();
   if (!Number.isInteger(card.id) || !card.title?.trim()) return { ok: false, error: "That recipe looks broken." };
   const data = {
     title: card.title.trim(),
@@ -43,6 +46,7 @@ export async function likeRecipe(card: RecipeCard): Promise<RecipeResult> {
 
 /** Sets the day a recipe was made, or clears it (`null`) to put it back on the list. */
 export async function markRecipeMade(id: string, date: string | null): Promise<RecipeResult> {
+  await requireAuth();
   if (date !== null && !DATE_RE.test(date)) return { ok: false, error: "Pick a date." };
   const existing = await prisma.savedRecipe.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return { ok: false, error: "That recipe is no longer saved." };
@@ -55,6 +59,7 @@ export async function markRecipeMade(id: string, date: string | null): Promise<R
 }
 
 export async function removeSavedRecipe(id: string): Promise<RecipeResult> {
+  await requireAuth();
   const existing = await prisma.savedRecipe.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return { ok: false, error: "That recipe is no longer saved." };
   await prisma.savedRecipe.delete({ where: { id } });
@@ -64,6 +69,7 @@ export async function removeSavedRecipe(id: string): Promise<RecipeResult> {
 
 /** Full recipe for a search result (1 API point, cached for an hour). */
 export async function getRecipeInfo(spoonacularId: number): Promise<RecipeInfoResult> {
+  await requireAuth();
   if (!Number.isInteger(spoonacularId)) return { ok: false, error: "That recipe looks broken." };
   return fetchRecipeInfo(spoonacularId);
 }
@@ -77,6 +83,7 @@ export type FridgeSearchResult =
  * the list costs no quota; the same list again within an hour is served from cache.
  */
 export async function searchFridge(): Promise<FridgeSearchResult> {
+  await requireAuth();
   const pantry = await prisma.pantryItem.findMany({ select: { name: true } });
   if (pantry.length === 0) return { ok: false, error: "Add some ingredients first." };
   const names = pantry.map((p) => p.name);
@@ -93,6 +100,7 @@ export async function searchFridge(): Promise<FridgeSearchResult> {
 
 /** Adds one or more ingredients ("eggs, spinach" or one per line) to the pantry. */
 export async function addPantryItems(raw: string): Promise<RecipeResult> {
+  await requireAuth();
   const names = [...new Set(raw.split(/[,\n]/).map((n) => n.trim().toLowerCase()).filter(Boolean))];
   if (names.length === 0) return { ok: false, error: "Type an ingredient." };
   if (names.some((n) => n.length > 60)) return { ok: false, error: "That ingredient name is too long." };
@@ -102,12 +110,14 @@ export async function addPantryItems(raw: string): Promise<RecipeResult> {
 }
 
 export async function removePantryItem(id: string): Promise<RecipeResult> {
+  await requireAuth();
   await prisma.pantryItem.deleteMany({ where: { id } });
   revalidatePath("/recipes/fridge");
   return { ok: true };
 }
 
 export async function clearPantry(): Promise<RecipeResult> {
+  await requireAuth();
   await prisma.pantryItem.deleteMany();
   revalidatePath("/recipes/fridge");
   return { ok: true };

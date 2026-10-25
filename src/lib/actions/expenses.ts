@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { formatDate, parseAmount } from "@/lib/format";
@@ -80,6 +81,7 @@ export type CreateExpenseResult =
   | { ok: false; error: string };
 
 export async function createExpense(input: CreateExpenseInput): Promise<CreateExpenseResult> {
+  await requireAuth();
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     return { ok: false, error: "Enter an amount greater than zero." };
   }
@@ -118,6 +120,7 @@ export async function createExpenseFromForm(
   _prevState: CreateExpenseFormState,
   formData: FormData
 ): Promise<CreateExpenseFormState> {
+  await requireAuth();
   const categoryId = String(formData.get("categoryId") ?? "");
   const amountRaw = String(formData.get("amount") ?? "");
   const note = formData.get("note");
@@ -155,6 +158,7 @@ export type UpdateExpenseInput = {
 export type ExpenseMutationResult = { ok: true } | { ok: false; error: string };
 
 export async function updateExpense(input: UpdateExpenseInput): Promise<ExpenseMutationResult> {
+  await requireAuth();
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
     return { ok: false, error: "Enter an amount greater than zero." };
   }
@@ -192,6 +196,7 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<ExpenseM
 }
 
 export async function deleteExpense(id: string): Promise<ExpenseMutationResult> {
+  await requireAuth();
   const existing = await prisma.expense.findUnique({ where: { id }, select: { id: true } });
   if (!existing) return { ok: false, error: "That expense no longer exists." };
 

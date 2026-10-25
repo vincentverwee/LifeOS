@@ -1,5 +1,6 @@
 "use server";
 
+import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { formatDate, parseHours } from "@/lib/format";
@@ -56,6 +57,7 @@ export async function createStudyEntriesFromForm(
   _prev: StudyEntryFormState,
   formData: FormData
 ): Promise<StudyEntryFormState> {
+  await requireAuth();
   const periodId = String(formData.get("periodId") ?? "");
   const hours = parseHours(String(formData.get("hours") ?? ""));
   const courseIds = formData.getAll("courseId").map(String).filter(Boolean);
@@ -99,6 +101,7 @@ export async function updateStudyEntry(input: {
   date: string;
   note: string | null;
 }): Promise<LessonsResult> {
+  await requireAuth();
   if (!Number.isFinite(input.hours) || input.hours < 0 || input.hours > 24) {
     return { ok: false, error: "Enter between 0 and 24 hours." };
   }
@@ -127,6 +130,7 @@ export async function updateStudyEntry(input: {
 }
 
 export async function deleteStudyEntry(id: string): Promise<LessonsResult> {
+  await requireAuth();
   const deleted = await prisma.studyEntry.deleteMany({ where: { id } });
   if (deleted.count === 0) return { ok: false, error: "That entry no longer exists." };
   revalidateLessonRoutes();
@@ -142,6 +146,7 @@ export async function setLessonMark(input: {
   kind: LessonKind;
   status: string | null;
 }): Promise<LessonsResult> {
+  await requireAuth();
   if (!Number.isInteger(input.week) || input.week < 1) return { ok: false, error: "Invalid week." };
   if (input.kind !== "HC" && input.kind !== "WC") return { ok: false, error: "Invalid lesson kind." };
   const where = { courseId_week_kind: { courseId: input.courseId, week: input.week, kind: input.kind } };
@@ -198,6 +203,7 @@ function periodData(input: StudyPeriodInput) {
 export async function createStudyPeriod(
   input: StudyPeriodInput
 ): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requireAuth();
   const error = validatePeriod(input);
   if (error) return { ok: false, error };
   if (await prisma.studyPeriod.findUnique({ where: { name: input.name.trim() } })) {
@@ -209,6 +215,7 @@ export async function createStudyPeriod(
 }
 
 export async function updateStudyPeriod(input: StudyPeriodInput & { id: string }): Promise<LessonsResult> {
+  await requireAuth();
   const error = validatePeriod(input);
   if (error) return { ok: false, error };
   const clash = await prisma.studyPeriod.findFirst({
@@ -222,6 +229,7 @@ export async function updateStudyPeriod(input: StudyPeriodInput & { id: string }
 }
 
 export async function deleteStudyPeriod(id: string): Promise<LessonsResult> {
+  await requireAuth();
   await prisma.studyPeriod.deleteMany({ where: { id } });
   revalidateLessonRoutes();
   return { ok: true };
@@ -238,6 +246,7 @@ function validateCourse(input: StudyCourseInput): string | null {
 }
 
 export async function createStudyCourse(periodId: string, input: StudyCourseInput): Promise<LessonsResult> {
+  await requireAuth();
   const error = validateCourse(input);
   if (error) return { ok: false, error };
   const code = input.code.trim();
@@ -260,6 +269,7 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
 }
 
 export async function updateStudyCourse(id: string, input: StudyCourseInput): Promise<LessonsResult> {
+  await requireAuth();
   const error = validateCourse(input);
   if (error) return { ok: false, error };
   const course = await prisma.studyCourse.findUnique({ where: { id }, select: { periodId: true } });
@@ -277,6 +287,7 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
 
 /** Its logged hours stay, without a course. */
 export async function deleteStudyCourse(id: string): Promise<LessonsResult> {
+  await requireAuth();
   await prisma.studyCourse.deleteMany({ where: { id } });
   revalidateLessonRoutes();
   return { ok: true };
@@ -290,6 +301,7 @@ export async function createStudyExam(input: {
   kind: "exam" | "test";
   note: string | null;
 }): Promise<LessonsResult> {
+  await requireAuth();
   if (!DATE_RE.test(input.date)) return { ok: false, error: "Pick a date." };
   if (input.kind !== "exam" && input.kind !== "test") return { ok: false, error: "Invalid kind." };
   const course = await prisma.studyCourse.findUnique({ where: { id: input.courseId }, select: { id: true } });
@@ -302,6 +314,7 @@ export async function createStudyExam(input: {
 }
 
 export async function deleteStudyExam(id: string): Promise<LessonsResult> {
+  await requireAuth();
   await prisma.studyExam.deleteMany({ where: { id } });
   revalidateLessonRoutes();
   return { ok: true };

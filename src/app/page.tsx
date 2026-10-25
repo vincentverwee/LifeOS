@@ -9,6 +9,8 @@ import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
 import { BudgetIcon, LessonsIcon, RecipesIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
+import { logout } from "@/lib/actions/auth";
+import { authDisabled } from "@/lib/authToken";
 
 type BudgetGlance = {
   /** "€ 23,65" */
@@ -189,6 +191,14 @@ export default async function HomePage() {
           </div>
         </li>
       </ul>
+
+      {!authDisabled() && (
+        <form action={logout} className="flex justify-center">
+          <button type="submit" className="btn btn-ghost text-sm">
+            Log out
+          </button>
+        </form>
+      )}
     </div>
   );
 }
