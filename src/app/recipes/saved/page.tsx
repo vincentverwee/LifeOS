@@ -17,7 +17,7 @@ export default async function SavedRecipesPage() {
         ) : (
           <p className="mt-3 text-ink-muted">
             Nothing saved yet.{" "}
-            <Link href="/recipes" className="btn btn-ghost -mx-1 inline-flex min-h-9 px-3">
+            <Link href="/recipes" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
               Start swiping
             </Link>
           </p>

@@ -41,6 +41,8 @@ interface MapWrapperProps {
   labelOverrides?: Record<string, string>;
   reserveBottom?: number;
   showControls?: boolean;
+  /** See MapView: one finger scrolls the page on touch screens. */
+  cooperativeGestures?: boolean;
   pixelRatio?: number;
   onReady?: () => void;
   /** Multi-trip maps (dashboard, world map): show the trip-focus legend + enable tap-to-focus. */
@@ -68,6 +70,7 @@ export function MapWrapper({
   labelOverrides,
   reserveBottom,
   showControls,
+  cooperativeGestures,
   pixelRatio,
   onReady,
   selectable = false,
@@ -143,6 +146,7 @@ export function MapWrapper({
       labelOverrides={labelOverrides}
       reserveBottom={reserveBottom}
       showControls={showControls}
+      cooperativeGestures={cooperativeGestures}
       pixelRatio={pixelRatio}
       preserveDrawingBuffer={preserveDrawingBuffer}
       onReady={onReady}

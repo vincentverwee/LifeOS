@@ -123,8 +123,10 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* overflow-x: clip (not hidden) so a swiped card or wide preview can never make
+   the page pan sideways, while sticky elements keep working. */
 body {
-  overscroll-behavior-y: none;
+  overflow-x: clip;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -180,9 +182,10 @@ textarea {
   @apply touch-manipulation transition-colors duration-100 select-none hover:bg-surface-muted/60 active:bg-surface-muted;
 }
 
-/* Clearance for the fixed bottom tab bar (see BudgetTabBar). */
+/* Clearance for the fixed bottom tab bar (see BudgetTabBar) incl. its raised + button.
+   The root <main> drops its own bottom padding when this is inside it. */
 .pb-tabbar {
-  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
 }
 @media (min-width: 640px) {
   .pb-tabbar {

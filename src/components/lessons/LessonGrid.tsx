@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import type { LessonMark, StudyCourse } from "@/lib/lessons/types";
 import { LESSON_STATUSES, LESSON_STATUS_INFO, attendance, type LessonKind, type LessonStatus } from "@/lib/lessons/marks";
 import { setLessonMark } from "@/lib/actions/lessons";
@@ -137,19 +137,34 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
   const [open, setOpen] = useState<Cell | null>(null);
   const columns = columnsOf(courses);
   const openCourse = courses.find((c) => c.id === open?.courseId);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const currentRowRef = useRef<HTMLTableRowElement>(null);
+  const headRef = useRef<HTMLTableSectionElement>(null);
+
+  // Open on the current week: scroll it to just under the sticky header row.
+  useEffect(() => {
+    const box = scrollRef.current;
+    const row = currentRowRef.current;
+    if (box && row) box.scrollTop = row.offsetTop - (headRef.current?.offsetHeight ?? 0);
+  }, []);
 
   if (courses.length === 0) return <p className="text-sm text-ink-muted">Add courses in Settings to start the grid.</p>;
 
   return (
     <div className="flex flex-col gap-2">
       {marks.error && <p className="text-sm text-critical">{marks.error}</p>}
-      <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-        <table className="w-max min-w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-border bg-surface text-sm">
-          <thead>
+      {/* One scroll box for both axes, sized to the screen, so the course header row and the
+          week column both stay in view (sticky only works inside the element that scrolls). */}
+      <div
+        ref={scrollRef}
+        className="-mx-4 max-h-[calc(100svh-16.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-80 overflow-auto overscroll-contain border-y border-border bg-surface sm:mx-0 sm:max-h-[75vh] sm:rounded-xl sm:border"
+      >
+        <table className="w-max min-w-full border-separate border-spacing-0 text-sm">
+          <thead ref={headRef}>
             <tr>
-              <th className="sticky left-0 z-10 border-b border-border bg-surface px-3 py-2 text-left font-medium text-ink-muted">Week</th>
+              <th className="sticky top-0 left-0 z-20 border-r border-b border-border bg-surface px-3 py-2 text-left font-medium text-ink-muted">Week</th>
               {columns.map(({ course, kind }) => (
-                <th key={`${course.id}${kind}`} className="border-b border-border px-1.5 py-2 text-center font-medium">
+                <th key={`${course.id}${kind}`} className="sticky top-0 z-10 border-b border-border bg-surface px-1.5 py-2 text-center font-medium">
                   <span className="flex flex-col items-center gap-0.5">
                     <span className="inline-flex items-center gap-1 text-foreground">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
@@ -167,10 +182,10 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
               const isBlok = weekStart(startDate, week + 1) > blokStart;
               const isCurrent = week === currentWeek;
               return (
-                <tr key={week} className={isCurrent ? "bg-surface-muted" : undefined}>
+                <tr key={week} ref={isCurrent ? currentRowRef : undefined} className={isCurrent ? "bg-surface-muted" : undefined}>
                   <th
                     scope="row"
-                    className={`sticky left-0 z-10 border-b border-border px-3 py-1.5 text-left font-normal whitespace-nowrap ${
+                    className={`sticky left-0 z-10 border-r border-b border-border px-3 py-1.5 text-left font-normal whitespace-nowrap ${
                       isCurrent ? "bg-surface-muted" : "bg-surface"
                     }`}
                   >
@@ -188,7 +203,7 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
                           type="button"
                           onClick={() => setOpen(cell)}
                           aria-label={`${course.code} ${kind} week ${week}: ${LESSON_STATUS_INFO[marks.get(cell)!]?.label ?? "empty"}`}
-                          className="tap flex h-10 w-14 items-center justify-center rounded-md"
+                          className="tap flex h-11 w-14 items-center justify-center rounded-md"
                         >
                           <MarkBadge status={marks.get(cell)} />
                         </button>
@@ -201,14 +216,14 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
           </tbody>
           <tfoot>
             <tr>
-              <th className="sticky left-0 z-10 bg-surface px-3 py-2 text-left text-xs font-medium text-ink-muted">Attended</th>
+              <th className="sticky bottom-0 left-0 z-20 border-r border-border bg-surface shadow-[0_-1px_0_var(--color-border)] px-3 py-2 text-left text-xs font-medium text-ink-muted">Attended</th>
               {columns.map(({ course, kind }) => {
                 const statuses = [...marks.all]
                   .filter(([key]) => key.startsWith(`${course.id}:`) && key.endsWith(`:${kind}`))
                   .map(([, s]) => s);
                 const { attended, given } = attendance(statuses);
                 return (
-                  <td key={`${course.id}${kind}`} className="px-1 py-2 text-center font-mono text-xs tabular-nums text-ink-muted">
+                  <td key={`${course.id}${kind}`} className="sticky bottom-0 z-10 bg-surface px-1 py-2 shadow-[0_-1px_0_var(--color-border)] text-center font-mono text-xs tabular-nums text-ink-muted">
                     {given ? formatPercent((attended / given) * 100) : "–"}
                   </td>
                 );

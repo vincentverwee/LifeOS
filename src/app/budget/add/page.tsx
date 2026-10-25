@@ -53,7 +53,7 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
       />
 
       <details id="categories" className="group scroll-mt-4 rounded-xl border border-border bg-surface p-4">
-        <summary className="flex min-h-8 cursor-pointer items-center justify-between font-medium text-foreground">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-medium text-foreground">
           Edit categories ({allCategories.length})
           <span className="text-sm font-normal text-ink-muted group-open:hidden">Show</span>
         </summary>

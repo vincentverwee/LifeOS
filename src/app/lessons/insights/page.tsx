@@ -4,7 +4,8 @@ import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, countdownChart } from "@/lib/lessons/stats";
 import { CATEGORY_COLOR_SLOTS } from "@/lib/categoryPalette";
 import { formatDate, formatHours, formatPercent } from "@/lib/format";
-import { SummaryCard } from "@/components/dashboard/SummaryCard";
+import { SummaryCards } from "@/components/dashboard/SummaryCards";
+import { Disclosure } from "@/components/Disclosure";
 import type { ChartSeries } from "@/components/lessons/StudyCharts";
 import { CountdownChart, StudyWeekdayChart, WeeklyChart } from "@/components/lessons/StudyChartsLazy";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
@@ -56,63 +57,50 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
         <StudyPeriodSwitcher periods={periods} activeId={period.id} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <SummaryCard
-          label="Total"
-          value={formatHours(stats.total)}
-          hint={
-            pace && pace.loggedCount > 0
-              ? `${pace.mine >= pace.avg.theirs ? "+" : "−"}${formatHours(Math.abs(Math.round((pace.mine - pace.avg.theirs) * 100) / 100))} vs earlier`
-              : undefined
-          }
-          tone={pace && pace.loggedCount > 0 ? (pace.mine >= pace.avg.theirs ? "positive" : "negative") : "neutral"}
-        />
-        <SummaryCard
-          label="Days studied"
-          value={String(stats.studiedDays)}
-          hint={stats.elapsedDays ? `of ${stats.elapsedDays} days logged` : undefined}
-          icon={null}
-        />
-        <SummaryCard
-          label="Per study day"
-          value={hoursOrDash(stats.avgPerStudyDay)}
-          hint={stats.medianPerStudyDay !== null ? `median ${formatHours(stats.medianPerStudyDay)}` : undefined}
-          icon={null}
-        />
-        <SummaryCard
-          label={`Days ≥ ${formatHours(period.goalHours)}`}
-          value={String(stats.daysAtGoal)}
-          hint={
-            stats.elapsedDays
-              ? `${formatPercent((stats.daysAtGoal / stats.elapsedDays) * 100)} of days · ${stats.topDays} ≥ ${formatHours(period.topDayHours)}`
-              : undefined
-          }
-          icon={null}
-        />
-      </div>
+      <SummaryCards
+        cards={[
+          {
+            label: "Total",
+            value: formatHours(stats.total),
+            hint:
+              pace && pace.loggedCount > 0
+                ? `${pace.mine >= pace.avg.theirs ? "+" : "−"}${formatHours(Math.abs(Math.round((pace.mine - pace.avg.theirs) * 100) / 100))} vs earlier`
+                : undefined,
+            tone: pace && pace.loggedCount > 0 ? (pace.mine >= pace.avg.theirs ? "positive" : "negative") : "neutral",
+          },
+          {
+            label: "Per study day",
+            value: hoursOrDash(stats.avgPerStudyDay),
+            hint: `${stats.studiedDays} ${stats.studiedDays === 1 ? "day" : "days"} studied`,
+            icon: null,
+          },
+          {
+            label: `Days ≥ ${formatHours(period.goalHours)}`,
+            value: String(stats.daysAtGoal),
+            hint: stats.elapsedDays ? `${formatPercent((stats.daysAtGoal / stats.elapsedDays) * 100)} of days` : undefined,
+            icon: null,
+          },
+        ]}
+      />
 
       {pace && !finished && (
         <Section title="Where this is heading">
           <p className="text-sm text-foreground">
-            Earlier periods studied another <strong className="font-mono tabular-nums">{formatHours(pace.avg.remaining)}</strong> from this
-            point to their last exam. At that pace you&apos;d end around{" "}
+            At the pace of earlier periods you&apos;d end around{" "}
             <strong className="font-mono tabular-nums">{formatHours(Math.round((pace.mine + pace.avg.remaining) * 100) / 100)}</strong>{" "}
-            (they averaged {formatHours(pace.avg.total)}).
-          </p>
-          <p className="mt-2 text-sm text-ink-muted">
-            Last 7 days: {formatHours(pace.mineLast7)} vs {formatHours(pace.avg.last7)} at the same point before.
+            <span className="text-ink-muted">(they averaged {formatHours(pace.avg.total)})</span>.
           </p>
         </Section>
       )}
 
       {chart.points.length > 1 && (
-        <Section title="Hours, counting down to the last exam" hint="Each period lined up on its last exam day. Dashed: an earlier period filled in from a more recent one, before it started logging.">
+        <Section title="Countdown to the last exam">
           <CountdownChart points={chart.points} series={series} hasAvg={chart.hasAvg} />
         </Section>
       )}
 
       {stats.courses.length > 0 && (
-        <Section title="Per course" hint="Hours split equally when a day covered several courses.">
+        <Section title="Per course">
           <ul className="flex flex-col gap-3">
             {[...stats.courses]
               .sort((a, b) => b.hours - a.hours)
@@ -146,19 +134,25 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
         </Section>
       )}
 
-      {stats.weeks.length > 0 && (
-        <Section title="Per week">
-          <WeeklyChart weeks={stats.weeks} />
-        </Section>
+      {(stats.weeks.length > 0 || stats.elapsedDays > 0) && (
+        <Disclosure title="More details">
+          {stats.weeks.length > 0 && (
+            <div>
+              <h3 className="mb-2 text-sm font-medium text-foreground">Per week</h3>
+              <WeeklyChart weeks={stats.weeks} />
+            </div>
+          )}
+          {stats.elapsedDays > 0 && (
+            <div>
+              <h3 className="text-sm font-medium text-foreground">By weekday</h3>
+              <p className="mb-2 text-xs text-ink-muted">Average hours per day, since the first logged day.</p>
+              <StudyWeekdayChart weekdays={stats.weekdays} />
+            </div>
+          )}
+        </Disclosure>
       )}
 
-      {stats.elapsedDays > 0 && (
-        <Section title="By weekday" hint="Average hours per day, since the first logged day.">
-          <StudyWeekdayChart weekdays={stats.weekdays} />
-        </Section>
-      )}
-
-      <Section title="All periods">
+      <Disclosure title="All periods">
         <ul className="flex flex-col divide-y divide-border">
           {summaries.map(({ period: p, stats: s }) => (
             <li key={p.id}>
@@ -180,7 +174,7 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
             </li>
           ))}
         </ul>
-      </Section>
+      </Disclosure>
     </div>
   );
 }

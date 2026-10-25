@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { useTooltipTrigger } from "@/lib/useTooltipTrigger";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
 
 export type ComparePoint = {
@@ -47,6 +48,7 @@ function CompareTooltip({
 }
 
 export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typicalLabel: string | null }) {
+  const tooltipTrigger = useTooltipTrigger();
   const hasTypical = data.some((d) => d.typical !== null);
 
   return (
@@ -84,7 +86,7 @@ export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typ
             tickLine={false}
             width={52}
           />
-          <Tooltip
+          <Tooltip trigger={tooltipTrigger}
             content={<CompareTooltip label={typicalLabel ?? undefined} />}
             cursor={{ stroke: "var(--color-ink-muted)" }}
           />

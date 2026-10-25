@@ -9,7 +9,11 @@ type PeriodListProps = {
   activeId: string;
 };
 
-/** Every period, grouped by label, with the typical spend per label. Tap to open one. */
+/** Periods per label shown before "Show older". */
+const SHOWN = 6;
+
+/** Every period, grouped by label, with the typical spend per label. Tap to open one. Each group
+ *  shows its latest periods; the older ones fold away. */
 export function PeriodList({ entries, summaries, activeId }: PeriodListProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -17,6 +21,47 @@ export function PeriodList({ entries, summaries, activeId }: PeriodListProps) {
         const group = entries
           .filter((e) => (e.month.label ?? "Other") === summary.label)
           .sort((a, b) => b.month.startDate.localeCompare(a.month.startDate));
+        // Never fold away the period being viewed.
+        const shown = Math.max(SHOWN, group.findIndex((e) => e.month.id === activeId) + 1);
+        const row = ({ month, stats }: PeriodEntry) => {
+          const active = month.id === activeId;
+          const used = month.budget > 0 ? Math.min(1, stats.spent / month.budget) : 0;
+          const over = stats.spent > month.budget;
+          const key = encodePeriodKey({ type: month.kind === "trip" ? "trip" : "cycle", id: month.id });
+          return (
+            <li key={month.id} className="border-b border-border last:border-b-0">
+              <Link
+                href={`/budget/insights?period=${encodeURIComponent(key)}`}
+                aria-current={active ? "page" : undefined}
+                className={`tap flex min-h-14 flex-col justify-center gap-1.5 px-3 py-2.5 ${
+                  active ? "bg-surface-muted" : "bg-surface"
+                }`}
+              >
+                <span className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate text-sm font-medium text-foreground">
+                    {month.name}
+                    {stats.isCurrent && <span className="ml-1.5 text-xs text-ink-muted">now</span>}
+                  </span>
+                  <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">
+                    {formatCurrency(stats.avgPerDay)}
+                    <span className="text-xs text-ink-muted">/day</span>
+                  </span>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-background" aria-hidden="true">
+                    <span
+                      className={`block h-full rounded-full ${over ? "bg-critical" : "bg-accent"}`}
+                      style={{ width: `${used * 100}%` }}
+                    />
+                  </span>
+                  <span className="shrink-0 text-right font-mono text-xs tabular-nums text-ink-muted">
+                    {formatCurrencyShort(stats.spent)} / {formatCurrencyShort(month.budget)}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        };
         return (
           <div key={summary.label} className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between px-1 text-sm">
@@ -31,47 +76,16 @@ export function PeriodList({ entries, summaries, activeId }: PeriodListProps) {
                 {formatCurrency(summary.avgPerDay)}/day
               </span>
             </div>
-            <ul className="overflow-hidden rounded-xl border border-border">
-              {group.map(({ month, stats }) => {
-                const active = month.id === activeId;
-                const used = month.budget > 0 ? Math.min(1, stats.spent / month.budget) : 0;
-                const over = stats.spent > month.budget;
-                const key = encodePeriodKey({ type: month.kind === "trip" ? "trip" : "cycle", id: month.id });
-                return (
-                  <li key={month.id} className="border-b border-border last:border-b-0">
-                    <Link
-                      href={`/budget/insights?period=${encodeURIComponent(key)}`}
-                      aria-current={active ? "page" : undefined}
-                      className={`tap flex min-h-14 flex-col justify-center gap-1.5 px-3 py-2.5 ${
-                        active ? "bg-surface-muted" : "bg-surface"
-                      }`}
-                    >
-                      <span className="flex items-baseline justify-between gap-3">
-                        <span className="min-w-0 truncate text-sm font-medium text-foreground">
-                          {month.name}
-                          {stats.isCurrent && <span className="ml-1.5 text-xs text-ink-muted">now</span>}
-                        </span>
-                        <span className="shrink-0 font-mono text-sm tabular-nums text-foreground">
-                          {formatCurrency(stats.avgPerDay)}
-                          <span className="text-xs text-ink-muted">/day</span>
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2">
-                        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-background" aria-hidden="true">
-                          <span
-                            className={`block h-full rounded-full ${over ? "bg-critical" : "bg-accent"}`}
-                            style={{ width: `${used * 100}%` }}
-                          />
-                        </span>
-                        <span className="shrink-0 text-right font-mono text-xs tabular-nums text-ink-muted">
-                          {formatCurrencyShort(stats.spent)} / {formatCurrencyShort(month.budget)}
-                        </span>
-                      </span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <ul className="overflow-hidden rounded-xl border border-border">{group.slice(0, shown).map(row)}</ul>
+            {group.length > shown && (
+              <details className="group/older">
+                <summary className="btn btn-ghost -mx-3 inline-flex min-h-11 cursor-pointer list-none px-3 text-sm [&::-webkit-details-marker]:hidden">
+                  <span className="group-open/older:hidden">Show {group.length - shown} older</span>
+                  <span className="hidden group-open/older:inline">Hide older</span>
+                </summary>
+                <ul className="overflow-hidden rounded-xl border border-border">{group.slice(shown).map(row)}</ul>
+              </details>
+            )}
           </div>
         );
       })}

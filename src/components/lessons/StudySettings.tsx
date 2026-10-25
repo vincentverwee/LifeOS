@@ -157,7 +157,7 @@ function ColorPicker({ value, onChange }: { value: CategoryColorSlot; onChange: 
           aria-checked={value === slot}
           aria-label={slot}
           onClick={() => onChange(slot)}
-          className={`btn h-9 w-9 ${value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""}`}
+          className={`btn h-10 w-10 ${value === slot ? "ring-2 ring-primary ring-offset-2 ring-offset-surface" : ""}`}
           style={{ backgroundColor: `var(--color-tag-${slot})` }}
         />
       ))}
@@ -353,7 +353,7 @@ export function ExamManager({ period }: { period: StudyPeriod }) {
                 type="button"
                 onClick={() => setKind(k)}
                 aria-pressed={kind === k}
-                className={`btn flex-1 px-3 py-2 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
+                className={`btn flex min-h-11 flex-1 px-3 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
               >
                 {k}
               </button>

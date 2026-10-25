@@ -142,7 +142,7 @@ export function BalancesCard({
       </div>
 
       <details className="text-sm">
-        <summary className="cursor-pointer py-1 text-ink-muted">
+        <summary className="tap -mx-2 flex min-h-11 cursor-pointer items-center rounded-lg px-2 text-ink-muted">
           Month settings · budget {formatCurrency(budget)}
           {rent > 0 ? ` · rent ${formatCurrency(rent)}${rentDay ? ` on day ${rentDay}` : ""}` : ""}
         </summary>
@@ -203,10 +203,10 @@ export function BalancesCard({
       )}
       {error && <p className="text-sm text-critical">{error}</p>}
 
-      <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 sm:grid-cols-3">
+      <dl className="grid grid-cols-3 gap-3 border-t border-border pt-3">
         <div>
           <dt className="text-xs text-ink-muted">
-            Available{outlook.rentStillDue > 0 ? " (after rent)" : ""}
+            Available{outlook.rentStillDue > 0 ? <span className="hidden sm:inline"> (after rent)</span> : ""}
           </dt>
           <dd
             className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
@@ -217,7 +217,9 @@ export function BalancesCard({
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-ink-muted">Safe to spend per day</dt>
+          <dt className="text-xs text-ink-muted">
+            Safe<span className="hidden sm:inline"> to spend</span> per day
+          </dt>
           <dd
             className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
               outlook.safePerDay !== null && outlook.safePerDay < 0
@@ -229,7 +231,10 @@ export function BalancesCard({
           </dd>
         </div>
         <div>
-          <dt className="text-xs text-ink-muted">Predicted at month end</dt>
+          <dt className="text-xs text-ink-muted">
+            <span className="sm:hidden">Month end</span>
+            <span className="hidden sm:inline">Predicted at month end</span>
+          </dt>
           <dd
             className={`font-mono text-base font-semibold tabular-nums sm:text-lg ${
               outlook.predictedEndBalance < 0 ? "text-critical" : "text-positive-text"

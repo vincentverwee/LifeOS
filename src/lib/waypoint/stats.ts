@@ -41,16 +41,6 @@ export function getCountryStats(locations: Location[]): CountryStats[] {
     .sort((a, b) => b.visits - a.visits);
 }
 
-export interface TripBreakdownEntry {
-  trip: TripSummary;
-}
-
-export function getTripBreakdown(trips: TripSummary[]): TripBreakdownEntry[] {
-  return trips
-    .map((trip) => ({ trip }))
-    .sort((a, b) => (b.trip.start_date ?? '').localeCompare(a.trip.start_date ?? ''));
-}
-
 /**
  * Headline numbers for the dashboard and stats pages. Pure: pass the trips and locations the
  * page already loaded, so the page does not run the same queries twice.

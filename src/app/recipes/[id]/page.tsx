@@ -13,7 +13,7 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
 
   return (
     <article className="mx-auto flex max-w-2xl flex-col gap-6">
-      <Link href="/recipes/saved" className="btn -mx-3 -mb-2 inline-flex min-h-9 self-start px-3 text-sm text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted">
+      <Link href="/recipes/saved" className="btn -mx-3 -mb-2 inline-flex min-h-11 self-start px-3 text-sm text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted">
         ‹ Saved recipes
       </Link>
 
@@ -49,7 +49,7 @@ export default async function RecipePage({ params }: PageProps<"/recipes/[id]">)
           href={recipe.sourceUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn btn-ghost -mx-3 inline-flex min-h-9 self-start px-3 text-sm"
+          className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm"
         >
           Original recipe ↗
         </a>

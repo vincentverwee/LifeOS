@@ -1,5 +1,3 @@
-import { SheepMark } from "@/components/icons/SheepMark";
-
 type SummaryCardTone = "neutral" | "positive" | "negative";
 
 export type SummaryCardProps = {
@@ -26,8 +24,7 @@ const TONE_ICON: Record<SummaryCardTone, string> = {
 export function SummaryCard({ label, value, tone = "neutral", hint, icon }: SummaryCardProps) {
   const arrow = icon === undefined ? TONE_ICON[tone] : icon;
   return (
-    <div className="relative min-w-0 overflow-hidden rounded-xl border border-border bg-surface p-3 sm:p-4">
-      <SheepMark className="pointer-events-none absolute right-2 bottom-2 h-12 w-12 text-primary opacity-[0.08]" />
+    <div className="min-w-0 rounded-xl border border-border bg-surface p-3 sm:p-4">
       <p className="text-xs text-ink-muted sm:text-sm">{label}</p>
       <p className={`mt-1 font-mono text-lg leading-tight font-semibold tabular-nums break-words sm:text-2xl ${TONE_TEXT[tone]}`}>
         {value}

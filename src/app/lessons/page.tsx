@@ -68,16 +68,16 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
           <span className="font-mono text-sm tabular-nums text-ink-muted">{formatHours(stats.todayHours ?? 0)}</span>
         </div>
         <StudyEntryList entries={todaysEntries} courses={period.courses} empty="Nothing logged today yet." />
-        <Link href={`/lessons/log${query}`} className="btn btn-ghost mx-1 mb-2 inline-flex min-h-9 px-3 text-sm">
+        <Link href={`/lessons/log${query}`} className="btn btn-ghost mx-1 mb-2 inline-flex min-h-11 px-3 text-sm">
           Full log ›
         </Link>
       </section>
 
       {showWeekLessons && (
         <section className="rounded-xl border border-border bg-surface">
-          <div className="flex items-baseline justify-between gap-2 px-4 pt-4 pb-3">
+          <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1">
             <h2 className="font-medium text-foreground">Lessons · week {week}</h2>
-            <Link href={`/lessons/grid${query}`} className="text-sm text-primary">
+            <Link href={`/lessons/grid${query}`} className="btn btn-ghost -mr-3 inline-flex min-h-11 px-3 text-sm">
               All weeks ›
             </Link>
           </div>

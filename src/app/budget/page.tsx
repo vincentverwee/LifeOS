@@ -92,9 +92,10 @@ export default async function TodayPage() {
         </Link>
       </div>
 
-      {running.map((entry) => (
+      {running.map((entry, i) => (
         <TodayPanel
           key={entry.month.id}
+          compact={i > 0}
           month={entry.month}
           stats={entry.stats}
           todayKey={todayKey}

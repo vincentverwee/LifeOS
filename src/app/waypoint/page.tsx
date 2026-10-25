@@ -31,20 +31,20 @@ export default async function DashboardPage() {
 
         <StatsGrid stats={stats} />
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm font-medium text-muted-foreground">All trips</p>
               {/* Exports the whole map (every trip) as one post. */}
-              <Link href="/waypoint/map/export" title="Export the whole map as an image">
-                <Button variant="outline" size="sm" className="gap-1.5">
+              <Button asChild variant="outline" size="sm" className="gap-1.5">
+                <Link href="/waypoint/map/export" title="Export the whole map as an image">
                   <ImageDown size={15} />
                   Export map
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
             <MapWrapper
-              className="h-[400px] lg:h-[500px]"
+              className="h-[min(400px,60svh)] lg:h-[500px]"
               locations={locations}
               routes={routes}
               tripLabels={tripLabels}

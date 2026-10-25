@@ -80,7 +80,7 @@ export function PantryEditor({ pantry, suggestions }: { pantry: PantryEntry[]; s
                   onClick={() => remove(item.id)}
                   disabled={pending}
                   aria-label={`Remove ${item.name}`}
-                  className="btn btn-outline inline-flex min-h-10 gap-1.5 pr-2.5 pl-3.5 text-sm first-letter:uppercase"
+                  className="btn btn-outline inline-flex min-h-11 gap-1.5 pr-2.5 pl-3.5 text-sm first-letter:uppercase"
                 >
                   {item.name}
                   <X size={15} aria-hidden="true" className="text-ink-muted" />
@@ -90,7 +90,7 @@ export function PantryEditor({ pantry, suggestions }: { pantry: PantryEntry[]; s
           </ul>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <button type="button" disabled={pending} className="btn btn-ghost -mx-3 inline-flex min-h-9 self-start px-3 text-sm text-ink-muted">
+              <button type="button" disabled={pending} className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm text-ink-muted">
                 Clear all
               </button>
             </AlertDialogTrigger>

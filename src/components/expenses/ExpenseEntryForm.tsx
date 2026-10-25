@@ -122,7 +122,7 @@ export function ExpenseEntryForm({
       type="button"
       onClick={() => setDateChoice(choice)}
       aria-pressed={dateChoice === choice}
-      className={`btn flex-1 px-3 py-2 text-sm ${
+      className={`btn flex min-h-11 flex-1 px-3 text-sm ${
         dateChoice === choice ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"
       }`}
     >
@@ -193,7 +193,7 @@ export function ExpenseEntryForm({
               section.open = true;
               section.scrollIntoView({ behavior: "smooth", block: "start" });
             }}
-            className="py-1 text-sm text-primary"
+            className="btn btn-ghost -mr-3 inline-flex min-h-11 px-3 text-sm"
           >
             Edit
           </button>
@@ -242,7 +242,7 @@ export function ExpenseEntryForm({
         <button
           type="button"
           onClick={() => setShowNote(true)}
-          className="btn btn-ghost -mx-3 inline-flex min-h-9 self-start px-3 text-sm"
+          className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm"
         >
           + Add note
         </button>
@@ -250,8 +250,9 @@ export function ExpenseEntryForm({
 
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
 
-      {/* Sticky on phones so it stays reachable above the tab bar. */}
-      <div className="sticky bottom-[calc(5rem+env(safe-area-inset-bottom))] z-30 sm:static">
+      {/* Sticky on phones so it stays reachable above the tab bar; the backing strip keeps
+          fields scrolling underneath from showing around the button. */}
+      <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <SubmitButton
           label={
             parsedAmount !== null && parsedAmount > 0
