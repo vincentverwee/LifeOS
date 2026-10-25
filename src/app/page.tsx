@@ -65,8 +65,12 @@ async function waypointGlance(): Promise<WaypointGlance> {
   };
 }
 
+function hourIn(tz: string): number {
+  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+}
+
 function greeting(tz: string): string {
-  const hour = Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+  const hour = hourIn(tz);
   if (hour < 5) return "Good night";
   if (hour < 12) return "Good morning";
   if (hour < 18) return "Good afternoon";
@@ -78,7 +82,7 @@ const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 })
 export default async function HomePage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
-  const fact = getFactOfTheDay(todayKey);
+  const fact = getFactOfTheDay(todayKey, hourIn(tz) >= 12);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -94,6 +98,21 @@ export default async function HomePage() {
       </div>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <li>
+          <div className="relative h-full min-h-40 overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
+            <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 opacity-15" />
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Fact of the day</h2>
+              {fact.theme !== "Sheep" && (
+                <span className="rounded-full bg-primary-foreground/15 px-2.5 py-0.5 text-xs font-medium">
+                  {fact.theme}
+                </span>
+              )}
+            </div>
+            <p className="relative mt-2 text-base leading-snug">{fact.text}</p>
+          </div>
+        </li>
+
         <li>
           <FeatureTile href="/budget" name="Budget" icon={BudgetIcon}>
             <Suspense fallback={<TileSkeleton />}>
@@ -126,21 +145,6 @@ export default async function HomePage() {
           </FeatureTile>
         </li>
 
-        {/* After the features, so they are the first thing on a phone. */}
-        <li className="sm:col-span-2">
-          <div className="relative h-full overflow-hidden rounded-2xl bg-primary p-5 text-primary-foreground">
-            <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 opacity-15" />
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold">Fact of the day</h2>
-              {fact.theme !== "Sheep" && (
-                <span className="rounded-full bg-primary-foreground/15 px-2.5 py-0.5 text-xs font-medium">
-                  {fact.theme}
-                </span>
-              )}
-            </div>
-            <p className="relative mt-2 text-base leading-snug">{fact.text}</p>
-          </div>
-        </li>
       </ul>
 
       {!authDisabled() && (

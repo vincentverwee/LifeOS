@@ -13,7 +13,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { useTooltipTrigger } from "@/lib/useTooltipTrigger";
 import type { CountdownPoint, WeekStat, WeekdayStat } from "@/lib/lessons/stats";
 import type { CategoryColorSlot } from "@/lib/categoryPalette";
 import { formatDate, formatHours } from "@/lib/format";
@@ -58,7 +57,6 @@ function CountdownTooltip({
 /** Cumulative hours of each period, lined up on its last exam. Shows this period against the
  *  average; every earlier period's own line is one tap away. */
 export function CountdownChart({ points, series: allSeries, hasAvg }: { points: CountdownPoint[]; series: ChartSeries[]; hasAvg: boolean }) {
-  const tooltipTrigger = useTooltipTrigger();
   const [showAll, setShowAll] = useState(false);
   const others = allSeries.filter((s) => !s.active).length;
   const series = showAll || !hasAvg ? allSeries : allSeries.filter((s) => s.active);
@@ -111,7 +109,7 @@ export function CountdownChart({ points, series: allSeries, hasAvg }: { points: 
             minTickGap={24}
           />
           <YAxis tickFormatter={(v: number) => `${v}`} tick={tick} axisLine={false} tickLine={false} width={40} />
-          <Tooltip trigger={tooltipTrigger} content={<CountdownTooltip series={series} hasAvg={hasAvg} />} cursor={{ stroke: "var(--color-ink-muted)" }} />
+          <Tooltip content={<CountdownTooltip series={series} hasAvg={hasAvg} />} cursor={{ stroke: "var(--color-ink-muted)" }} />
           {hasAvg && (
             <Line
               dataKey="avg"
@@ -171,7 +169,6 @@ function WeekTooltip({ active, payload }: { active?: boolean; payload?: { payloa
 
 /** Hours per week; blok weeks full colour, lesson weeks lighter. */
 export function WeeklyChart({ weeks }: { weeks: WeekStat[] }) {
-  const tooltipTrigger = useTooltipTrigger();
   return (
     <div className="min-w-0">
       <div className="mb-2 flex items-center gap-4 text-xs text-ink-muted">
@@ -196,7 +193,7 @@ export function WeeklyChart({ weeks }: { weeks: WeekStat[] }) {
             minTickGap={16}
           />
           <YAxis tick={tick} axisLine={false} tickLine={false} width={40} />
-          <Tooltip trigger={tooltipTrigger} content={<WeekTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
+          <Tooltip content={<WeekTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
           <Bar dataKey="hours" radius={[4, 4, 0, 0]} maxBarSize={28} isAnimationActive={false}>
             {weeks.map((w) => (
               <Cell key={w.start} fill="var(--color-accent)" fillOpacity={w.blok ? 1 : 0.4} />
@@ -223,14 +220,13 @@ function WeekdayTooltip({ active, payload }: { active?: boolean; payload?: { pay
 }
 
 export function StudyWeekdayChart({ weekdays }: { weekdays: WeekdayStat[] }) {
-  const tooltipTrigger = useTooltipTrigger();
   return (
     <ResponsiveContainer width="100%" height={200} minWidth={0} initialDimension={{ width: 320, height: 200 }}>
       <BarChart data={weekdays} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid stroke="var(--color-gridline)" vertical={false} />
         <XAxis dataKey="label" tick={tick} axisLine={{ stroke: "var(--color-gridline)" }} tickLine={false} />
         <YAxis tick={tick} axisLine={false} tickLine={false} width={40} />
-        <Tooltip trigger={tooltipTrigger} content={<WeekdayTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
+        <Tooltip content={<WeekdayTooltip />} cursor={{ fill: "var(--color-surface-muted)" }} />
         <Bar dataKey="avg" fill="var(--color-accent)" radius={[4, 4, 0, 0]} maxBarSize={32} isAnimationActive={false} />
       </BarChart>
     </ResponsiveContainer>

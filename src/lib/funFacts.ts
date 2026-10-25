@@ -107,8 +107,10 @@ const FACTS: FunFact[] = [
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** Today's fact. Same fact all day, a different one tomorrow; the list repeats only after FACTS.length days. */
-export function getFactOfTheDay(todayKey: string): FunFact {
+/** The current fact: a new one at midnight and another at noon (two per day); the list repeats
+ *  only after FACTS.length half-days. */
+export function getFactOfTheDay(todayKey: string, afternoon: boolean): FunFact {
   const day = Math.floor(Date.parse(`${todayKey}T00:00:00Z`) / DAY_MS);
-  return FACTS[((day % FACTS.length) + FACTS.length) % FACTS.length];
+  const slot = day * 2 + (afternoon ? 1 : 0);
+  return FACTS[((slot % FACTS.length) + FACTS.length) % FACTS.length];
 }
