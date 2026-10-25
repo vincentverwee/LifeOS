@@ -26,11 +26,11 @@ npm run db:studio   # Prisma Studio
 - `DATABASE_URL` — pooled (pgbouncer, port 6543). Used by the app at runtime.
 - `DIRECT_URL` — direct (port 5432). Used only by Prisma CLI commands (push/migrate/studio) — DDL isn't reliable through pgbouncer.
 - `SPOONACULAR_API_KEY` — server-only, for the /recipes deck. Free tier ≈150 points/day; one deck batch (10 recipes) costs ~1.6.
-- `APP_PASSWORD` + `AUTH_SECRET` — the single-user password gate. Without `APP_PASSWORD` the gate is off in development and everything is locked in production.
+- `APP_PASSWORD` + `AUTH_SECRET` — the single-user passcode gate (`APP_PASSWORD` = 4–8 digits). Without `APP_PASSWORD` the gate is off in development and everything is locked in production.
 
 ## Auth
 
-One password, no accounts. `src/proxy.ts` redirects every page without a valid signed cookie to `/login` (token logic in `src/lib/authToken.ts`, Web Crypto so it runs in the proxy). The proxy doesn't cover direct POSTs to server actions, so **every exported server action starts with `await requireAuth()`** (`src/lib/auth.ts`), and route handlers check `isAuthed()`. Add both to anything new.
+One passcode (digits only, 4–8, entered on an iPhone-style keypad at `/login`; `src/components/LoginForm.tsx`), no accounts. Wrong tries are throttled in the `LoginThrottle` table (5 free, then 30 s doubling to 15 min; `src/lib/actions/auth.ts`). `src/proxy.ts` redirects every page without a valid signed cookie to `/login` (token logic in `src/lib/authToken.ts`, Web Crypto so it runs in the proxy). The proxy doesn't cover direct POSTs to server actions, so **every exported server action starts with `await requireAuth()`** (`src/lib/auth.ts`), and route handlers check `isAuthed()`. Add both to anything new.
 
 ## Prisma 7 specifics (important — differs from Prisma 5/6 patterns)
 

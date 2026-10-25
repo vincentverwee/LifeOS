@@ -310,3 +310,13 @@ model LessonMark {
 
   @@unique([courseId, week, kind])
 }
+
+// --- Login throttling ---
+// One row ("global"): wrong passcodes in a row and until when logging in is locked.
+// Lives in the database so it holds across serverless instances (src/lib/actions/auth.ts).
+model LoginThrottle {
+  id          String    @id
+  failures    Int       @default(0)
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+}
