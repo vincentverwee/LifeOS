@@ -2,38 +2,60 @@
 
 import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { fetchDeck, fetchRecipeInfo, findByIngredients } from "@/lib/recipes/spoonacular";
+import { fetchRecipeInfo, findByIngredients } from "@/lib/recipes/spoonacular";
 import { getSavedSpoonacularIds } from "@/lib/data/recipes";
-import type { DeckFilters, DeckResult, FridgeMatch, RecipeCard, RecipeInfoResult } from "@/lib/recipes/types";
+import { parseDateKey } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
+import type { FridgeMatch, RecipeCard, RecipeIngredient, RecipeInfoResult } from "@/lib/recipes/types";
 
 export type RecipeResult = { ok: true } | { ok: false; error: string };
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+// The deck itself loads through GET /api/recipes/deck (see that route for why).
 
-/** A fresh batch for the swipe deck, minus recipes that are already saved. */
-export async function loadDeck(filters: DeckFilters): Promise<DeckResult> {
-  await requireAuth();
-  const [result, saved] = await Promise.all([fetchDeck(filters), getSavedSpoonacularIds()]);
-  if (!result.ok) return result;
-  return { ...result, cards: result.cards.filter((card) => !saved.has(card.id)) };
-}
+const str = (value: unknown, max: number): string | null =>
+  typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
+const num = (value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value) && value >= 0 && value < 100_000 ? value : null;
+const strList = (value: unknown, maxItems: number, maxLength: number): string[] =>
+  Array.isArray(value) ? value.map((v) => str(v, maxLength)).filter((v): v is string => v !== null).slice(0, maxItems) : [];
+/** Only Spoonacular's image host: next/image refuses (and breaks the page on) any other. */
+const image = (value: unknown): string | null => {
+  const url = str(value, 500);
+  return url && url.startsWith("https://img.spoonacular.com/") ? url : null;
+};
+const link = (value: unknown): string | null => {
+  const url = str(value, 1000);
+  return url && (url.startsWith("https://") || url.startsWith("http://")) ? url : null;
+};
 
 /** Right swipe: stores a snapshot of the recipe in the saved list. */
 export async function likeRecipe(card: RecipeCard): Promise<RecipeResult> {
   await requireAuth();
-  if (!Number.isInteger(card.id) || !card.title?.trim()) return { ok: false, error: "That recipe looks broken." };
+  // The snapshot comes from the browser, so keep only well-formed, bounded fields.
+  const title = str(card?.title, 200);
+  if (!Number.isInteger(card?.id) || card.id <= 0 || !title) return { ok: false, error: "That recipe looks broken." };
+  const ingredients: RecipeIngredient[] = (Array.isArray(card.ingredients) ? card.ingredients : [])
+    .slice(0, 100)
+    .map((i) => ({
+      name: str(i?.name, 120) ?? "",
+      amount: num(i?.amount) ?? 0,
+      unit: str(i?.unit, 40) ?? "",
+      original: str(i?.original, 300) ?? str(i?.name, 120) ?? "",
+    }))
+    .filter((i) => i.name || i.original);
   const data = {
-    title: card.title.trim(),
-    image: card.image,
-    readyInMinutes: card.readyInMinutes,
-    servings: card.servings,
-    cuisines: card.cuisines,
-    dishTypes: card.dishTypes,
-    sourceUrl: card.sourceUrl,
-    summary: card.summary,
-    ingredients: card.ingredients,
-    steps: card.steps,
+    title,
+    image: image(card.image),
+    readyInMinutes: num(card.readyInMinutes),
+    servings: num(card.servings),
+    cuisines: strList(card.cuisines, 20, 60),
+    dishTypes: strList(card.dishTypes, 20, 60),
+    sourceUrl: link(card.sourceUrl),
+    summary: str(card.summary, 5000),
+    ingredients,
+    steps: strList(card.steps, 100, 2000),
   };
   await prisma.savedRecipe.upsert({
     where: { spoonacularId: card.id },
@@ -47,24 +69,31 @@ export async function likeRecipe(card: RecipeCard): Promise<RecipeResult> {
 /** Sets the day a recipe was made, or clears it (`null`) to put it back on the list. */
 export async function markRecipeMade(id: string, date: string | null): Promise<RecipeResult> {
   await requireAuth();
-  if (date !== null && !DATE_RE.test(date)) return { ok: false, error: "Pick a date." };
-  const existing = await prisma.savedRecipe.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) return { ok: false, error: "That recipe is no longer saved." };
-  await prisma.savedRecipe.update({
+  if (date !== null) {
+    if (!parseDateKey(date)) return { ok: false, error: "Pick a date." };
+    if (date > (await getTodayKey())) return { ok: false, error: "That date is in the future." };
+  }
+  const { count } = await prisma.savedRecipe.updateMany({
     where: { id },
     data: { madeOn: date ? new Date(`${date}T00:00:00Z`) : null },
   });
+  if (count === 0) return { ok: false, error: "That recipe is no longer saved." };
   revalidateRecipeRoutes();
   return { ok: true };
 }
 
+/**
+ * Removes a saved recipe and goes back to the saved list. The redirect happens
+ * here, in the same response: re-rendering the detail page of a recipe that no
+ * longer exists would flash the 404 page first.
+ */
 export async function removeSavedRecipe(id: string): Promise<RecipeResult> {
   await requireAuth();
-  const existing = await prisma.savedRecipe.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) return { ok: false, error: "That recipe is no longer saved." };
-  await prisma.savedRecipe.delete({ where: { id } });
-  revalidateRecipeRoutes();
-  return { ok: true };
+  const { count } = await prisma.savedRecipe.deleteMany({ where: { id } });
+  if (count === 0) return { ok: false, error: "That recipe is no longer saved." };
+  revalidatePath("/");
+  revalidatePath("/recipes/fridge");
+  redirect("/recipes/saved");
 }
 
 /** Full recipe for a search result (1 API point, cached for an hour). */

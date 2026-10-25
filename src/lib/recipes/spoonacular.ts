@@ -3,6 +3,7 @@ import type { DeckFilters, DeckResult, FridgeResult, RecipeCard, RecipeIngredien
 
 const API = "https://api.spoonacular.com";
 const BATCH_SIZE = 10;
+const MAX_INGREDIENTS = 40;
 
 // The subset of complexSearch's response (with addRecipeInformation +
 // fillIngredients) that the deck uses.
@@ -72,6 +73,7 @@ async function apiGet<T>(path: string, params: Record<string, string>, revalidat
   if (res.status === 402) return { ok: false, error: "Daily recipe quota used up — try again tomorrow." };
   if (res.status === 401) return { ok: false, error: "The Spoonacular API key was rejected." };
   if (res.status === 404) return { ok: false, error: "That recipe doesn't exist anymore." };
+  if (res.status === 429) return { ok: false, error: "Too many recipe requests at once. Wait a moment and try again." };
   if (!res.ok) return { ok: false, error: `The recipe service answered ${res.status}. Try again.` };
 
   // Stale for cached responses, so only uncached calls (the deck) show it.
@@ -120,8 +122,9 @@ export async function findByIngredients(ingredients: string[]): Promise<FridgeRe
   const result = await apiGet<ApiFridgeMatch[]>(
     "/recipes/findByIngredients",
     {
-      // Sorted, so the same pantry always hits the same cache entry.
-      ingredients: [...ingredients].sort().join(","),
+      // Sorted, so the same pantry always hits the same cache entry. Capped so the
+      // URL stays reasonable; more than this hardly changes the matches.
+      ingredients: [...ingredients].sort().slice(0, MAX_INGREDIENTS).join(","),
       number: "30",
       ranking: "2",
       ignorePantry: "true",

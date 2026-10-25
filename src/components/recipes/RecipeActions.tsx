@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { markRecipeMade, removeSavedRecipe } from "@/lib/actions/recipes";
 import { formatDate } from "@/lib/format";
 import {
@@ -18,7 +17,6 @@ import {
 
 /** Mark as made (with a date), put back on the list, or remove. */
 export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: string | null; todayKey: string }) {
-  const router = useRouter();
   const [date, setDate] = useState(madeOn ?? todayKey);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -85,7 +83,7 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
               <AlertDialogCancel>Keep it</AlertDialogCancel>
               <AlertDialogAction
                 destructive
-                onClick={() => run(() => removeSavedRecipe(id), () => router.replace("/recipes/saved"))}
+                onClick={() => run(() => removeSavedRecipe(id))}
               >
                 Remove
               </AlertDialogAction>
