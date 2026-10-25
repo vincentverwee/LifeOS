@@ -5,9 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Life Analytics",
     short_name: "LifeOS",
     description: "Your personal data, in one place.",
-    start_url: "/budget",
+    start_url: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#faf9f6",
     theme_color: "#1f5c3b",
     icons: [
