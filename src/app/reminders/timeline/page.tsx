@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { getFinishedReminders, getReminders } from "@/lib/data/reminders";
-import { restoreReminder } from "@/lib/actions/reminders";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
-import { describeDoneOn, describeDue, describeRepeat, FINISHED_DAYS, type Reminder } from "@/lib/reminders/schedule";
-import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
+import { describeDue, describeRepeat, FINISHED_DAYS, type Reminder } from "@/lib/reminders/schedule";
+import { FinishedList } from "@/components/reminders/FinishedList";
 
 const UPCOMING_SHOWN = 5;
 
@@ -49,23 +48,7 @@ export default async function ReminderTimelinePage() {
         {finished.length === 0 ? (
           <p className="mt-2 text-sm text-ink-muted">Nothing finished lately.</p>
         ) : (
-          <ul className="mt-3 flex flex-col gap-2">
-            {finished.map((reminder) => (
-              <li key={reminder.id}>
-                <form
-                  action={restoreReminder}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2 pl-3"
-                >
-                  <input type="hidden" name="id" value={reminder.id} />
-                  <SheepCheckbox checked label={reminder.title} submit />
-                  <div className="min-w-0 flex-1 px-2">
-                    <p className="truncate text-ink-muted line-through">{reminder.title}</p>
-                    <p className="text-sm text-ink-muted">Done {describeDoneOn(reminder.doneOn, todayKey)}</p>
-                  </div>
-                </form>
-              </li>
-            ))}
-          </ul>
+          <FinishedList reminders={finished} todayKey={todayKey} />
         )}
       </section>
     </div>

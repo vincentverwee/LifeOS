@@ -99,9 +99,9 @@ export async function undoCompleteReminder(id: string, previousDueOn: string | n
 }
 
 /** From the Finished tab: back on the open list. */
-export async function restoreReminder(formData: FormData): Promise<void> {
+export async function restoreReminder(id: string): Promise<void> {
   await requireAuth();
-  await prisma.reminder.updateMany({ where: { id: String(formData.get("id") ?? "") }, data: { doneAt: null } });
+  await prisma.reminder.updateMany({ where: { id }, data: { doneAt: null } });
   revalidate();
 }
 

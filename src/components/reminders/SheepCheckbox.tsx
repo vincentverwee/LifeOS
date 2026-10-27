@@ -8,19 +8,16 @@ export function SheepCheckbox({
   label,
   onChange,
   disabled,
-  submit,
 }: {
   checked: boolean;
   /** What gets ticked off, for screen readers. */
   label: string;
-  onChange?: () => void;
+  onChange: () => void;
   disabled?: boolean;
-  /** Submits the surrounding form instead of calling `onChange`. */
-  submit?: boolean;
 }) {
   return (
     <button
-      type={submit ? "submit" : "button"}
+      type="button"
       role="checkbox"
       aria-checked={checked}
       aria-label={`Done: ${label}`}
