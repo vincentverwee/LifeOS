@@ -16,7 +16,7 @@ npm run build       # production build (also type-checks)
 npm run lint        # ESLint
 npx prisma generate # regenerate Prisma Client (also runs automatically via postinstall)
 npm run db:push     # push prisma/schema.prisma to Supabase (no migration history yet)
-npx tsx prisma/apply-checks.ts  # after db:push: CHECK constraints db push can't express (idempotent; --dry reports violations)
+npx tsx prisma/apply-checks.ts  # after db:push: locks out Supabase's API (RLS + revoked grants) and adds CHECK constraints db push can't express (idempotent; --dry only reports)
 npm run db:studio   # Prisma Studio
 ```
 
@@ -69,6 +69,7 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 
 ## Gotchas
 
+- **Supabase API is shut out**: the `anon`/`authenticated` roles have no grants on `public` (also by default for new tables) and every table has RLS on with no policies. The app connects as `postgres` (owner, bypasses RLS) so it's unaffected. `apply-checks.ts` re-applies both first thing; never add RLS policies or grants unless a feature really uses Supabase's API.
 - After `prisma generate`/`db:push` changes, **restart `npm run dev`** — the running server keeps the old generated client in memory.
 - Date-only columns are UTC midnight; use `dayKey()`/`toDateInputValue()` from `src/lib/format.ts` rather than `toISOString()` slices scattered around.
 - Amount inputs go through `parseAmount()`, which evaluates calculations with `+ − × ÷` (`6,8+7,4`, `12,50×3`; × ÷ first, trailing operator ignored). On /budget/add the one `+` button opens the operator picker and the total shows inside the amount box.
