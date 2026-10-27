@@ -9,8 +9,10 @@ import {
   flushOutbox,
   onlineStore,
   readOutbox,
+  readSyncFailed,
   removeFromOutbox,
   serverOutbox,
+  serverSyncFailed,
   subscribeOutbox,
 } from "@/lib/offline/outbox";
 
@@ -19,6 +21,7 @@ export function PendingExpenses() {
   const router = useRouter();
   const items = useSyncExternalStore(subscribeOutbox, readOutbox, serverOutbox);
   const online = useSyncExternalStore(...onlineStore);
+  const syncFailed = useSyncExternalStore(subscribeOutbox, readSyncFailed, serverSyncFailed);
   const [syncing, setSyncing] = useState(false);
 
   if (items.length === 0) return null;
@@ -79,6 +82,20 @@ export function PendingExpenses() {
         ))}
       </ul>
       {!online && <p className="text-xs text-ink-muted">They&apos;ll sync on their own when you&apos;re back online.</p>}
+      {online && syncFailed && (
+        // Online but the server didn't answer: logged out, or this page is from an older
+        // version of the app (offline copy). A reload fixes both (it goes to /login if needed).
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-warning-text">Couldn&apos;t sync. Reload the app (or log in again) to send them.</p>
+          <button
+            type="button"
+            onClick={() => location.reload()}
+            className="btn btn-outline inline-flex min-h-11 shrink-0 px-4 text-sm"
+          >
+            Reload
+          </button>
+        </div>
+      )}
     </section>
   );
 }

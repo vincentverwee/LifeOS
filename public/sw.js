@@ -4,11 +4,12 @@
 // Expenses saved offline are queued by the page itself (src/lib/offline/outbox.ts).
 // Bump VERSION when changing what gets cached here.
 
-const VERSION = "v2";
+const VERSION = "v3";
 const SHELL_CACHE = `lifeos-shell-${VERSION}`; // offline.html + icons
 const PAGES_CACHE = `lifeos-pages-${VERSION}`; // the last /budget/add
 // Hashed build files. Not versioned: a cached page needs its own build's chunks,
-// even after a deploy, so they're kept (oldest dropped past STATIC_LIMIT).
+// even after a deploy, so they're kept (oldest dropped past STATIC_LIMIT; the cached
+// page's own files are moved to the end on every refresh, so they're never the oldest).
 const STATIC_CACHE = "lifeos-static";
 const STATIC_LIMIT = 300;
 
@@ -85,7 +86,10 @@ async function storePage(path, response) {
   const cache = await caches.open(STATIC_CACHE);
   await Promise.all(
     [...assets].map(async (asset) => {
-      if (await cache.match(asset)) return;
+      const cached = await cache.match(asset);
+      // Re-putting moves it to the end, so pruning never drops a file this page needs
+      // (build files that don't change between deploys were stored first).
+      if (cached) return cache.put(asset, cached);
       try {
         const res = await fetch(asset);
         if (res.ok) await cache.put(asset, res);
@@ -94,14 +98,16 @@ async function storePage(path, response) {
       }
     })
   );
+  await prune(cache, STATIC_LIMIT);
 }
 
 async function navigate(event, url) {
   const offlinePage = OFFLINE_PAGES.includes(url.pathname) ? url.pathname : null;
   try {
     const response = await fetch(event.request);
-    // Keep a fresh copy of the offline-capable page.
-    if (offlinePage) event.waitUntil(storePage(offlinePage, response.clone()));
+    // Keep a fresh copy of the offline-capable page, plain URL only: a ?period= copy
+    // would queue every offline expense into that trip.
+    if (offlinePage && !url.search) event.waitUntil(storePage(offlinePage, response.clone()));
     return response;
   } catch {
     const cached = offlinePage && (await caches.match(offlinePage, { cacheName: PAGES_CACHE }));
@@ -116,10 +122,13 @@ async function cacheFirst(request, cacheName, limit) {
   if (response.ok) {
     const cache = await caches.open(cacheName);
     await cache.put(request, response.clone());
-    if (limit) {
-      const keys = await cache.keys();
-      await Promise.all(keys.slice(0, Math.max(0, keys.length - limit)).map((key) => cache.delete(key)));
-    }
+    if (limit) await prune(cache, limit);
   }
   return response;
+}
+
+/** Drops the oldest entries past `limit`. */
+async function prune(cache, limit) {
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - limit)).map((key) => cache.delete(key)));
 }

@@ -9,8 +9,8 @@ import type { CategoryDto } from "@/lib/actions/categories";
 import { createExpenseFromForm, type CreateExpenseFormState } from "@/lib/actions/expenses";
 import { CategoryGrid } from "@/components/expenses/CategoryGrid";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
-import { formatCurrency, formatDate, hasOperator, parseAmount, toDateInputValue } from "@/lib/format";
-import { addToOutbox, onlineStore } from "@/lib/offline/outbox";
+import { MAX_AMOUNT, formatCurrency, formatDate, hasOperator, parseAmount, toDateInputValue } from "@/lib/format";
+import { addToOutbox, newClientId, onlineStore, setSyncFailed } from "@/lib/offline/outbox";
 
 const OPERATORS = [
   { op: "+", label: "Plus" },
@@ -102,24 +102,28 @@ export function ExpenseEntryForm({
     async (prev: CreateExpenseFormState, formData: FormData): Promise<CreateExpenseFormState> => {
       // A fresh id per entry: the expense's id on the server, so a retry from the
       // offline queue can't save it twice (even if this attempt did get through).
-      const clientId = crypto.randomUUID();
+      const clientId = newClientId();
       formData.set("clientId", clientId);
       const category = categories.find((c) => c.id === selectedCategoryId);
       const parsed = parseAmount(amount);
       const label = `${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}`;
 
       let result: CreateExpenseFormState | undefined;
+      let failedOnline = false;
       if (navigator.onLine) {
         try {
           result = await createExpenseFromForm(prev, formData);
         } catch {
-          // No answer (connection dropped, server down): keep it on the phone below.
+          // No answer (connection dropped, server down, logged out, an older build):
+          // keep it on the phone below.
+          failedOnline = true;
         }
       }
 
       if (result === undefined) {
         if (!category) return { ok: false, error: "Pick a category first." };
         if (parsed === null || parsed <= 0) return { ok: false, error: "Enter a valid amount, e.g. 6,80 or 6,8+7,4." };
+        if (parsed > MAX_AMOUNT) return { ok: false, error: "That amount is too large." };
         addToOutbox({
           id: clientId,
           categoryId: category.id,
@@ -130,7 +134,12 @@ export function ExpenseEntryForm({
           note: note.trim() || null,
           createdAt: new Date().toISOString(),
         });
-        resetAfterSave(`Saved on this phone ${label} · syncs when online`);
+        if (failedOnline) setSyncFailed(true);
+        resetAfterSave(
+          failedOnline
+            ? `Couldn't reach the server: kept ${label} on this phone, will retry`
+            : `Saved on this phone ${label} · syncs when online`
+        );
         return null;
       }
 
