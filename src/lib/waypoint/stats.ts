@@ -1,4 +1,5 @@
 import { DashboardStats, TripSummary, Location } from '@/lib/waypoint/types';
+import { flownKm } from '@/lib/waypoint/routing/lines';
 
 export interface YearlyStats {
   year: number;
@@ -72,4 +73,24 @@ export function getDashboardStats(
     longest_trip_title: longestTrip?.title ?? null,
     latest_trip: latestTrip,
   };
+}
+
+export interface FlightStats {
+  flights: number;
+  km: number;
+}
+
+/** Flown legs across all trips (kept out of the driven km): how many, and their straight-line km. */
+export function getFlightStats(locations: Location[]): FlightStats {
+  const byTrip = new Map<string, Location[]>();
+  for (const loc of locations) byTrip.set(loc.trip_id, [...(byTrip.get(loc.trip_id) ?? []), loc]);
+
+  let flights = 0;
+  let km = 0;
+  for (const stops of byTrip.values()) {
+    stops.sort((a, b) => a.visit_order - b.visit_order);
+    flights += stops.filter((s, i) => i > 0 && s.arrived_by_plane).length;
+    km += flownKm(stops);
+  }
+  return { flights, km: Math.round(km) };
 }

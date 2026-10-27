@@ -4,13 +4,14 @@ import { CountryBreakdown } from '@/components/waypoint/stats/CountryBreakdown';
 import { Badge } from '@/components/waypoint/ui/badge';
 import { getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
 import { getDashboardStats } from '@/lib/waypoint/stats';
-import { getYearlyStats, getCountryStats } from '@/lib/waypoint/stats';
-import { BarChart3, Trophy } from 'lucide-react';
+import { getYearlyStats, getCountryStats, getFlightStats } from '@/lib/waypoint/stats';
+import { BarChart3, Plane, Trophy } from 'lucide-react';
 
 export default async function StatsPage() {
   await connection();
   const [trips, locations] = await Promise.all([getAllTripSummaries(), getAllLocations()]);
   const stats = getDashboardStats(trips, locations);
+  const flights = getFlightStats(locations);
 
   return (
     <>
@@ -31,12 +32,26 @@ export default async function StatsPage() {
         ) : (
           <>
             {/* The headline numbers live on the Overview tab; this page is the breakdown. */}
-            {stats.longest_trip_title && (
-              <Badge variant="secondary" className="max-w-full gap-1.5 text-xs font-normal">
-                <Trophy size={12} className="shrink-0" />
-                <span className="truncate">Longest trip: {stats.longest_trip_title}</span>
-                <span className="shrink-0">· {stats.longest_trip_km.toLocaleString()} km</span>
-              </Badge>
+            {(stats.longest_trip_title || flights.flights > 0) && (
+              <div className="flex flex-wrap gap-2">
+                {stats.longest_trip_title && (
+                  <Badge variant="secondary" className="max-w-full gap-1.5 text-xs font-normal">
+                    <Trophy size={12} className="shrink-0" />
+                    <span className="truncate">Longest trip: {stats.longest_trip_title}</span>
+                    <span className="shrink-0">· {stats.longest_trip_km.toLocaleString()} km</span>
+                  </Badge>
+                )}
+                {/* Flights stay out of the km-per-year chart, which is km driven. */}
+                {flights.flights > 0 && (
+                  <Badge variant="secondary" className="gap-1.5 text-xs font-normal">
+                    <Plane size={12} className="shrink-0" />
+                    Flown: {flights.km.toLocaleString()} km
+                    <span className="shrink-0">
+                      · {flights.flights} {flights.flights === 1 ? 'flight' : 'flights'}
+                    </span>
+                  </Badge>
+                )}
+              </div>
             )}
 
             <div className="grid gap-6 lg:grid-cols-2">
