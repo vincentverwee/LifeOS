@@ -4,11 +4,13 @@ import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { getAllTripSummaries } from "@/lib/data/waypoint";
 import { getRecipesGlance } from "@/lib/data/recipes";
 import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
+import { getRemindersGlance } from "@/lib/data/reminders";
+import { describeDue } from "@/lib/reminders/schedule";
 import { computeMonthStats } from "@/lib/monthStats";
 import { formatCurrency, formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BudgetIcon, LessonsIcon, RecipesIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
 import { logout } from "@/lib/actions/auth";
 import { authDisabled } from "@/lib/authToken";
@@ -125,6 +127,14 @@ export default async function HomePage() {
           <FeatureTile href="/lessons" name="Lessons" icon={LessonsIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <LessonsTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/reminders" name="Reminders" icon={RemindersIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <RemindersTileBody todayKey={todayKey} />
             </Suspense>
           </FeatureTile>
         </li>
@@ -277,6 +287,31 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
           ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
       </p>
       <LessonsWeek glance={lessons} />
+    </>
+  );
+}
+
+async function RemindersTileBody({ todayKey }: { todayKey: string }) {
+  const reminders = await getRemindersGlance(todayKey);
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {reminders.open} <span className="text-lg text-ink-muted">open</span>
+      </p>
+      {reminders.overdue > 0 ? (
+        <p className="text-sm text-critical">{reminders.overdue} overdue</p>
+      ) : reminders.open === 0 ? (
+        <p className="text-sm text-positive-text">All done</p>
+      ) : (
+        <p className="text-sm text-ink-muted">Nothing overdue</p>
+      )}
+      {reminders.next && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Next · </span>
+          {reminders.next.title}
+          <span className="text-ink-muted"> · {describeDue(reminders.next.dueOn, todayKey)}</span>
+        </p>
+      )}
     </>
   );
 }

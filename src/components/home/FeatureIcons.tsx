@@ -55,3 +55,15 @@ export function RecipesIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Reminders: a checklist, the top line ticked. */
+export function RemindersIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M7 14l3.5 3.5L17 11" />
+      <path d="M23 14.5h18M23 25h18M23 35.5h18" />
+      <rect x="8" y="21.5" width="7" height="7" rx="2" />
+      <rect x="8" y="32" width="7" height="7" rx="2" />
+    </svg>
+  );
+}

@@ -1,0 +1,49 @@
+import "server-only";
+import { prisma } from "@/lib/prisma";
+import { dayKey } from "@/lib/format";
+import { isOpen, isRepeat, type Reminder } from "@/lib/reminders/schedule";
+
+const SELECT = { id: true, title: true, repeat: true, dueOn: true, anchorDay: true } as const;
+
+function toReminder(row: { id: string; title: string; repeat: string; dueOn: Date | null; anchorDay: number | null }): Reminder {
+  return {
+    ...row,
+    repeat: isRepeat(row.repeat) ? row.repeat : "once",
+    dueOn: row.dueOn ? dayKey(row.dueOn) : null,
+  };
+}
+
+async function getActive(): Promise<Reminder[]> {
+  const rows = await prisma.reminder.findMany({
+    where: { doneAt: null },
+    orderBy: [{ dueOn: { sort: "asc", nulls: "last" } }, { createdAt: "asc" }],
+    select: SELECT,
+  });
+  return rows.map(toReminder);
+}
+
+/** Open (oldest due first, then undated) and upcoming (soonest first). */
+export async function getReminders(todayKey: string): Promise<{ open: Reminder[]; upcoming: Reminder[] }> {
+  const active = await getActive();
+  return {
+    open: active.filter((r) => isOpen(r, todayKey)),
+    upcoming: active.filter((r) => !isOpen(r, todayKey)),
+  };
+}
+
+export async function getReminder(id: string): Promise<Reminder | null> {
+  const row = await prisma.reminder.findFirst({ where: { id, doneAt: null }, select: SELECT });
+  return row ? toReminder(row) : null;
+}
+
+export type RemindersGlance = { open: number; overdue: number; next: Reminder | null };
+
+/** For the home tile. */
+export async function getRemindersGlance(todayKey: string): Promise<RemindersGlance> {
+  const { open, upcoming } = await getReminders(todayKey);
+  return {
+    open: open.length,
+    overdue: open.filter((r) => r.dueOn !== null && r.dueOn < todayKey).length,
+    next: upcoming[0] ?? null,
+  };
+}

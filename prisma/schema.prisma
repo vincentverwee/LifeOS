@@ -320,3 +320,22 @@ model LoginThrottle {
   lockedUntil DateTime?
   updatedAt   DateTime  @updatedAt
 }
+
+// A to-do on /reminders. Open = not done and dueOn is null or <= today.
+// Ticking a one-off sets doneAt; ticking a weekly/monthly one moves dueOn to
+// its next date after today (src/lib/reminders/schedule.ts).
+model Reminder {
+  id        String    @id @default(cuid())
+  title     String
+  // "once" | "weekly" | "monthly"
+  repeat    String
+  // Next day it is due. null = undated one-off (always open).
+  dueOn     DateTime? @db.Date
+  // Monthly: the chosen day of month (29–31 fall back to the month's last day).
+  anchorDay Int?
+  // Set when a one-off is ticked off.
+  doneAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([doneAt, dueOn])
+}
