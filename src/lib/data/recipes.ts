@@ -61,11 +61,12 @@ export async function getSavedSpoonacularIds(): Promise<Set<number>> {
   return new Set(rows.map((r) => r.spoonacularId));
 }
 
-export type RecipesGlance = { toMake: number; lastMade: string | null };
+export type RecipesGlance = { cookbook: number; toMake: number; lastMade: string | null };
 
 /** For the home tile. */
 export async function getRecipesGlance(): Promise<RecipesGlance> {
-  const [toMake, lastMade] = await Promise.all([
+  const [cookbook, toMake, lastMade] = await Promise.all([
+    prisma.myRecipe.count(),
     prisma.savedRecipe.count({ where: { madeOn: null } }),
     prisma.savedRecipe.findFirst({
       where: { madeOn: { not: null } },
@@ -73,7 +74,7 @@ export async function getRecipesGlance(): Promise<RecipesGlance> {
       select: { title: true },
     }),
   ]);
-  return { toMake, lastMade: lastMade?.title ?? null };
+  return { cookbook, toMake, lastMade: lastMade?.title ?? null };
 }
 
 export type PantryEntry = { id: string; name: string };
@@ -93,4 +94,48 @@ export async function getIngredientSuggestions(): Promise<string[]> {
     }
   }
   return [...names].sort();
+}
+
+export type MyRecipeSummary = {
+  id: string;
+  title: string;
+  readyInMinutes: number | null;
+  mealType: string | null;
+  /** Ingredient lines, for searching the Cookbook. */
+  ingredients: string[];
+  /** "YYYY-MM-DD", null = never marked as made */
+  lastMadeOn: string | null;
+};
+
+export type MyRecipeDetail = MyRecipeSummary & {
+  servings: number | null;
+  steps: string[];
+  notes: string | null;
+  sourceUrl: string | null;
+};
+
+/** The Cookbook, A–Z. */
+export async function getMyRecipes(): Promise<MyRecipeSummary[]> {
+  const rows = await prisma.myRecipe.findMany({
+    orderBy: { title: "asc" },
+    select: { id: true, title: true, readyInMinutes: true, mealType: true, ingredients: true, lastMadeOn: true },
+  });
+  return rows.map((row) => ({ ...row, lastMadeOn: row.lastMadeOn ? dayKey(row.lastMadeOn) : null }));
+}
+
+export async function getMyRecipe(id: string): Promise<MyRecipeDetail | null> {
+  const row = await prisma.myRecipe.findUnique({ where: { id } });
+  if (!row) return null;
+  return {
+    id: row.id,
+    title: row.title,
+    readyInMinutes: row.readyInMinutes,
+    mealType: row.mealType,
+    ingredients: row.ingredients,
+    lastMadeOn: row.lastMadeOn ? dayKey(row.lastMadeOn) : null,
+    servings: row.servings,
+    steps: row.steps,
+    notes: row.notes,
+    sourceUrl: row.sourceUrl,
+  };
 }

@@ -6,15 +6,11 @@ import Link from "next/link";
 import { animate, motion, useMotionValue, useTransform, type MotionValue, type PanInfo } from "framer-motion";
 import { Heart, Info, X } from "lucide-react";
 import { likeRecipe } from "@/lib/actions/recipes";
-import type { DeckFilters, DeckResult, RecipeCard, RecipeIngredient } from "@/lib/recipes/types";
+import { deckQuery, type DeckFilters, type DeckResult, type RecipeCard, type RecipeIngredient } from "@/lib/recipes/types";
 
 /** GET /api/recipes/deck: doesn't queue behind likes like a server action would. */
 async function loadDeck(filters: DeckFilters): Promise<DeckResult> {
-  const query = new URLSearchParams();
-  if (filters.cuisine) query.set("cuisine", filters.cuisine);
-  if (filters.type) query.set("type", filters.type);
-  if (filters.maxReadyTime) query.set("maxTime", String(filters.maxReadyTime));
-  const res = await fetch(`/api/recipes/deck?${query}`, { cache: "no-store" });
+  const res = await fetch(`/api/recipes/deck?${deckQuery(filters)}`, { cache: "no-store" });
   if (res.status === 401 || res.redirected) return { ok: false, error: "Your session expired. Reload to log in." };
   return (await res.json()) as DeckResult;
 }

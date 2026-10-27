@@ -222,6 +222,24 @@ model SavedRecipe {
   @@index([madeOn, likedAt])
 }
 
+// Recipes written by hand: the Cookbook (/recipes). No API involved.
+model MyRecipe {
+  id             String    @id @default(cuid())
+  title          String
+  readyInMinutes Int?
+  servings       Int?
+  // One of MEAL_TYPES (src/lib/recipes/types.ts), or null.
+  mealType       String?
+  // One line each, as typed ("2 tomatoes, diced").
+  ingredients    String[]
+  steps          String[]
+  notes          String?
+  sourceUrl      String?
+  lastMadeOn     DateTime? @db.Date
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
 // What's in the fridge/cupboard, for the "what can I make" search on /recipes/fridge.
 model PantryItem {
   id        String   @id @default(cuid())

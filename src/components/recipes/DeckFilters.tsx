@@ -3,27 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SlidersHorizontal } from "lucide-react";
-import { CUISINES, MAX_TIMES, MEAL_TYPES, type DeckFilters as Filters } from "@/lib/recipes/types";
+import { CUISINES, DEFAULT_MEAL_TYPE, MAX_TIMES, MEAL_TYPES, deckQuery, type DeckFilters as Filters } from "@/lib/recipes/types";
+import { Chip } from "./Chip";
 import { Sheet } from "./Sheet";
 
 function summary(filters: Filters): string {
   const parts = [filters.cuisine, filters.type, filters.maxReadyTime && `≤ ${filters.maxReadyTime} min`].filter(Boolean);
   return parts.length ? parts.join(" · ") : "All recipes";
-}
-
-function Chip({ selected, onClick, children }: { selected: boolean; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      className={`btn min-h-11 border px-3.5 text-sm capitalize ${
-        selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-foreground hover:bg-surface-muted active:bg-surface-muted"
-      }`}
-    >
-      {children}
-    </button>
-  );
 }
 
 /** Filter button + sheet. Applying writes the filters to the URL, which reloads the deck. */
@@ -38,16 +24,12 @@ export function DeckFilters({ filters }: { filters: Filters }) {
   }
 
   function apply() {
-    const params = new URLSearchParams();
-    if (draft.cuisine) params.set("cuisine", draft.cuisine);
-    if (draft.type) params.set("type", draft.type);
-    if (draft.maxReadyTime) params.set("maxTime", String(draft.maxReadyTime));
-    const query = params.toString();
+    const query = deckQuery(draft).toString();
     setOpen(false);
-    router.replace(query ? `/recipes?${query}` : "/recipes");
+    router.replace(query ? `/recipes/swipe?${query}` : "/recipes/swipe");
   }
 
-  const active = Boolean(filters.cuisine || filters.type || filters.maxReadyTime);
+  const active = Boolean(filters.cuisine || filters.type !== DEFAULT_MEAL_TYPE || filters.maxReadyTime);
 
   return (
     <>

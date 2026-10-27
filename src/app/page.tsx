@@ -350,9 +350,12 @@ async function RecipesTileBody() {
   return (
     <>
       <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {recipes.toMake} <span className="text-lg text-ink-muted">to make</span>
+        {recipes.cookbook} <span className="text-lg text-ink-muted">{recipes.cookbook === 1 ? "recipe" : "recipes"}</span>
       </p>
-      <p className="text-sm text-ink-muted">{recipes.toMake === 0 ? "Start swiping" : "Saved from the deck"}</p>
+      <p className="text-sm text-ink-muted">
+        {recipes.cookbook === 0 ? "Add your own" : "In your cookbook"}
+        {recipes.toMake > 0 && ` · ${recipes.toMake} saved to make`}
+      </p>
       {recipes.lastMade && (
         <p className="mt-4 truncate text-sm text-foreground">
           <span className="text-ink-muted">Last made · </span>

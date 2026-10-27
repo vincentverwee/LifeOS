@@ -78,6 +78,9 @@ export const MEAL_TYPES = [
 
 export const MAX_TIMES = [15, 30, 45, 60] as const;
 
+/** The deck shows main courses unless another meal (or `type=any`) is picked. */
+export const DEFAULT_MEAL_TYPE = "main course";
+
 /** Reads deck filters from URL search params, ignoring anything unknown. */
 export function parseDeckFilters(params: Record<string, string | string[] | undefined>): DeckFilters {
   const one = (key: string) => {
@@ -85,11 +88,21 @@ export function parseDeckFilters(params: Record<string, string | string[] | unde
     return typeof value === "string" ? value : undefined;
   };
   const cuisine = one("cuisine");
-  const type = one("type");
+  const type = one("type") ?? DEFAULT_MEAL_TYPE;
   const maxTime = Number(one("maxTime"));
   return {
     cuisine: CUISINES.find((c) => c.toLowerCase() === cuisine?.toLowerCase()),
     type: MEAL_TYPES.find((t) => t === type),
     maxReadyTime: MAX_TIMES.find((m) => m === maxTime),
   };
+}
+
+/** The search params for `filters`, the reverse of parseDeckFilters (no type = `type=any`). */
+export function deckQuery(filters: DeckFilters): URLSearchParams {
+  const query = new URLSearchParams();
+  if (filters.cuisine) query.set("cuisine", filters.cuisine);
+  if (!filters.type) query.set("type", "any");
+  else if (filters.type !== DEFAULT_MEAL_TYPE) query.set("type", filters.type);
+  if (filters.maxReadyTime) query.set("maxTime", String(filters.maxReadyTime));
+  return query;
 }

@@ -1,14 +1,28 @@
-import { Bookmark, Layers, Refrigerator, type LucideIcon } from "lucide-react";
+import { BookOpen, Bookmark, Layers, Refrigerator, type LucideIcon } from "lucide-react";
 
-export const RECIPE_TABS: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/recipes", label: "Swipe", icon: Layers },
-  { href: "/recipes/fridge", label: "Fridge", icon: Refrigerator },
-  { href: "/recipes/saved", label: "Saved", icon: Bookmark },
+export type RecipesTab = { href: string; label: string; icon: LucideIcon };
+
+export const COOKBOOK: RecipesTab = { href: "/recipes", label: "Cookbook", icon: BookOpen };
+export const SWIPE: RecipesTab = { href: "/recipes/swipe", label: "Swipe", icon: Layers };
+export const FRIDGE: RecipesTab = { href: "/recipes/fridge", label: "Fridge", icon: Refrigerator };
+export const SAVED: RecipesTab = { href: "/recipes/saved", label: "Saved", icon: Bookmark };
+
+/** Desktop text tabs, in order. */
+export const RECIPE_LINKS = [
+  { href: "/recipes", label: "Cookbook" },
+  { href: "/recipes/swipe", label: "Swipe" },
+  { href: "/recipes/add", label: "Add" },
+  { href: "/recipes/fridge", label: "Fridge" },
+  { href: "/recipes/saved", label: "Saved" },
 ];
 
-/** Recipe detail pages (/recipes/[id]) belong to the Saved tab. */
+const SECTIONS = ["/recipes/swipe", "/recipes/add", "/recipes/fridge", "/recipes/mine"];
+
+/** Cookbook recipes (/recipes/mine/…) belong to Cookbook; saved recipe pages (/recipes/[id]) to Saved. */
 export function isTabActive(pathname: string, href: string) {
-  if (href === "/recipes") return pathname === href;
-  if (href === "/recipes/fridge") return pathname.startsWith(href);
-  return pathname.startsWith("/recipes/") && !pathname.startsWith("/recipes/fridge");
+  if (href === "/recipes") return pathname === href || pathname.startsWith("/recipes/mine");
+  if (href === "/recipes/saved") {
+    return pathname.startsWith("/recipes/") && !SECTIONS.some((section) => pathname.startsWith(section));
+  }
+  return pathname.startsWith(href);
 }
