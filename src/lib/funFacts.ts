@@ -1,8 +1,10 @@
 // Two fun facts a day for the home page (new at midnight and at noon). Mostly sheep; when the sheep run
-// out of material, other animals and places step in.
+// out of material, other animals and places step in. The cat theme swaps the sheep facts for cat ones.
+
+import { THEME } from "@/lib/theme";
 
 export type FunFact = {
-  theme: "Sheep" | "Animals" | "Ireland" | "Science" | "Elsewhere";
+  theme: "Sheep" | "Cats" | "Animals" | "Ireland" | "Science" | "Elsewhere";
   text: string;
 };
 
@@ -194,12 +196,34 @@ const FACTS: FunFact[] = [
   { theme: "Science", text: "A day on Earth was only about 22 hours long around 600 million years ago. The Moon has been slowing us down ever since." },
 ];
 
+const CAT_FACTS: FunFact[] = [
+  { theme: "Cats", text: "Cats sleep around 12 to 16 hours a day, saving their energy for short bursts of hunting." },
+  { theme: "Cats", text: "Cats can't taste sweetness: the gene for their sweet taste receptor doesn't work." },
+  { theme: "Cats", text: "A group of cats is called a clowder, and a litter of kittens is a kindle." },
+  { theme: "Cats", text: "Adult cats rarely meow at each other. The meow is mostly something they use to talk to humans." },
+  { theme: "Cats", text: "Félicette, launched by France in 1963, was the first cat to go to space, and came back safely." },
+  { theme: "Cats", text: "A 9,500-year-old grave on Cyprus held a person buried together with a cat, long before Egypt's cat cults." },
+  { theme: "Cats", text: "Cats have a third eyelid, a thin membrane that sweeps across the eye to protect it." },
+  { theme: "Cats", text: "Cats have about 230 bones, more than the 206 in an adult human." },
+  { theme: "Cats", text: "A cat's collarbone isn't attached to its other bones, which helps it squeeze through narrow gaps." },
+  { theme: "Cats", text: "Most adult cats are lactose intolerant, so a saucer of milk is a bad idea." },
+  { theme: "Cats", text: "Nearly all tortoiseshell and calico cats are female: the orange and black fur genes sit on the X chromosome." },
+  { theme: "Cats", text: "Stubbs the cat was honorary mayor of Talkeetna, Alaska, for about 20 years." },
+  { theme: "Cats", text: "Larry has been Chief Mouser at 10 Downing Street since 2011, outlasting several prime ministers." },
+  { theme: "Cats", text: "According to Herodotus, ancient Egyptians shaved off their eyebrows to mourn the death of a family cat." },
+  { theme: "Cats", text: "A cat's whiskers are sensitive enough to feel tiny changes in air currents, which helps it move in the dark." },
+  { theme: "Cats", text: "Cats can turn their ears independently, about 180 degrees, to pinpoint where a sound comes from." },
+];
+
+// In the cat theme the sheep facts make way for the cat ones; the rest stay.
+const ACTIVE_FACTS = THEME === "cat" ? [...CAT_FACTS, ...FACTS.filter((f) => f.theme !== "Sheep")] : FACTS;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** The current fact: a new one at midnight and another at noon (two per day); the list repeats
- *  only after FACTS.length half-days. */
+ *  only after ACTIVE_FACTS.length half-days. */
 export function getFactOfTheDay(todayKey: string, afternoon: boolean): FunFact {
   const day = Math.floor(Date.parse(`${todayKey}T00:00:00Z`) / DAY_MS);
   const slot = day * 2 + (afternoon ? 1 : 0);
-  return FACTS[((slot % FACTS.length) + FACTS.length) % FACTS.length];
+  return ACTIVE_FACTS[((slot % ACTIVE_FACTS.length) + ACTIVE_FACTS.length) % ACTIVE_FACTS.length];
 }

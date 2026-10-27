@@ -5,6 +5,7 @@ import { StandaloneStart } from "@/components/StandaloneStart";
 import { TimeZoneSync } from "@/components/TimeZoneSync";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { OutboxSync } from "@/components/OutboxSync";
+import { THEME, THEME_COLORS } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,8 +33,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#faf9f6" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f120c" },
+    { media: "(prefers-color-scheme: light)", color: THEME_COLORS.background },
+    { media: "(prefers-color-scheme: dark)", color: THEME_COLORS.backgroundDark },
   ],
 };
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-theme={THEME}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">

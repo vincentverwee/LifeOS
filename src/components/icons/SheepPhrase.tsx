@@ -1,8 +1,9 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { THEME } from "@/lib/theme";
 
-const PHRASES = [
+const SHEEP_PHRASES = [
   "Counting sheep…",
   "Herding the data…",
   "Following the flock…",
@@ -48,6 +49,39 @@ const PHRASES = [
   "Shear patience, please…",
   "Wool you wait just a moment…",
 ];
+
+const CAT_PHRASES = [
+  "Herding cats…",
+  "Paws-ing for a second…",
+  "Purr-cessing your data…",
+  "Just a meow-ment…",
+  "Fur-midable things are loading…",
+  "Chasing the laser pointer…",
+  "Knocking things off the table…",
+  "Landing on our feet…",
+  "Kneading the numbers…",
+  "Cat-culating…",
+  "Taking a quick cat nap…",
+  "Un-purr-lievably close…",
+  "Claw-ing through the details…",
+  "Hiss-terically fast, almost…",
+  "Whisker-ing your data over…",
+  "Finding the sunny spot…",
+  "Curiosity is on it…",
+  "Coughing up a hairball… er, a result…",
+  "Purr-paring something nice…",
+  "Feline good about this…",
+  "Stretching and yawning…",
+  "Opurr-ating at full speed…",
+  "Look what the cat dragged in…",
+  "Ball of yarn, nearly untangled…",
+  "Cat-ching up…",
+  "Meow-sing over the numbers…",
+  "Fetching… no wait, cats don't fetch…",
+  "Nine lives, one more second…",
+];
+
+const PHRASES = THEME === "cat" ? CAT_PHRASES : SHEEP_PHRASES;
 
 // Picked once per page load in the browser.
 const clientPhrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];

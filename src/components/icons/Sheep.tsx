@@ -1,3 +1,6 @@
+import { Cat } from "@/components/icons/Cat";
+import { THEME } from "@/lib/theme";
+
 type SheepProps = {
   className?: string;
   /** Rendered size in px (the mark is square). */
@@ -51,13 +54,17 @@ function Fleece() {
  * icons regenerated (see CLAUDE.md).
  */
 export function Sheep({ className, size = 100, animate, decorative }: SheepProps) {
+  const classes = [animate ? "animate-sheep-spin" : "", className].filter(Boolean).join(" ");
+  // The cat theme swaps the mascot here, so every placement follows it.
+  if (THEME === "cat") return <Cat className={classes} size={size} decorative={decorative} />;
+
   return (
     <svg
       viewBox="8 0 84 84"
       width={size}
       height={size}
       {...(decorative ? { "aria-hidden": "true" } : { role: "img", "aria-label": "Sheep" })}
-      className={[animate ? "animate-sheep-spin" : "", className].filter(Boolean).join(" ")}
+      className={classes}
     >
       {/* fleece: outline pass (stroke around every puff), then the fill on top
           hides the inner strokes so only the outer scalloped edge remains */}

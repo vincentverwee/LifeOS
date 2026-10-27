@@ -6,6 +6,7 @@ import { describeDue, describeRepeat, FINISHED_DAYS, formatDay, type Reminder } 
 import { describeSince } from "@/lib/reminders/routines";
 import { FinishedList } from "@/components/reminders/FinishedList";
 import { Disclosure } from "@/components/Disclosure";
+import { MASCOT } from "@/lib/theme";
 
 const SHOWN = 5;
 const HISTORY_LIMIT = 60;
@@ -63,7 +64,7 @@ export default async function ReminderTimelinePage() {
         <section>
           <h2 className="font-semibold text-foreground">Finished</h2>
           <p className="mt-1 text-sm text-ink-muted">
-            One-offs you ticked off. They disappear after {FINISHED_DAYS} days; tap the sheep to put one back.
+            One-offs you ticked off. They disappear after {FINISHED_DAYS} days; tap the {MASCOT} to put one back.
           </p>
           {finished.length === 0 ? (
             <p className="mt-2 text-sm text-ink-muted">Nothing finished lately.</p>

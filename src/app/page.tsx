@@ -106,7 +106,7 @@ export default async function HomePage() {
             <SheepMark className="pointer-events-none absolute -right-3 -bottom-3 h-24 w-24 opacity-15" />
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Fact of the day</h2>
-              {fact.theme !== "Sheep" && (
+              {fact.theme !== "Sheep" && fact.theme !== "Cats" && (
                 <span className="rounded-full bg-primary-foreground/15 px-2.5 py-0.5 text-xs font-medium">
                   {fact.theme}
                 </span>

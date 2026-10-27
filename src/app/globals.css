@@ -112,6 +112,38 @@
   }
 }
 
+/* Pink theme for NEXT_PUBLIC_THEME=cat (src/lib/theme.ts sets data-theme on <html>).
+   Only the brand colours change: status colours (good/critical) and the tag palette keep
+   their meaning. The accent leans orchid so a bar never reads as the red "over" state. */
+:root[data-theme="cat"] {
+  --background: #fbf8f9;
+  --foreground: #1a1216;
+
+  --color-primary: #b83a72;
+  --color-surface-muted: #fbecf2;
+  --color-border: rgba(74, 20, 44, 0.12);
+  --color-accent: #c45aa8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="cat"] {
+    --background: #130e11;
+    --foreground: #eeeaec;
+
+    --color-primary: #e07aa8;
+    --color-primary-foreground: #160b11;
+
+    --color-surface: #1b1418;
+    --color-surface-muted: #271a21;
+    --color-border: rgba(255, 255, 255, 0.1);
+
+    --color-accent: #d47fc0;
+    --color-gridline: #2e2a2c;
+
+    --color-wool: #f1e7ec;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

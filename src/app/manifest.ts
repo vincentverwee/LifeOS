@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { THEME_COLORS } from "@/lib/theme";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -7,8 +8,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Your personal data, in one place.",
     start_url: "/",
     display: "standalone",
-    background_color: "#faf9f6",
-    theme_color: "#1f5c3b",
+    background_color: THEME_COLORS.background,
+    theme_color: THEME_COLORS.primary,
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },

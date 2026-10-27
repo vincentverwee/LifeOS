@@ -27,6 +27,7 @@ npm run db:studio   # Prisma Studio
 - `DIRECT_URL` — direct (port 5432). Used only by Prisma CLI commands (push/migrate/studio) — DDL isn't reliable through pgbouncer.
 - `SPOONACULAR_API_KEY` — server-only, for the /recipes deck. Free tier ≈150 points/day; one deck batch (10 recipes) costs ~1.6.
 - `APP_PASSWORD` + `AUTH_SECRET` — the single-user passcode gate (`APP_PASSWORD` = 4–8 digits). Without `APP_PASSWORD` the gate is off in development and everything is locked in production.
+- `NEXT_PUBLIC_THEME` — unset = green sheep (Meadow). `cat` = pink with a cat, for a second copy of the app (another Vercel project + Supabase on the same repo). Build-time: `src/lib/theme.ts` sets `data-theme` on `<html>` (pink tokens in `globals.css`), `<Sheep>` renders `<Cat>`, and loading phrases, fun facts and "tap the sheep" copy follow. The favicon/PWA icons, `offline.html` and `global-error.tsx` stay sheep/green.
 
 ## Auth
 
