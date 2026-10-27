@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Re-opening a page seen in the last minute is instant (no server render). Every
+    // mutating server action calls revalidatePath, which clears this cache, so edits show at once.
+    staleTimes: { dynamic: 60 },
+  },
   images: {
     // Recipe photos from the Spoonacular API.
     remotePatterns: [{ protocol: "https", hostname: "img.spoonacular.com" }],

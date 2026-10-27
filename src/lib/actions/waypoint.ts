@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
@@ -12,7 +13,8 @@ import { parseDateKey } from '@/lib/format';
  * Waypoint's data store. These used to be browser-side Supabase calls; they are server
  * actions now (reads go through src/lib/data/waypoint.ts in server pages). They throw on
  * bad input, so callers catch and show the message.
- * No revalidatePath: every Waypoint page is dynamic and the client pages keep their own state.
+ * Every change calls revalidate() so the client router cache (staleTimes.dynamic) doesn't
+ * show old trips/km elsewhere; the client pages keep their own state, so this doesn't reset them.
  */
 
 export type CreateTripInput = {
@@ -60,6 +62,11 @@ function optionalDate(value: string | null | undefined, label: string): Date | n
   return new Date(`${key}T00:00:00Z`);
 }
 
+function revalidate() {
+  revalidatePath('/'); // hub shows total km
+  revalidatePath('/waypoint', 'layout');
+}
+
 function checkOrder(from: Date | null, to: Date | null, message: string) {
   if (from && to && to < from) throw new Error(message);
 }
@@ -81,6 +88,7 @@ export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
     },
     omit: WITHOUT_GEOMETRY,
   });
+  revalidate();
   return toTripSummary(row);
 }
 
@@ -108,12 +116,14 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
     },
     omit: WITHOUT_GEOMETRY,
   });
+  revalidate();
   return toTripSummary(row);
 }
 
 export async function deleteTrip(id: string): Promise<void> {
   await requireAuth();
   await prisma.waypointTrip.deleteMany({ where: { id } });
+  revalidate();
 }
 
 /**
@@ -136,6 +146,7 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
       where: { id: tripId },
       data: { totalKm: null, routeGeometry: Prisma.DbNull },
     });
+    revalidate();
     return { total_km: null, route_geometry: null };
   }
 
@@ -148,6 +159,7 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
       routeGeometry: route.geometry as unknown as Prisma.InputJsonValue,
     },
   });
+  revalidate();
   return { total_km: route.distanceKm, route_geometry: route.geometry };
 }
 
@@ -188,6 +200,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
       },
     });
   });
+  revalidate();
   return toLocation(row);
 }
 
@@ -205,6 +218,7 @@ export async function removeLocation(tripId: string, locationId: string): Promis
       if (loc.visitOrder !== i) await tx.waypointLocation.update({ where: { id: loc.id }, data: { visitOrder: i } });
     }
   });
+  revalidate();
 }
 
 /** Saves a new stop order. `orderedIds` must be exactly the trip's stops. */
@@ -223,6 +237,7 @@ export async function reorderLocations(tripId: string, orderedIds: string[]): Pr
       await tx.waypointLocation.update({ where: { id }, data: { visitOrder: i } });
     }
   });
+  revalidate();
 }
 
 export async function updateLocation(id: string, input: UpdateLocationInput): Promise<void> {
@@ -248,4 +263,5 @@ export async function updateLocation(id: string, input: UpdateLocationInput): Pr
       ...(input.notes !== undefined && { notes: optionalText(input.notes, 2000) }),
     },
   });
+  revalidate();
 }
