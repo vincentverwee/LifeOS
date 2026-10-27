@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Plus } from "lucide-react";
 import { COOKBOOK, FRIDGE, SAVED, SWIPE, isTabActive, type RecipesTab } from "./nav";
 
 function TabLink({ tab, active }: { tab: RecipesTab; active: boolean }) {
@@ -38,9 +39,9 @@ export function RecipesTabBar() {
             href="/recipes/add"
             aria-label="Add a recipe"
             aria-current={onAdd ? "page" : undefined}
-            className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 text-3xl leading-none font-light shadow-lg ring-4 ring-background"
+            className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 shadow-lg ring-4 ring-background"
           >
-            +
+            <Plus size={30} strokeWidth={2} aria-hidden="true" />
           </Link>
         </div>
         <TabLink tab={FRIDGE} active={isTabActive(pathname, FRIDGE.href)} />

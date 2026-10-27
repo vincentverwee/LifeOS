@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useFormStatus } from "react-dom";
+import { Plus } from "lucide-react";
 import type { Period } from "@/lib/data/periods";
 import type { Category } from "@/lib/data/categories";
 import type { CategoryDto } from "@/lib/actions/categories";
@@ -164,9 +165,9 @@ export function ExpenseEntryForm({
             onClick={appendPlus}
             aria-label="Add another amount"
             title="Add another amount (sum)"
-            className="btn flex w-16 shrink-0 rounded-2xl border border-border bg-surface-muted text-3xl font-light text-foreground hover:bg-gridline active:bg-gridline"
+            className="btn flex w-16 shrink-0 rounded-2xl border border-border bg-surface-muted text-foreground hover:bg-gridline active:bg-gridline"
           >
-            +
+            <Plus size={28} strokeWidth={1.8} aria-hidden="true" />
           </button>
         </div>
         <p className="min-h-5 text-sm text-ink-muted" aria-live="polite">

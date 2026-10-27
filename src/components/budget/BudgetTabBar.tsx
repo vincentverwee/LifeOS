@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChartColumn, House, List, Settings, type LucideIcon } from "lucide-react";
+import { ChartColumn, House, List, Plus, Settings, type LucideIcon } from "lucide-react";
 
 type Tab = { href: string; label: string; icon: LucideIcon };
 
@@ -45,9 +45,9 @@ export function BudgetTabBar() {
             href="/budget/add"
             aria-label="Add expense"
             aria-current={onAdd ? "page" : undefined}
-            className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 text-3xl leading-none font-light shadow-lg ring-4 ring-background"
+            className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 shadow-lg ring-4 ring-background"
           >
-            +
+            <Plus size={30} strokeWidth={2} aria-hidden="true" />
           </Link>
         </div>
         <TabLink tab={INSIGHTS} active={pathname.startsWith("/budget/insights")} />
