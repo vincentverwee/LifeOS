@@ -8,6 +8,7 @@ import { colorForTrip } from '@/lib/waypoint/tripColors';
 import { SheepSpinner } from '@/components/icons/SheepSpinner';
 import { SheepPhrase } from '@/components/icons/SheepPhrase';
 import { TripLegend, type LegendChip } from './TripLegend';
+import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
 
 function MapPlaceholder() {
   return (
@@ -30,7 +31,7 @@ const MapView = dynamic(() => import('./MapView'), {
 interface MapWrapperProps {
   className?: string;
   locations?: Location[];
-  routeGeometry?: GeoJSON.LineString | null;
+  routeGeometry?: RouteGeometry | null;
   routes?: { tripId: string; geometry: GeoJSON.LineString }[];
   tripLabels?: Record<string, string>;
   tripColors?: Record<string, string>;

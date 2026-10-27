@@ -1,3 +1,5 @@
+import type { RouteGeometry } from './routing/lines';
+
 export type RoutePreference = 'allow_tolls' | 'avoid_tolls';
 
 export interface Trip {
@@ -9,7 +11,8 @@ export interface Trip {
   cover_image: string | null;
   route_preference: RoutePreference;
   total_km: number | null;
-  route_geometry: GeoJSON.LineString | null;
+  /** The driving parts; a MultiLineString when a flight splits them (see routing/lines.ts). */
+  route_geometry: RouteGeometry | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,12 +29,14 @@ export interface Location {
   departure_date: string | null;
   notes: string | null;
   visit_order: number;
+  /** The leg from the previous stop to this one was flown. */
+  arrived_by_plane: boolean;
   created_at: string;
   updated_at: string;
 }
 
 /**
- * A trip minus its `route_geometry` — the (potentially very large) OSRM polyline.
+ * A trip minus its `route_geometry` — the (potentially very large) OSRM polyline(s).
  *
  * The list/stats screens never draw a route, so they fetch this narrower row set instead of
  * `select('*')`; on a phone that's the difference between a few kB and several MB per page load.

@@ -10,6 +10,7 @@ import { Trip, Location } from '@/lib/waypoint/types';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
 import { useElementWidth } from '@/lib/waypoint/useElementWidth';
+import { routeLines } from '@/lib/waypoint/routing/lines';
 import {
   EXPORT_FORMATS,
   DESIGN_WIDTH,
@@ -276,9 +277,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
 
   const includedTrips = trips.filter((t) => included.has(t.id));
   const includedLocations = locations.filter((l) => included.has(l.trip_id));
-  const routes = includedTrips
-    .filter((t) => t.route_geometry)
-    .map((t) => ({ tripId: t.id, geometry: t.route_geometry! }));
+  const routes = includedTrips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
 
   const totalKm = includedTrips.reduce((sum, t) => sum + (t.total_km ?? 0), 0);
   const countries = new Set(includedLocations.map((l) => l.country).filter(Boolean)).size;

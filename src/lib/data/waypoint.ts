@@ -2,6 +2,7 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
 import { simplifyLine } from '@/lib/waypoint/simplify';
+import { joinLines, routeLines } from '@/lib/waypoint/routing/lines';
 import { Trip, TripSummary, Location } from '@/lib/waypoint/types';
 
 /**
@@ -23,7 +24,9 @@ export async function getAllTrips({ simplify }: { simplify?: number } = {}): Pro
   const trips = rows.map(toTrip);
   if (!simplify) return trips;
   return trips.map((t) =>
-    t.route_geometry ? { ...t, route_geometry: simplifyLine(t.route_geometry, simplify) } : t
+    t.route_geometry
+      ? { ...t, route_geometry: joinLines(routeLines(t.route_geometry).map((l) => simplifyLine(l, simplify))) }
+      : t
   );
 }
 

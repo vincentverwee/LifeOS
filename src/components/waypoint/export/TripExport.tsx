@@ -9,7 +9,8 @@ import { Button } from '@/components/waypoint/ui/button';
 import { Label } from '@/components/waypoint/ui/label';
 import { Card, CardContent } from '@/components/waypoint/ui/card';
 import { Trip, Location } from '@/lib/waypoint/types';
-import { calculateRoute, RouteResult } from '@/lib/waypoint/routing/osrm';
+import { calculateTripRoute, TripRouteResult } from '@/lib/waypoint/routing/osrm';
+import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
 import {
   EXPORT_FORMATS,
   DESIGN_WIDTH,
@@ -43,7 +44,7 @@ interface ExportStageProps {
   locations: Location[];
   labeledIds: string[];
   labelOverrides: Record<string, string>;
-  routeGeometry: GeoJSON.LineString | null;
+  routeGeometry: RouteGeometry | null;
   accentColor: string;
   theme: 'light' | 'dark';
   captionStops: CaptionStop[];
@@ -195,7 +196,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
   const [routeLoading, setRouteLoading] = useState(false);
   const [routeError, setRouteError] = useState(false);
   // The full-trip route — calculated ONCE per trip, never on checkbox changes.
-  const [route, setRoute] = useState<RouteResult | null>(null);
+  const [route, setRoute] = useState<TripRouteResult | null>(null);
   // Rendering and saving are deliberately TWO steps — see useImageExport for why (iOS drops a
   // download fired after the tap's user activation has expired).
   const {
@@ -222,7 +223,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setRouteLoading(true);
     setRouteError(false);
-    calculateRoute(locations)
+    calculateTripRoute(locations.map((l) => ({ ...l, byPlane: l.arrived_by_plane })))
       .then((result) => {
         if (cancelled) return;
         if (result) setRoute(result);
@@ -311,11 +312,13 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
       : Math.max(40, Math.min(74, Math.round(150 / captionStops.length)));
   // "+km added" = the legs that arrive at each checked stop, summed (each checked stop
   // attributes the leg that reaches it). Total km stays the full-trip distance, unchanged.
+  // Flown legs don't count, like the total (which is km driven).
   const legs = route?.legsKm ?? [];
   const addedKm = route
     ? Math.round(
         locations.reduce(
-          (sum, l, i) => (i > 0 && included.has(l.id) ? sum + (legs[i - 1] ?? 0) : sum),
+          (sum, l, i) =>
+            i > 0 && included.has(l.id) && !l.arrived_by_plane ? sum + (legs[i - 1] ?? 0) : sum,
           0
         ) * 10
       ) / 10

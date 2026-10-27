@@ -14,12 +14,15 @@ import {
   updateTrip,
   recalculateTripRoute,
   CreateTripInput,
+  CreateLocationInput,
   createLocation,
   removeLocation as removeLocationAction,
   updateLocation,
   reorderLocations,
+  setLegByPlane,
 } from '@/lib/actions/waypoint';
-import { CalendarDays, Navigation, Pencil, ArrowLeft, MapPin, ImageDown } from 'lucide-react';
+import { flownKm } from '@/lib/waypoint/routing/lines';
+import { CalendarDays, Navigation, Pencil, ArrowLeft, MapPin, ImageDown, Plane } from 'lucide-react';
 
 const dayFormatter = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -35,8 +38,9 @@ function formatDate(key: string) {
 
 const errorMessage = (e: unknown) => (e instanceof Error && e.message ? e.message : 'Something went wrong.');
 
-/** The ordered stop ids: the route only changes when this does (not on note/date edits). */
-const routeKeyOf = (locations: Location[]) => locations.map((l) => l.id).join('|');
+/** The ordered stops and how each was reached: the route only changes when this does (not on note/date edits). */
+const routeKeyOf = (locations: Location[]) =>
+  locations.map((l, i) => (i > 0 && l.arrived_by_plane ? `${l.id}:plane` : l.id)).join('|');
 
 /** Interactive trip page. The server page loads the trip, so the first paint has data. */
 export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Trip; initialLocations: Location[] }) {
@@ -102,7 +106,7 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
     setTrip((prev) => ({ ...prev, ...updated }));
   }
 
-  async function addLocation(loc: Omit<Location, 'id' | 'created_at' | 'updated_at' | 'visit_order'>) {
+  async function addLocation(loc: CreateLocationInput) {
     setError(null);
     setBusy(true);
     try {
@@ -130,6 +134,14 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
     return mutate(next, () => reorderLocations(id, next.map((l) => l.id)));
   }
 
+  function toggleLeg(locId: string) {
+    const loc = locations.find((l) => l.id === locId);
+    if (!loc) return;
+    const byPlane = !loc.arrived_by_plane;
+    const next = locations.map((l) => (l.id === locId ? { ...l, arrived_by_plane: byPlane } : l));
+    return mutate(next, () => setLegByPlane(id, locId, byPlane));
+  }
+
   function updateDates(locId: string, arrival: string, departure: string) {
     const arrival_date = arrival || null;
     const departure_date = departure || null;
@@ -144,6 +156,7 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
   }
 
   const displayedRouteGeometry = locations.length < 2 ? null : trip.route_geometry;
+  const flown = flownKm(locations);
 
   return (
     <>
@@ -170,10 +183,16 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
                       {trip.end_date && ` – ${formatDate(trip.end_date)}`}
                     </span>
                   )}
-                  {trip.total_km != null && locations.length >= 2 && (
+                  {!!trip.total_km && locations.length >= 2 && (
                     <Badge variant="secondary" className="gap-1 text-xs">
                       <Navigation size={10} />
                       {trip.total_km.toLocaleString()} km
+                    </Badge>
+                  )}
+                  {flown > 0 && (
+                    <Badge variant="secondary" className="gap-1 text-xs" title="Flown, not counted in the km driven">
+                      <Plane size={10} />
+                      {flown.toLocaleString()} km
                     </Badge>
                   )}
                 </div>
@@ -226,6 +245,7 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
                 onRemove={removeLocation}
                 onMoveUp={(locId) => move(locId, -1)}
                 onMoveDown={(locId) => move(locId, 1)}
+                onToggleLeg={toggleLeg}
                 onUpdateDates={updateDates}
                 onUpdateNotes={updateNotes}
                 disabled={busy}

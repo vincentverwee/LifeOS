@@ -15,13 +15,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/waypoint/ui/alert-dialog';
-import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote } from 'lucide-react';
+import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote, Car, Plane } from 'lucide-react';
 
 interface LocationListProps {
   locations: Location[];
   onRemove: (id: string) => void;
   onMoveUp: (id: string) => void;
   onMoveDown: (id: string) => void;
+  /** Switches the leg arriving at this stop between driven and flown. */
+  onToggleLeg: (id: string) => void;
   onUpdateDates: (id: string, arrival: string, departure: string) => void;
   onUpdateNotes: (id: string, notes: string) => void;
   /** While a reorder/removal is saving: blocks the next one so they can't cross. */
@@ -33,6 +35,7 @@ export function LocationList({
   onRemove,
   onMoveUp,
   onMoveDown,
+  onToggleLeg,
   onUpdateDates,
   onUpdateNotes,
   disabled = false,
@@ -69,6 +72,29 @@ export function LocationList({
               key={loc.id}
               className="relative animate-in fade-in slide-in-from-left-2 duration-200"
             >
+              {/* How this stop was reached from the previous one: tap to switch car ↔ plane. */}
+              {!isFirst && (
+                <div className="-mt-1 mb-1 flex h-7 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => onToggleLeg(loc.id)}
+                    disabled={disabled}
+                    aria-pressed={loc.arrived_by_plane}
+                    aria-label={loc.arrived_by_plane ? 'Flown here, switch to driven' : 'Driven here, switch to flown'}
+                    title={loc.arrived_by_plane ? 'By plane, tap for car' : 'By car, tap for plane'}
+                    className="btn btn-ghost relative z-10 -my-2 flex h-11 w-10 shrink-0 p-0"
+                  >
+                    <span
+                      className={`flex h-7 w-7 items-center justify-center rounded-full border bg-card ${
+                        loc.arrived_by_plane ? 'border-primary text-primary' : 'border-border text-muted-foreground'
+                      }`}
+                    >
+                      {loc.arrived_by_plane ? <Plane size={14} /> : <Car size={14} />}
+                    </span>
+                  </button>
+                  {loc.arrived_by_plane && <span className="text-xs text-muted-foreground">By plane</span>}
+                </div>
+              )}
               <div className="flex items-start gap-3">
                 {/* Order indicator */}
                 <div className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-primary bg-card text-xs font-bold text-primary">

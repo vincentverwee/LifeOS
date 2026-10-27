@@ -1,5 +1,6 @@
 import type { WaypointLocation, WaypointTrip } from '@/generated/prisma/client';
 import { dayKey } from '@/lib/format';
+import type { RouteGeometry } from './routing/lines';
 import type { Location, RoutePreference, Trip, TripSummary } from './types';
 
 /**
@@ -30,7 +31,7 @@ export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry'>): TripSum
 export function toTrip(row: WaypointTrip): Trip {
   return {
     ...toTripSummary(row),
-    route_geometry: (row.routeGeometry ?? null) as unknown as GeoJSON.LineString | null,
+    route_geometry: (row.routeGeometry ?? null) as unknown as RouteGeometry | null,
   };
 }
 
@@ -47,6 +48,7 @@ export function toLocation(row: WaypointLocation): Location {
     departure_date: optionalDay(row.departureDate),
     notes: row.notes,
     visit_order: row.visitOrder,
+    arrived_by_plane: row.arrivedByPlane,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };

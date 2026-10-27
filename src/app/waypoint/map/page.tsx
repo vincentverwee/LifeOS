@@ -4,6 +4,7 @@ import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { Button } from '@/components/waypoint/ui/button';
 import { getAllLocations, getAllTrips } from '@/lib/data/waypoint';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
+import { routeLines } from '@/lib/waypoint/routing/lines';
 import { ImageDown } from 'lucide-react';
 
 export default async function MapPage() {
@@ -11,9 +12,7 @@ export default async function MapPage() {
   const [locations, trips] = await Promise.all([getAllLocations(), getAllTrips({ simplify: 0.0005 })]);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
-  const routes = trips
-    .filter((t) => t.route_geometry)
-    .map((t) => ({ tripId: t.id, geometry: t.route_geometry! }));
+  const routes = trips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
 
   return (
     <>

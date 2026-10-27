@@ -178,20 +178,23 @@ model WaypointTrip {
 }
 
 model WaypointLocation {
-  id            String       @id @default(uuid()) @db.Uuid
-  tripId        String       @db.Uuid
-  trip          WaypointTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  name          String
-  latitude      Decimal      @db.Decimal(10, 7)
-  longitude     Decimal      @db.Decimal(10, 7)
-  country       String?
-  city          String?
-  arrivalDate   DateTime?    @db.Date
-  departureDate DateTime?    @db.Date
-  notes         String?
-  visitOrder    Int
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id             String       @id @default(uuid()) @db.Uuid
+  tripId         String       @db.Uuid
+  trip           WaypointTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name           String
+  latitude       Decimal      @db.Decimal(10, 7)
+  longitude      Decimal      @db.Decimal(10, 7)
+  country        String?
+  city           String?
+  arrivalDate    DateTime?    @db.Date
+  departureDate  DateTime?    @db.Date
+  notes          String?
+  visitOrder     Int
+  // The leg from the previous stop to this one was flown (drawn as a dashed arc, not routed
+  // by car, its km kept out of totalKm). Ignored on the first stop.
+  arrivedByPlane Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([tripId, visitOrder])
 }

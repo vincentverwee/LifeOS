@@ -6,7 +6,8 @@ import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
 import { Location, RoutePreference, TripSummary } from '@/lib/waypoint/types';
 import { toLocation, toTripSummary } from '@/lib/waypoint/rows';
-import { calculateRoute } from '@/lib/waypoint/routing/osrm';
+import { calculateTripRoute } from '@/lib/waypoint/routing/osrm';
+import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
 import { parseDateKey } from '@/lib/format';
 
 /**
@@ -27,9 +28,9 @@ export type CreateTripInput = {
 
 export type UpdateTripInput = Partial<CreateTripInput>;
 
-export type CreateLocationInput = Omit<Location, 'id' | 'created_at' | 'updated_at' | 'visit_order'>;
+export type CreateLocationInput = Omit<Location, 'id' | 'created_at' | 'updated_at' | 'visit_order' | 'arrived_by_plane'>;
 export type UpdateLocationInput = Partial<Pick<Location, 'arrival_date' | 'departure_date' | 'notes'>>;
-export type TripRoute = { total_km: number | null; route_geometry: GeoJSON.LineString | null };
+export type TripRoute = { total_km: number | null; route_geometry: RouteGeometry | null };
 
 const WITHOUT_GEOMETRY = { routeGeometry: true } as const;
 const MAX_STOPS = 100;
@@ -128,7 +129,7 @@ export async function deleteTrip(id: string): Promise<void> {
 
 /**
  * Recalculates the driving route through the trip's stops (in their stored order) and
- * saves it. Runs on the server from the stored stops, so the saved km and line always
+ * saves it. Flown legs are left out: they split the line and their km don't count. Runs on the server from the stored stops, so the saved km and line always
  * match the database. Fewer than 2 stops clears the route. Returns null when the routing
  * service failed; the stored route is then left as it was.
  */
@@ -137,9 +138,13 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
   const stops = await prisma.waypointLocation.findMany({
     where: { tripId },
     orderBy: { visitOrder: 'asc' },
-    select: { latitude: true, longitude: true },
+    select: { latitude: true, longitude: true, arrivedByPlane: true },
   });
-  const points = stops.map((s) => ({ latitude: Number(s.latitude), longitude: Number(s.longitude) }));
+  const points = stops.map((s) => ({
+    latitude: Number(s.latitude),
+    longitude: Number(s.longitude),
+    byPlane: s.arrivedByPlane,
+  }));
 
   if (points.length < 2) {
     await prisma.waypointTrip.updateMany({
@@ -150,13 +155,13 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
     return { total_km: null, route_geometry: null };
   }
 
-  const route = await calculateRoute(points);
+  const route = await calculateTripRoute(points);
   if (!route) return null;
   await prisma.waypointTrip.updateMany({
     where: { id: tripId },
     data: {
       totalKm: route.distanceKm,
-      routeGeometry: route.geometry as unknown as Prisma.InputJsonValue,
+      routeGeometry: route.geometry ? (route.geometry as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
     },
   });
   revalidate();
@@ -262,6 +267,16 @@ export async function updateLocation(id: string, input: UpdateLocationInput): Pr
       departureDate,
       ...(input.notes !== undefined && { notes: optionalText(input.notes, 2000) }),
     },
+  });
+  revalidate();
+}
+
+/** Marks the leg that arrives at this stop as flown (or driven again). */
+export async function setLegByPlane(tripId: string, locationId: string, byPlane: boolean): Promise<void> {
+  await requireAuth();
+  await prisma.waypointLocation.updateMany({
+    where: { id: locationId, tripId },
+    data: { arrivedByPlane: byPlane === true },
   });
   revalidate();
 }

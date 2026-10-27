@@ -7,6 +7,7 @@ import { Button } from '@/components/waypoint/ui/button';
 import { getAllTrips, getAllLocations } from '@/lib/data/waypoint';
 import { getDashboardStats } from '@/lib/waypoint/stats';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
+import { routeLines } from '@/lib/waypoint/routing/lines';
 import { ImageDown } from 'lucide-react';
 
 export default async function DashboardPage() {
@@ -17,9 +18,7 @@ export default async function DashboardPage() {
   const recentTrips = trips.slice(0, 5);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
-  const routes = trips
-    .filter((t) => t.route_geometry)
-    .map((t) => ({ tripId: t.id, geometry: t.route_geometry! }));
+  const routes = trips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
 
   return (
     <>

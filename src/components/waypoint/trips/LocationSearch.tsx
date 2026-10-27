@@ -4,11 +4,11 @@ import { useState, useRef } from 'react';
 import { Input } from '@/components/waypoint/ui/input';
 import { searchPlaces, extractCity, extractCountry, GeocodingResult } from '@/lib/waypoint/geocoding';
 import { Search, MapPin, Loader2 } from 'lucide-react';
-import { Location } from '@/lib/waypoint/types';
+import type { CreateLocationInput } from '@/lib/actions/waypoint';
 
 interface LocationSearchProps {
   tripId: string;
-  onAdd: (loc: Omit<Location, 'id' | 'created_at' | 'updated_at' | 'visit_order'>) => void;
+  onAdd: (loc: CreateLocationInput) => void;
 }
 
 export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {

@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Location } from '@/lib/waypoint/types';
 import { colorForTrip } from '@/lib/waypoint/tripColors';
 import { buildCorridorSegments } from '@/lib/waypoint/routing/corridors';
+import { flightLegs, routeLines, type RouteGeometry } from '@/lib/waypoint/routing/lines';
 
 const ROUTE_SOURCE_ID = 'route'; // single-trip solid line (trip detail + export)
 const ROUTE_LAYER_ID = 'route-line';
@@ -14,6 +15,9 @@ const CORRIDOR_SOURCE_ID = 'corridor';
 const CORRIDOR_CASING_LAYER_ID = 'corridor-casing';
 const CORRIDOR_BASE_LAYER_ID = 'corridor-base';
 const CORRIDOR_HL_LAYER_ID = 'corridor-hl'; // selected trip's segments, lifted on top
+// Flown legs (any view): dashed great-circle arcs between the two stops, drawn from the stops.
+const FLIGHTS_SOURCE_ID = 'flights';
+const FLIGHTS_LAYER_ID = 'flights-line';
 const DOTS_SOURCE_ID = 'stop-dots';
 const DOTS_LAYER_ID = 'stop-dots-layer';
 const ROUTE_WIDTH = 4;
@@ -218,7 +222,7 @@ function layoutLabels(
 interface MapViewProps {
   locations?: Location[];
   /** Single-trip route line (trip detail page). For multiple trips at once, use `routes` instead. */
-  routeGeometry?: GeoJSON.LineString | null;
+  routeGeometry?: RouteGeometry | null;
   /** One route line per trip, each colored to match that trip's markers (dashboard, world map). */
   routes?: TripRoute[];
   /** Optional label shown per-marker, e.g. the trip title when plotting multiple trips together. */
@@ -342,7 +346,7 @@ export default function MapView({
     const onMapClick = (e: maplibregl.MapMouseEvent) => {
       const select = onSelectTripRef.current;
       if (!select) return;
-      const layers = [CORRIDOR_BASE_LAYER_ID, DOTS_LAYER_ID].filter((id) => map.getLayer(id));
+      const layers = [CORRIDOR_BASE_LAYER_ID, FLIGHTS_LAYER_ID, DOTS_LAYER_ID].filter((id) => map.getLayer(id));
       const feats = layers.length ? map.queryRenderedFeatures(e.point, { layers }) : [];
       if (!feats.length) {
         if (selectedTripIdRef.current != null) select(null);
@@ -518,9 +522,7 @@ export default function MapView({
       const markerLngLats: [number, number][] = orderedLocations.map((l) => [l.longitude, l.latitude]);
       const routeLngLats: [number, number][] = routes?.length
         ? routes.flatMap((r) => r.geometry.coordinates as [number, number][])
-        : routeGeometry
-          ? (routeGeometry.coordinates as [number, number][])
-          : [];
+        : routeLines(routeGeometry).flatMap((l) => l.coordinates as [number, number][]);
 
       const isExportLabels = showLabels || labeledIds != null;
       const place = () => {
@@ -678,6 +680,30 @@ export default function MapView({
       map.removeSource(CORRIDOR_SOURCE_ID);
     }
 
+    // --- Flown legs: dashed arcs, above the roads and below the stop dots ---
+    const flights = flightLegs(orderedLocations);
+    if (flights.length > 0 && !map.getSource(FLIGHTS_SOURCE_ID)) {
+      map.addSource(FLIGHTS_SOURCE_ID, { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer(
+        {
+          id: FLIGHTS_LAYER_ID,
+          type: 'line',
+          source: FLIGHTS_SOURCE_ID,
+          layout: { 'line-join': 'round', 'line-cap': 'butt' },
+          paint: {
+            'line-color': ['get', 'color'],
+            'line-width': ['interpolate', ['linear'], ['zoom'], 3, 2, 8, 3],
+            'line-opacity': ['coalesce', ['get', 'opacity'], 1],
+            'line-dasharray': [2, 1.5],
+          },
+        },
+        map.getLayer(DOTS_LAYER_ID) ? DOTS_LAYER_ID : undefined
+      );
+    } else if (flights.length === 0 && map.getSource(FLIGHTS_SOURCE_ID)) {
+      if (map.getLayer(FLIGHTS_LAYER_ID)) map.removeLayer(FLIGHTS_LAYER_ID);
+      map.removeSource(FLIGHTS_SOURCE_ID);
+    }
+
     // --- Stop dots (markerStyle 'dot' — the dashboard's decluttered multi-trip map) ---
     // Circle layer (not DOM markers) so many stops stay cheap; added AFTER the corridor layers so
     // it draws above the routes.
@@ -751,6 +777,22 @@ export default function MapView({
         (map.getSource(CORRIDOR_SOURCE_ID) as maplibregl.GeoJSONSource | undefined)?.setData({
           type: 'FeatureCollection',
           features,
+        });
+      }
+
+      if (flights.length > 0) {
+        const flightFeatures: GeoJSON.Feature[] = flights.map((leg) => ({
+          type: 'Feature',
+          properties: {
+            color: resolveColor(leg.tripId),
+            opacity: sel != null && leg.tripId !== sel ? 0.3 : 0.9,
+            trips: JSON.stringify([leg.tripId]),
+          },
+          geometry: leg.geometry,
+        }));
+        (map.getSource(FLIGHTS_SOURCE_ID) as maplibregl.GeoJSONSource | undefined)?.setData({
+          type: 'FeatureCollection',
+          features: flightFeatures,
         });
       }
 
