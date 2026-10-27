@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { useFormStatus } from "react-dom";
 import { Plus } from "lucide-react";
 import type { Period } from "@/lib/data/periods";
@@ -17,6 +17,11 @@ const OPERATORS = [
   { op: "×", label: "Times" },
   { op: "÷", label: "Divide by" },
 ];
+
+/** mousedown handler that keeps focus where it is (in the amount field). */
+function keepFocus(e: MouseEvent) {
+  e.preventDefault();
+}
 
 type ExpenseEntryFormProps = {
   period: Period;
@@ -139,6 +144,11 @@ export function ExpenseEntryForm({
     amountRef.current?.focus();
   }
 
+  function toggleOperators() {
+    setOpsOpen((open) => !open);
+    amountRef.current?.focus();
+  }
+
   function handleCreatedCategory(category: CategoryDto) {
     setCategories((prev) => [
       ...prev,
@@ -206,7 +216,16 @@ export function ExpenseEntryForm({
           <div ref={opsRef} className="relative flex shrink-0">
             <button
               type="button"
-              onClick={() => setOpsOpen((open) => !open)}
+              // The operator buttons never take focus from the amount field, so the phone
+              // keyboard stays up. Desktop: cancelling mousedown keeps focus. Touch: iOS moves
+              // focus on the synthesised mouse events, so the tap is handled on touchend and its
+              // default (those events + the click) cancelled.
+              onMouseDown={keepFocus}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                toggleOperators();
+              }}
+              onClick={toggleOperators}
               aria-label="Calculate"
               aria-haspopup="true"
               aria-expanded={opsOpen}
@@ -227,8 +246,11 @@ export function ExpenseEntryForm({
                   <button
                     key={op}
                     type="button"
-                    // Keep focus (and the phone keyboard) in the amount field.
-                    onPointerDown={(e) => e.preventDefault()}
+                    onMouseDown={keepFocus}
+                    onTouchEnd={(e) => {
+                      e.preventDefault();
+                      appendOperator(op);
+                    }}
                     onClick={() => appendOperator(op)}
                     aria-label={label}
                     className="btn flex h-16 w-16 rounded-2xl bg-surface-muted text-3xl font-semibold text-foreground hover:bg-gridline active:bg-gridline"
