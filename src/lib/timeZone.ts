@@ -2,4 +2,4 @@
 export const TZ_COOKIE = "tz";
 
 /** Assumed until the browser has reported its timezone. */
-export const FALLBACK_TZ = "Europe/Dublin";
+export const FALLBACK_TZ = "Europe/Brussels";
