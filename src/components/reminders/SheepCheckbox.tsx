@@ -8,16 +8,19 @@ export function SheepCheckbox({
   label,
   onChange,
   disabled,
+  submit,
 }: {
   checked: boolean;
   /** What gets ticked off, for screen readers. */
   label: string;
-  onChange: () => void;
+  onChange?: () => void;
   disabled?: boolean;
+  /** Submits the surrounding form instead of calling `onChange`. */
+  submit?: boolean;
 }) {
   return (
     <button
-      type="button"
+      type={submit ? "submit" : "button"}
       role="checkbox"
       aria-checked={checked}
       aria-label={`Done: ${label}`}
@@ -26,7 +29,7 @@ export function SheepCheckbox({
       className={`flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border-2 transition-[background-color,border-color,transform] duration-150 select-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100 ${
         checked
           ? "border-primary bg-surface-muted text-primary"
-          : "border-border bg-surface text-ink-muted [@media(hover:hover)]:hover:border-primary"
+          : "border-ink-muted/70 bg-surface text-ink-muted [@media(hover:hover)]:hover:border-primary"
       }`}
     >
       <Sheep

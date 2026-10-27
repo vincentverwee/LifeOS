@@ -1,13 +1,13 @@
 // Pure reminder date math on "YYYY-MM-DD" keys (UTC midnight, like every date-only column).
 
-export const REPEATS = ["once", "weekly", "monthly"] as const;
+/** Finished one-offs stay on the Finished tab this long, then they are deleted. */
+export const FINISHED_DAYS = 30;
+
+export const REPEATS = ["once", "daily", "weekly", "monthly"] as const;
 export type Repeat = (typeof REPEATS)[number];
 
-export const REPEAT_LABELS: Record<Repeat, string> = {
-  once: "Once",
-  weekly: "Every week",
-  monthly: "Every month",
-};
+/** Weekdays as `Date.getUTCDay()` numbers (0 = Sunday), listed Monday first. */
+export const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0] as const;
 
 export type Reminder = {
   id: string;
@@ -16,7 +16,11 @@ export type Reminder = {
   /** "YYYY-MM-DD", null = undated one-off */
   dueOn: string | null;
   anchorDay: number | null;
+  /** Weekly: the days it comes back on (0 = Sunday). */
+  weekdays: number[];
 };
+
+type Schedule = Pick<Reminder, "repeat" | "anchorDay" | "weekdays">;
 
 export function isRepeat(value: unknown): value is Repeat {
   return typeof value === "string" && (REPEATS as readonly string[]).includes(value);
@@ -28,6 +32,10 @@ function toDate(key: string): Date {
 
 function toKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+export function weekdayOf(key: string): number {
+  return toDate(key).getUTCDay();
 }
 
 export function addDays(key: string, days: number): string {
@@ -50,21 +58,42 @@ function nextMonth(key: string, anchorDay: number): string {
   return toKey(new Date(Date.UTC(year, month, Math.min(anchorDay, lastDay))));
 }
 
+/** Weekly days to use: the chosen ones, or the weekday of `dueOn` when none are stored. */
+function daysOf(weekdays: number[], dueOn: string): number[] {
+  return weekdays.length ? weekdays : [weekdayOf(dueOn)];
+}
+
+/** First chosen weekday on or after `key`. */
+function onOrAfterWeekday(key: string, weekdays: number[]): string {
+  let next = key;
+  while (!weekdays.includes(weekdayOf(next))) next = addDays(next, 1);
+  return next;
+}
+
+/** Where a new or edited reminder starts: weekly ones move to their first chosen day from `start`. */
+export function firstDueOn(repeat: Repeat, start: string, weekdays: number[]): string {
+  return repeat === "weekly" ? onOrAfterWeekday(start, daysOf(weekdays, start)) : start;
+}
+
 export function isOpen(reminder: Pick<Reminder, "dueOn">, todayKey: string): boolean {
   return reminder.dueOn === null || reminder.dueOn <= todayKey;
 }
 
-/** Where a recurring reminder goes once ticked off: its first date after today (missed ones don't pile up). */
-export function nextDueAfter(repeat: Repeat, dueOn: string, anchorDay: number | null, todayKey: string): string {
-  let next = dueOn;
-  const anchor = anchorDay ?? toDate(dueOn).getUTCDate();
-  do {
-    next = repeat === "weekly" ? addDays(next, 7) : nextMonth(next, anchor);
-  } while (next <= todayKey);
-  return next;
+/** Where a repeating reminder goes once ticked off: its first date after today (missed ones don't pile up). */
+export function nextDueAfter(schedule: Schedule, dueOn: string, todayKey: string): string {
+  if (schedule.repeat === "monthly") {
+    const anchor = schedule.anchorDay ?? toDate(dueOn).getUTCDate();
+    let next = dueOn;
+    do next = nextMonth(next, anchor);
+    while (next <= todayKey);
+    return next;
+  }
+  const from = addDays(dueOn > todayKey ? dueOn : todayKey, 1);
+  return schedule.repeat === "weekly" ? onOrAfterWeekday(from, daysOf(schedule.weekdays, dueOn)) : from;
 }
 
 const weekdayFormatter = new Intl.DateTimeFormat("en-GB", { weekday: "long", timeZone: "UTC" });
+const weekdayShortFormatter = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: "UTC" });
 const shortDateFormatter = new Intl.DateTimeFormat("en-GB", {
   weekday: "short",
   day: "numeric",
@@ -72,16 +101,27 @@ const shortDateFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+/** "Mon", "Tue", … for a weekday number (4 Jan 1970 was a Sunday). */
+export function weekdayName(day: number, style: "short" | "long" = "short"): string {
+  const date = new Date(Date.UTC(1970, 0, 4 + day));
+  return (style === "long" ? weekdayFormatter : weekdayShortFormatter).format(date);
+}
+
 function ordinal(n: number): string {
   const suffix = n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th";
   return `${n}${suffix}`;
 }
 
-/** "Every Monday" / "Every month on the 15th" / null for one-offs. */
-export function describeRepeat(repeat: Repeat, dueOn: string | null, anchorDay: number | null): string | null {
-  if (repeat === "once" || !dueOn) return null;
-  if (repeat === "weekly") return `Every ${weekdayFormatter.format(toDate(dueOn))}`;
-  return `Every month on the ${ordinal(anchorDay ?? toDate(dueOn).getUTCDate())}`;
+/** "Every day" / "Every Monday" / "Every Mon, Wed" / "Every month on the 15th" / null for one-offs. */
+export function describeRepeat(schedule: Schedule, dueOn: string | null): string | null {
+  if (schedule.repeat === "once" || !dueOn) return null;
+  if (schedule.repeat === "daily") return "Every day";
+  if (schedule.repeat === "monthly") return `Every month on the ${ordinal(schedule.anchorDay ?? toDate(dueOn).getUTCDate())}`;
+  const days = WEEKDAYS.filter((d) => daysOf(schedule.weekdays, dueOn).includes(d));
+  if (days.length === 7) return "Every day";
+  if (days.length === 5 && !days.includes(0) && !days.includes(6)) return "Every weekday";
+  if (days.length === 1) return `Every ${weekdayName(days[0], "long")}`;
+  return `Every ${days.map((d) => weekdayName(d)).join(", ")}`;
 }
 
 /** "Today" / "Tomorrow" / "2 days overdue" / "Fri 31 Oct"; null when undated. */
@@ -92,4 +132,12 @@ export function describeDue(dueOn: string | null, todayKey: string): string | nu
   if (days === 1) return "Tomorrow";
   if (days < 0) return `${-days} ${days === -1 ? "day" : "days"} overdue`;
   return shortDateFormatter.format(toDate(dueOn));
+}
+
+/** "today" / "yesterday" / "3 days ago" */
+export function describeDoneOn(doneOn: string, todayKey: string): string {
+  const days = daysBetween(doneOn, todayKey);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  return `${days} days ago`;
 }

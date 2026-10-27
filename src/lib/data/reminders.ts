@@ -1,11 +1,19 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
-import { isOpen, isRepeat, type Reminder } from "@/lib/reminders/schedule";
+import { dayKeyIn } from "@/lib/today";
+import { FINISHED_DAYS, isOpen, isRepeat, type Reminder } from "@/lib/reminders/schedule";
 
-const SELECT = { id: true, title: true, repeat: true, dueOn: true, anchorDay: true } as const;
+const SELECT = { id: true, title: true, repeat: true, dueOn: true, anchorDay: true, weekdays: true } as const;
 
-function toReminder(row: { id: string; title: string; repeat: string; dueOn: Date | null; anchorDay: number | null }): Reminder {
+function toReminder(row: {
+  id: string;
+  title: string;
+  repeat: string;
+  dueOn: Date | null;
+  anchorDay: number | null;
+  weekdays: number[];
+}): Reminder {
   return {
     ...row,
     repeat: isRepeat(row.repeat) ? row.repeat : "once",
@@ -34,6 +42,18 @@ export async function getReminders(todayKey: string): Promise<{ open: Reminder[]
 export async function getReminder(id: string): Promise<Reminder | null> {
   const row = await prisma.reminder.findFirst({ where: { id, doneAt: null }, select: SELECT });
   return row ? toReminder(row) : null;
+}
+
+export type FinishedReminder = { id: string; title: string; /** "YYYY-MM-DD" in the user's timezone */ doneOn: string };
+
+/** One-offs ticked off in the last FINISHED_DAYS days, latest first. */
+export async function getFinishedReminders(tz: string): Promise<FinishedReminder[]> {
+  const rows = await prisma.reminder.findMany({
+    where: { doneAt: { gte: new Date(Date.now() - FINISHED_DAYS * 86_400_000) } },
+    orderBy: { doneAt: "desc" },
+    select: { id: true, title: true, doneAt: true },
+  });
+  return rows.map((r) => ({ id: r.id, title: r.title, doneOn: dayKeyIn(tz, r.doneAt!) }));
 }
 
 export type RemindersGlance = { open: number; overdue: number; next: Reminder | null };

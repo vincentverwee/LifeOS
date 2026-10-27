@@ -2,8 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getReminder } from "@/lib/data/reminders";
 import { getTodayKey } from "@/lib/today";
-import { deleteReminder } from "@/lib/actions/reminders";
 import { ReminderForm } from "@/components/reminders/ReminderForm";
+import { DeleteReminderButton } from "@/components/reminders/DeleteReminderButton";
 
 export default async function EditReminderPage({ params }: PageProps<"/reminders/[id]">) {
   const { id } = await params;
@@ -21,12 +21,7 @@ export default async function EditReminderPage({ params }: PageProps<"/reminders
 
       <ReminderForm reminder={reminder} todayKey={todayKey} />
 
-      <form action={deleteReminder}>
-        <input type="hidden" name="id" value={reminder.id} />
-        <button type="submit" className="btn btn-danger flex min-h-11 w-full px-4 text-sm">
-          Delete reminder
-        </button>
-      </form>
+      <DeleteReminderButton id={reminder.id} title={reminder.title} />
     </div>
   );
 }

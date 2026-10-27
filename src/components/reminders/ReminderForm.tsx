@@ -1,12 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createReminder, updateReminder, type ReminderFormState } from "@/lib/actions/reminders";
-import { describeRepeat, REPEATS, type Reminder, type Repeat } from "@/lib/reminders/schedule";
+import { describeRepeat, weekdayName, weekdayOf, WEEKDAYS, type Reminder, type Repeat } from "@/lib/reminders/schedule";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
-const SEGMENT_LABELS: Record<Repeat, string> = { once: "Once", weekly: "Weekly", monthly: "Monthly" };
+const REPEAT_OPTIONS: { value: Exclude<Repeat, "once">; label: string }[] = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+];
 
 function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -28,7 +32,17 @@ function SubmitButton({ label }: { label: string }) {
 export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; todayKey: string }) {
   const [title, setTitle] = useState(reminder?.title ?? "");
   const [repeat, setRepeat] = useState<Repeat>(reminder?.repeat ?? "once");
+  const [weekdays, setWeekdays] = useState<number[]>(reminder?.weekdays ?? []);
   const [date, setDate] = useState(reminder?.dueOn ?? "");
+  // Set when picking a repeat filled in today; toggling the repeat off clears it again.
+  const [autoDate, setAutoDate] = useState(false);
+  const [showAdded, setShowAdded] = useState(false);
+  const titleRef = useRef<HTMLInputElement>(null);
+
+  // Desktop: straight into the title when adding; phones keep the keyboard closed.
+  useEffect(() => {
+    if (!reminder && window.matchMedia("(min-width: 640px)").matches) titleRef.current?.focus();
+  }, [reminder]);
 
   const [state, formAction] = useActionState(async (prev: ReminderFormState, formData: FormData) => {
     if (reminder) return updateReminder(prev, formData);
@@ -36,31 +50,57 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
     if (result?.ok) {
       setTitle("");
       setRepeat("once");
+      setWeekdays([]);
       setDate("");
+      setAutoDate(false);
     }
+    setShowAdded(!!result?.ok);
     return result;
   }, null);
 
-  function pickRepeat(next: Repeat) {
+  /** Tapping the selected option again turns repeating off. */
+  function pickRepeat(next: Exclude<Repeat, "once">) {
+    if (repeat === next) {
+      setRepeat("once");
+      if (autoDate) {
+        setDate("");
+        setAutoDate(false);
+      }
+      return;
+    }
     setRepeat(next);
-    if (next !== "once" && !date) setDate(todayKey);
+    const start = date || todayKey;
+    if (!date) {
+      setDate(todayKey);
+      setAutoDate(true);
+    }
+    if (next === "weekly" && weekdays.length === 0) setWeekdays([weekdayOf(start)]);
   }
 
+  function toggleDay(day: number) {
+    setWeekdays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  }
+
+  const start = date || todayKey;
   const hint =
     repeat === "once"
       ? date
-        ? "Shows up on that day and stays until you tick it."
-        : "No date: it stays on the list until you tick it."
-      : `${describeRepeat(repeat, date || todayKey, null)}, starting on that day.`;
+        ? "Doesn't repeat. Shows up on that day and stays until you tick it."
+        : "Doesn't repeat. No date: it stays on the list until you tick it."
+      : repeat === "weekly" && weekdays.length === 0
+        ? "Pick at least one day."
+        : `${describeRepeat({ repeat, anchorDay: null, weekdays }, start)}, starting ${repeat === "weekly" ? "from" : "on"} that day.`;
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
       {reminder && <input type="hidden" name="id" value={reminder.id} />}
       <input type="hidden" name="repeat" value={repeat} />
+      {repeat === "weekly" && weekdays.map((d) => <input key={d} type="hidden" name="weekday" value={d} />)}
 
       <label className="flex flex-col gap-1">
         <span className="text-sm text-ink-muted">What</span>
         <input
+          ref={titleRef}
           name="title"
           type="text"
           required
@@ -68,7 +108,10 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
           autoComplete="off"
           enterKeyHint="done"
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => {
+            setTitle(e.target.value);
+            setShowAdded(false);
+          }}
           placeholder="e.g. Pay rent, call grandma"
           className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
         />
@@ -77,20 +120,39 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
       <div className="flex flex-col gap-2">
         <span className="text-sm text-ink-muted">Repeat</span>
         <div className="flex gap-1 rounded-full bg-surface-muted p-1">
-          {REPEATS.map((r) => (
+          {REPEAT_OPTIONS.map((option) => (
             <button
-              key={r}
+              key={option.value}
               type="button"
-              onClick={() => pickRepeat(r)}
-              aria-pressed={repeat === r}
+              onClick={() => pickRepeat(option.value)}
+              aria-pressed={repeat === option.value}
               className={`btn flex min-h-11 flex-1 px-3 text-sm ${
-                repeat === r ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"
+                repeat === option.value ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"
               }`}
             >
-              {SEGMENT_LABELS[r]}
+              {option.label}
             </button>
           ))}
         </div>
+        {repeat === "weekly" && (
+          <div role="group" aria-label="Days of the week" className="flex gap-1">
+            {WEEKDAYS.map((day) => {
+              const on = weekdays.includes(day);
+              return (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  aria-pressed={on}
+                  aria-label={weekdayName(day, "long")}
+                  className={`btn flex min-h-11 min-w-0 flex-1 px-0 text-sm ${on ? "btn-primary" : "btn-outline"}`}
+                >
+                  {weekdayName(day).slice(0, 2)}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -104,11 +166,21 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
             type="date"
             required={repeat !== "once"}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setAutoDate(false);
+            }}
             className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
           />
           {repeat === "once" && date && (
-            <button type="button" onClick={() => setDate("")} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+            <button
+              type="button"
+              onClick={() => {
+                setDate("");
+                setAutoDate(false);
+              }}
+              className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
+            >
               No date
             </button>
           )}
@@ -117,7 +189,7 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
       </div>
 
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
-      {state?.ok && !reminder && <p className="text-sm text-positive-text">✓ Added</p>}
+      {showAdded && !reminder && <p className="text-sm text-positive-text">✓ Added. Add another or go back to the list.</p>}
 
       <SubmitButton label={reminder ? "Save changes" : "Add reminder"} />
     </form>

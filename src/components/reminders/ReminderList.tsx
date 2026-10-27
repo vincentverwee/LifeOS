@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { completeReminder, undoCompleteReminder } from "@/lib/actions/reminders";
 import { describeDue, describeRepeat, type Reminder } from "@/lib/reminders/schedule";
 import { SheepCheckbox } from "./SheepCheckbox";
@@ -10,7 +10,8 @@ type Undo = { id: string; title: string; previousDueOn: string | null; next: str
 
 /** The open reminders, each with a sheep box. Ticked rows fade out; "Undo" stays for a few seconds. */
 export function ReminderList({ reminders, todayKey }: { reminders: Reminder[]; todayKey: string }) {
-  const [ticked, setTicked] = useState<ReadonlySet<string>>(new Set());
+  // Ticked rows stay ticked until the action's re-render drops them from the list.
+  const [ticked, addTicked] = useOptimistic<ReadonlySet<string>, string>(new Set(), (prev, id) => new Set(prev).add(id));
   const [undo, setUndo] = useState<Undo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -23,8 +24,8 @@ export function ReminderList({ reminders, todayKey }: { reminders: Reminder[]; t
 
   function tick(reminder: Reminder) {
     setError(null);
-    setTicked((prev) => new Set(prev).add(reminder.id));
     startTransition(async () => {
+      addTicked(reminder.id);
       const result = await completeReminder(reminder.id);
       if (result.ok) {
         const next = reminder.repeat === "once" ? "Done" : "Done until next time";
@@ -32,11 +33,6 @@ export function ReminderList({ reminders, todayKey }: { reminders: Reminder[]; t
       } else {
         setError(result.error);
       }
-      setTicked((prev) => {
-        const rest = new Set(prev);
-        rest.delete(reminder.id);
-        return rest;
-      });
     });
   }
 
@@ -49,7 +45,10 @@ export function ReminderList({ reminders, todayKey }: { reminders: Reminder[]; t
     <div className="flex flex-col gap-3">
       {reminders.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
-          Nothing to do. Enjoy the meadow.
+          Nothing to do. Enjoy the meadow.{" "}
+          <Link href="/reminders/add" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
+            Add a reminder
+          </Link>
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -57,7 +56,7 @@ export function ReminderList({ reminders, todayKey }: { reminders: Reminder[]; t
             const done = ticked.has(reminder.id);
             const due = describeDue(reminder.dueOn, todayKey);
             const overdue = reminder.dueOn !== null && reminder.dueOn < todayKey;
-            const repeat = describeRepeat(reminder.repeat, reminder.dueOn, reminder.anchorDay);
+            const repeat = describeRepeat(reminder, reminder.dueOn);
             return (
               <li
                 key={reminder.id}
