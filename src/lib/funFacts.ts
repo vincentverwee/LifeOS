@@ -4,7 +4,7 @@
 import { THEME } from "@/lib/theme";
 
 export type FunFact = {
-  theme: "Sheep" | "Cats" | "Animals" | "Ireland" | "Science" | "Elsewhere";
+  theme: "Sheep" | "Cats" | "Names" | "Animals" | "Ireland" | "Science" | "Elsewhere";
   text: string;
 };
 
@@ -215,8 +215,32 @@ const CAT_FACTS: FunFact[] = [
   { theme: "Cats", text: "Cats can turn their ears independently, about 180 degrees, to pinpoint where a sound comes from." },
 ];
 
-// In the cat theme the sheep facts make way for the cat ones; the rest stay.
-const ACTIVE_FACTS = THEME === "cat" ? [...CAT_FACTS, ...FACTS.filter((f) => f.theme !== "Sheep")] : FACTS;
+// Also cat theme only: the names of the cats.
+const NAME_FACTS: FunFact[] = [
+  { theme: "Names", text: "Watson means \"son of Wat\", and Wat was a medieval nickname for Walter." },
+  { theme: "Names", text: "Dr John Watson, Sherlock Holmes's friend, first appeared in A Study in Scarlet in 1887." },
+  { theme: "Names", text: "IBM's Watson computer beat the two greatest Jeopardy! champions in 2011. It was named after IBM's founder, Thomas J. Watson." },
+  { theme: "Names", text: "James Watson and Francis Crick described the double helix structure of DNA in 1953." },
+  { theme: "Names", text: "Juliette is the French form of Juliet, which comes from the old Roman family name Julius." },
+  { theme: "Names", text: "Shakespeare's Juliet isn't even 14 yet. Her nurse says so in the play." },
+  { theme: "Names", text: "Thousands of letters addressed to Juliet arrive in Verona every year, and volunteers of the Club di Giulietta answer them." },
+  { theme: "Names", text: "Juliette Gordon Low founded the Girl Scouts in the United States in 1912." },
+  { theme: "Names", text: "Gus is short for Augustus, Latin for \"venerable\" or \"majestic\", but also for Gustav and Angus." },
+  { theme: "Names", text: "Gus the Theatre Cat, from T.S. Eliot's Old Possum's Book of Practical Cats (1939), is really called Asparagus." },
+  { theme: "Names", text: "Gus is the chubby mouse who helps make Cinderella's dress in Disney's Cinderella (1950)." },
+  { theme: "Names", text: "Lola started out as a Spanish nickname for Dolores, from María de los Dolores." },
+  { theme: "Names", text: "Lola Montez, a 19th-century dancer, became so powerful at the Bavarian court that King Ludwig I made her a countess." },
+  { theme: "Names", text: "In the German film Run Lola Run (1998), Lola gets 20 minutes to find 100,000 marks, and the story plays out three times." },
+  { theme: "Names", text: "Lola is the showgirl in Barry Manilow's Copacabana (1978), and the title of a 1970 hit by The Kinks." },
+];
+
+// In the cat theme the sheep facts make way for the cat and name ones; the rest stay.
+// Cat and name facts alternate, so one name's facts don't all come in a row.
+const CAT_AND_NAME_FACTS = Array.from({ length: Math.max(CAT_FACTS.length, NAME_FACTS.length) }, (_, i) =>
+  [CAT_FACTS[i], NAME_FACTS[i]].filter((f): f is FunFact => f !== undefined)
+).flat();
+const ACTIVE_FACTS =
+  THEME === "cat" ? [...CAT_AND_NAME_FACTS, ...FACTS.filter((f) => f.theme !== "Sheep")] : FACTS;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
