@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LAST_DONE, TIMELINE, TODO, isTabActive, type RemindersTab } from "./nav";
+import { INSIGHTS, LAST_DONE, TIMELINE, TODO, isTabActive, type RemindersTab } from "./nav";
 
 function TabLink({ tab, active }: { tab: RemindersTab; active: boolean }) {
   const Icon = tab.icon;
@@ -44,6 +44,7 @@ export function RemindersTabBar() {
           </Link>
         </div>
         <TabLink tab={TIMELINE} active={isTabActive(pathname, TIMELINE.href)} />
+        <TabLink tab={INSIGHTS} active={isTabActive(pathname, INSIGHTS.href)} />
       </div>
     </nav>
   );

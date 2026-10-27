@@ -2,6 +2,8 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { compareRoutines, type Routine } from "@/lib/reminders/routines";
+import { INSIGHT_DAYS, type RoutineLogs } from "@/lib/reminders/insights";
+import { addDays } from "@/lib/reminders/schedule";
 
 const RECENT = 6;
 
@@ -49,4 +51,19 @@ export async function getRoutineHistory(limit: number): Promise<RoutineHistoryEn
     select: { id: true, doneOn: true, routine: { select: { name: true } } },
   });
   return rows.map((r) => ({ id: r.id, name: r.routine.name, doneOn: dayKey(r.doneOn) }));
+}
+
+/** Every item with its logs of the last INSIGHT_DAYS days (oldest first), for Insights. */
+export async function getRoutineLogs(todayKey: string): Promise<RoutineLogs[]> {
+  const since = new Date(`${addDays(todayKey, -INSIGHT_DAYS)}T00:00:00Z`);
+  const rows = await prisma.routine.findMany({
+    orderBy: { name: "asc" },
+    select: {
+      id: true,
+      name: true,
+      everyDays: true,
+      logs: { where: { doneOn: { gte: since } }, orderBy: { doneOn: "asc" }, select: { doneOn: true } },
+    },
+  });
+  return rows.map(({ logs, ...row }) => ({ ...row, doneOns: logs.map((l) => dayKey(l.doneOn)) }));
 }
