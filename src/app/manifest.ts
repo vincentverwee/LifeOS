@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { THEME_COLORS } from "@/lib/theme";
+import { THEME_COLORS, THEME_ICONS } from "@/lib/theme";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -11,9 +11,9 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: THEME_COLORS.background,
     theme_color: THEME_COLORS.primary,
     icons: [
-      { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
-      { src: "/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: THEME_ICONS.pwa192, sizes: "192x192", type: "image/png" },
+      { src: THEME_ICONS.pwa512, sizes: "512x512", type: "image/png" },
+      { src: THEME_ICONS.maskable512, sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }

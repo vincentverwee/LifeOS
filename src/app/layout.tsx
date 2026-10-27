@@ -5,7 +5,7 @@ import { StandaloneStart } from "@/components/StandaloneStart";
 import { TimeZoneSync } from "@/components/TimeZoneSync";
 import { ServiceWorkerRegister } from "@/components/ServiceWorkerRegister";
 import { OutboxSync } from "@/components/OutboxSync";
-import { THEME, THEME_COLORS } from "@/lib/theme";
+import { THEME, THEME_COLORS, THEME_ICONS } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,6 +21,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Life Analytics",
   description: "Your personal data, in one place.",
+  icons: { icon: THEME_ICONS.favicon, apple: THEME_ICONS.apple },
   appleWebApp: {
     capable: true,
     title: "LifeOS",

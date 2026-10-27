@@ -27,7 +27,7 @@ npm run db:studio   # Prisma Studio
 - `DIRECT_URL` — direct (port 5432). Used only by Prisma CLI commands (push/migrate/studio) — DDL isn't reliable through pgbouncer.
 - `SPOONACULAR_API_KEY` — server-only, for the /recipes deck. Free tier ≈150 points/day; one deck batch (10 recipes) costs ~1.6.
 - `APP_PASSWORD` + `AUTH_SECRET` — the single-user passcode gate (`APP_PASSWORD` = 4–8 digits). Without `APP_PASSWORD` the gate is off in development and everything is locked in production.
-- `NEXT_PUBLIC_THEME` — unset = green sheep (Meadow). `cat` = pink with a cat, for a second copy of the app (another Vercel project + Supabase on the same repo). Build-time: `src/lib/theme.ts` sets `data-theme` on `<html>` (pink tokens in `globals.css`), `<Sheep>` renders `<Cat>`, and loading phrases, fun facts and "tap the sheep" copy follow. The favicon/PWA icons, `offline.html` and `global-error.tsx` stay sheep/green.
+- `NEXT_PUBLIC_THEME` — unset = green sheep (Meadow). `cat` = pink with a cat, for a second copy of the app (another Vercel project + Supabase on the same repo). Build-time: `src/lib/theme.ts` sets `data-theme` on `<html>` (pink tokens in `globals.css`), `<Sheep>` renders `<Cat>`, and loading phrases, fun facts and "tap the sheep" copy follow. App icons come from `THEME_ICONS` (all in `public/`: `icon-cat*.png`/`icon-cat.svg`/`apple-icon-cat.png`, made from `Cat.tsx`); `offline.html` and `global-error.tsx` stay sheep/green.
 
 ## Auth
 
@@ -90,4 +90,4 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 - Tap targets ≥ 44px (`min-h-11` / `h-11 w-11`); Waypoint's `Button` sizes are 44px on phones. Hover-only controls are revealed with `[@media(hover:hover)]:opacity-0`, never plain `opacity-0 group-hover:`.
 - **No scroll traps**: embedded MapLibre maps use `cooperativeGestures` on touch (one finger scrolls the page; off only on the full-screen map page); a two-axis table scrolls inside one fixed-height box so sticky header + column both work (`LessonGrid`); `body` has `overflow-x: clip`.
 - **Insights stay calm**: headline + one chart + categories/courses visible; deeper cuts and long history lists go in `Disclosure` (`src/components/Disclosure.tsx`), long lists show the latest few with "Show all".
-- PWA: `src/app/manifest.ts`, icons in `public/icon-*.png` + `src/app/apple-icon.png` (generated from `src/app/icon.svg` with sharp).
+- PWA: `src/app/manifest.ts`, icons in `public/` (`icon-*.png`, `apple-icon.png`, `favicon.ico`, generated from `public/icon.svg` with sharp), linked per theme via `THEME_ICONS` in `src/lib/theme.ts` (not the `src/app` file convention, which would override it).

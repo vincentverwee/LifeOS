@@ -49,7 +49,7 @@ function Fleece() {
  * The one shared sheep mark: a dark sheep face set in a round, scalloped
  * fleece. Two tones only — currentColor (outline, ears, face) and
  * --color-wool (fleece and facial features, light in both themes). Every
- * other sheep placement wraps this component. `src/app/icon.svg` is a static
+ * other sheep placement wraps this component. `public/icon.svg` is a static
  * copy for the favicon and must be updated alongside this file, then the PNG
  * icons regenerated (see CLAUDE.md).
  */
