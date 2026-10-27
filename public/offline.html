@@ -34,6 +34,9 @@
       * {
         box-sizing: border-box;
       }
+      [hidden] {
+        display: none !important;
+      }
       body {
         margin: 0;
         min-height: 100vh;
@@ -118,8 +121,9 @@
       <h1>You're offline</h1>
       <p>This page needs a connection. You can still add expenses: they're kept on this phone and sync when you're back online.</p>
       <p id="pending" hidden></p>
+      <p id="not-ready" hidden>Add expense isn't on this phone yet: open the app once while you're online.</p>
       <div class="actions">
-        <a class="btn btn-primary" href="/budget/add">Add expense</a>
+        <a id="add" class="btn btn-primary" href="/budget/add" hidden>Add expense</a>
         <button class="btn btn-outline" type="button" onclick="location.reload()">Try again</button>
       </div>
     </main>
@@ -133,6 +137,15 @@
           pending.hidden = false;
         }
       } catch (e) {}
+      // Only offer Add expense when public/sw.js has a copy of it; otherwise the tap
+      // would just land back here.
+      (window.caches ? caches.match("/budget/add") : Promise.resolve(null))
+        .catch(function () {
+          return null;
+        })
+        .then(function (cached) {
+          document.getElementById(cached ? "add" : "not-ready").hidden = false;
+        });
       try {
         // This launch has started (src/components/StandaloneStart.tsx), so the cached
         // Add page isn't sent back to the hub, which would land here again.

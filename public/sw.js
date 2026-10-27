@@ -4,7 +4,7 @@
 // Expenses saved offline are queued by the page itself (src/lib/offline/outbox.ts).
 // Bump VERSION when changing what gets cached here.
 
-const VERSION = "v1";
+const VERSION = "v2";
 const SHELL_CACHE = `lifeos-shell-${VERSION}`; // offline.html + icons
 const PAGES_CACHE = `lifeos-pages-${VERSION}`; // the last /budget/add
 // Hashed build files. Not versioned: a cached page needs its own build's chunks,
@@ -43,7 +43,7 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(navigate(request, url));
+    event.respondWith(navigate(event, url));
   } else if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith(cacheFirst(request, STATIC_CACHE, STATIC_LIMIT));
   } else if (SHELL.includes(url.pathname) || /^\/(icon|apple-icon)/.test(url.pathname)) {
@@ -51,15 +51,57 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-async function navigate(request, url) {
+// In-app taps are client-side navigations (RSC fetches, not page loads), so the
+// fetch handler alone would almost never see /budget/add. The page asks for a
+// refresh on every load (ServiceWorkerRegister); copies younger than this are kept.
+const REFRESH_AFTER = 15 * 60 * 1000;
+
+self.addEventListener("message", (event) => {
+  if (event.data === "cache-offline-pages") event.waitUntil(refreshOfflinePages());
+});
+
+async function refreshOfflinePages() {
+  const cache = await caches.open(PAGES_CACHE);
+  for (const path of OFFLINE_PAGES) {
+    const cached = await cache.match(path);
+    const fetchedAt = cached ? new Date(cached.headers.get("date") || 0).getTime() : 0;
+    if (Date.now() - fetchedAt < REFRESH_AFTER) continue;
+    try {
+      await storePage(path, await fetch(path));
+    } catch {
+      // offline: keep what we have
+    }
+  }
+}
+
+/** Keeps a page (not a redirect to /login) plus every build file its HTML points to. */
+async function storePage(path, response) {
+  if (!response.ok || response.redirected) return;
+  const html = await response.clone().text();
+  await (await caches.open(PAGES_CACHE)).put(path, response);
+  // Scripts, styles and fonts, also those only named inside the RSC payload. A copy
+  // fetched in the background was never rendered, so they may not be cached yet.
+  const assets = new Set(html.match(/\/_next\/static\/[^"'\s\\)]+/g) || []);
+  const cache = await caches.open(STATIC_CACHE);
+  await Promise.all(
+    [...assets].map(async (asset) => {
+      if (await cache.match(asset)) return;
+      try {
+        const res = await fetch(asset);
+        if (res.ok) await cache.put(asset, res);
+      } catch {
+        // a missing chunk only matters offline; the next refresh tries again
+      }
+    })
+  );
+}
+
+async function navigate(event, url) {
   const offlinePage = OFFLINE_PAGES.includes(url.pathname) ? url.pathname : null;
   try {
-    const response = await fetch(request);
-    // Keep a fresh copy of the offline-capable page (not a redirect to /login).
-    if (offlinePage && response.ok && !response.redirected) {
-      const cache = await caches.open(PAGES_CACHE);
-      await cache.put(offlinePage, response.clone());
-    }
+    const response = await fetch(event.request);
+    // Keep a fresh copy of the offline-capable page.
+    if (offlinePage) event.waitUntil(storePage(offlinePage, response.clone()));
     return response;
   } catch {
     const cached = offlinePage && (await caches.match(offlinePage, { cacheName: PAGES_CACHE }));

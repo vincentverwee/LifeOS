@@ -9,9 +9,15 @@ import { useEffect } from "react";
 export function ServiceWorkerRegister() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // Unsupported or blocked: the app just works online-only.
-    });
+    navigator.serviceWorker
+      .register("/sw.js")
+      // Have the worker keep a fresh copy of the offline pages: tapping through the
+      // app never loads them as a full page, which is the only thing it sees itself.
+      .then(() => navigator.serviceWorker.ready)
+      .then((registration) => registration.active?.postMessage("cache-offline-pages"))
+      .catch(() => {
+        // Unsupported or blocked: the app just works online-only.
+      });
   }, []);
 
   return null;
