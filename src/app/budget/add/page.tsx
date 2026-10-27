@@ -11,6 +11,7 @@ import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { CategoryManager } from "@/components/categories/CategoryManager";
 import { ExpenseEntryForm } from "@/components/expenses/ExpenseEntryForm";
+import { PendingExpenses } from "@/components/expenses/PendingExpenses";
 
 export default async function AddExpensePage(props: PageProps<"/budget/add">) {
   const searchParams = await props.searchParams;
@@ -51,6 +52,8 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
         categories={activeCategories}
         defaultCategoryId={defaultCategoryId}
       />
+
+      <PendingExpenses />
 
       <details id="categories" className="group scroll-mt-4 rounded-xl border border-border bg-surface p-4">
         <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between font-medium text-foreground">

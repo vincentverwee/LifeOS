@@ -7,6 +7,7 @@ import { MAX_AMOUNT, formatDate, parseAmount, parseDateKey } from "@/lib/format"
 import { getTodayKey } from "@/lib/today";
 import { ensureMonthFor } from "@/lib/data/ensureMonth";
 import { knownError } from "@/lib/prismaErrors";
+import { Prisma } from "@/generated/prisma/client";
 
 function revalidateExpenseRoutes() {
   revalidatePath("/"); // hub shows "left today"
@@ -81,7 +82,14 @@ export type CreateExpenseInput = {
   amount: number;
   date?: string;
   note?: string | null;
+  /**
+   * A UUID made on the phone, used as the expense's id so a retried save (offline
+   * queue, or a reply lost on a bad connection) can never create it twice.
+   */
+  clientId?: string;
 };
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type CreateExpenseResult =
   | {
@@ -96,6 +104,12 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
   await requireAuth();
   const amountError = checkAmount(input.amount);
   if (amountError) return { ok: false, error: amountError };
+  const clientId = input.clientId && UUID.test(input.clientId) ? input.clientId.toLowerCase() : undefined;
+
+  // Already saved by an earlier attempt: report success again instead of a duplicate.
+  if (clientId && (await prisma.expense.findUnique({ where: { id: clientId }, select: { id: true } }))) {
+    return { ok: true, expenseId: clientId, movedTo: null };
+  }
 
   // No date (the form sends "" before hydration) means today; a bad one is an error.
   const todayKey = await getTodayKey();
@@ -110,17 +124,27 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
   if (!category) return { ok: false, error: "That category no longer exists." };
   if (!target.ok) return target;
 
-  const expense = await prisma.expense.create({
-    data: {
-      categoryId: category.id,
-      tripId: target.period.type === "trip" ? target.period.id : null,
-      cycleId: target.period.type === "cycle" ? target.period.id : null,
-      amount: toCents(input.amount),
-      date,
-      note: input.note?.trim().slice(0, 500) || null,
-    },
-    select: { id: true },
-  });
+  let expense: { id: string };
+  try {
+    expense = await prisma.expense.create({
+      data: {
+        ...(clientId && { id: clientId }),
+        categoryId: category.id,
+        tripId: target.period.type === "trip" ? target.period.id : null,
+        cycleId: target.period.type === "cycle" ? target.period.id : null,
+        amount: toCents(input.amount),
+        date,
+        note: input.note?.trim().slice(0, 500) || null,
+      },
+      select: { id: true },
+    });
+  } catch (e) {
+    // Two attempts with the same clientId raced; the other one saved it.
+    if (clientId && e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      return { ok: true, expenseId: clientId, movedTo: null };
+    }
+    throw e;
+  }
 
   revalidateExpenseRoutes();
   return {
@@ -160,6 +184,7 @@ export async function createExpenseFromForm(
     amount,
     date: typeof date === "string" ? date : undefined,
     note: typeof note === "string" ? note : null,
+    clientId: String(formData.get("clientId") ?? "") || undefined,
   });
 }
 

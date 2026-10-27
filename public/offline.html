@@ -1,0 +1,147 @@
+<!doctype html>
+<!-- Shown by public/sw.js for any page that can't load offline. Self-contained:
+     no Next.js chunks, so it always works. Colours are the Meadow tokens from globals.css. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#faf9f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f120c" media="(prefers-color-scheme: dark)" />
+    <title>Offline · Life Analytics</title>
+    <link rel="icon" href="/icon-192.png" />
+    <style>
+      :root {
+        --background: #faf9f6;
+        --foreground: #14170f;
+        --primary: #1f5c3b;
+        --primary-foreground: #ffffff;
+        --surface-muted: #eef4ec;
+        --border: rgba(15, 46, 31, 0.12);
+        --ink-muted: #898781;
+        --warning-text: #9a5b00;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --background: #0f120c;
+          --foreground: #ededea;
+          --primary: #4c9a72;
+          --primary-foreground: #0b0f0b;
+          --surface-muted: #1e2419;
+          --border: rgba(255, 255, 255, 0.1);
+          --warning-text: #e0a33a;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+        background: var(--background);
+        color: var(--foreground);
+        font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      main {
+        width: 100%;
+        max-width: 360px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        text-align: center;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+        border-radius: 18px;
+        margin-bottom: 8px;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.375rem;
+        font-weight: 600;
+      }
+      p {
+        margin: 0;
+        color: var(--ink-muted);
+        line-height: 1.5;
+      }
+      #pending {
+        color: var(--warning-text);
+        font-weight: 500;
+      }
+      .actions {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 16px;
+      }
+      .btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        border-radius: 9999px;
+        font: inherit;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        transition: transform 0.1s, filter 0.15s;
+      }
+      .btn:active {
+        transform: scale(0.97);
+        filter: brightness(0.92);
+      }
+      .btn-primary {
+        background: var(--primary);
+        color: var(--primary-foreground);
+        border: 0;
+      }
+      .btn-outline {
+        background: transparent;
+        color: var(--foreground);
+        border: 1px solid var(--border);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon-192.png" alt="" />
+      <h1>You're offline</h1>
+      <p>This page needs a connection. You can still add expenses: they're kept on this phone and sync when you're back online.</p>
+      <p id="pending" hidden></p>
+      <div class="actions">
+        <a class="btn btn-primary" href="/budget/add">Add expense</a>
+        <button class="btn btn-outline" type="button" onclick="location.reload()">Try again</button>
+      </div>
+    </main>
+    <script>
+      try {
+        // Same key as src/lib/offline/outbox.ts.
+        var items = JSON.parse(localStorage.getItem("lifeos-expense-outbox") || "[]");
+        if (items.length) {
+          var pending = document.getElementById("pending");
+          pending.textContent = items.length === 1 ? "1 expense waiting to sync" : items.length + " expenses waiting to sync";
+          pending.hidden = false;
+        }
+      } catch (e) {}
+      try {
+        // This launch has started (src/components/StandaloneStart.tsx), so the cached
+        // Add page isn't sent back to the hub, which would land here again.
+        sessionStorage.setItem("lifeos-launched", "1");
+      } catch (e) {}
+      // Back online: load the page that was asked for.
+      addEventListener("online", function () {
+        location.reload();
+      });
+    </script>
+  </body>
+</html>

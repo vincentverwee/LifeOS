@@ -20,7 +20,8 @@ export function StandaloneStart() {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
-    if (!standalone || pathname === "/login") return;
+    // Offline the hub can't load; stay on the (cached) page the app opened on.
+    if (!standalone || pathname === "/login" || !navigator.onLine) return;
     try {
       if (sessionStorage.getItem(KEY)) return;
       sessionStorage.setItem(KEY, "1");

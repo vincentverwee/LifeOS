@@ -10,6 +10,7 @@ import { createExpenseFromForm, type CreateExpenseFormState } from "@/lib/action
 import { CategoryGrid } from "@/components/expenses/CategoryGrid";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { formatCurrency, formatDate, hasOperator, parseAmount, toDateInputValue } from "@/lib/format";
+import { addToOutbox, onlineStore } from "@/lib/offline/outbox";
 
 const OPERATORS = [
   { op: "+", label: "Plus" },
@@ -87,20 +88,54 @@ export function ExpenseEntryForm({
         ? today && shiftDays(today, -1)
         : (otherDate ?? today);
 
+  const online = useSyncExternalStore(...onlineStore);
+
+  function resetAfterSave(message: string) {
+    setSavedMessage(message);
+    setAmount("");
+    setNote("");
+    setShowNote(false);
+    amountRef.current?.focus();
+  }
+
   const [state, formAction] = useActionState(
-    async (prev: CreateExpenseFormState, formData: FormData) => {
-      const result = await createExpenseFromForm(prev, formData);
+    async (prev: CreateExpenseFormState, formData: FormData): Promise<CreateExpenseFormState> => {
+      // A fresh id per entry: the expense's id on the server, so a retry from the
+      // offline queue can't save it twice (even if this attempt did get through).
+      const clientId = crypto.randomUUID();
+      formData.set("clientId", clientId);
+      const category = categories.find((c) => c.id === selectedCategoryId);
+      const parsed = parseAmount(amount);
+      const label = `${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}`;
+
+      let result: CreateExpenseFormState | undefined;
+      if (navigator.onLine) {
+        try {
+          result = await createExpenseFromForm(prev, formData);
+        } catch {
+          // No answer (connection dropped, server down): keep it on the phone below.
+        }
+      }
+
+      if (result === undefined) {
+        if (!category) return { ok: false, error: "Pick a category first." };
+        if (parsed === null || parsed <= 0) return { ok: false, error: "Enter a valid amount, e.g. 6,80 or 6,8+7,4." };
+        addToOutbox({
+          id: clientId,
+          categoryId: category.id,
+          categoryName: category.name,
+          amount: parsed,
+          date: date || toDateInputValue(),
+          period: { type: period.type, id: period.id },
+          note: note.trim() || null,
+          createdAt: new Date().toISOString(),
+        });
+        resetAfterSave(`Saved on this phone ${label} · syncs when online`);
+        return null;
+      }
+
       if (result?.ok) {
-        const category = categories.find((c) => c.id === selectedCategoryId);
-        const parsed = parseAmount(amount);
-        setSavedMessage(
-          `Saved ${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}` +
-            (result.movedTo ? ` · in ${result.movedTo}` : "")
-        );
-        setAmount("");
-        setNote("");
-        setShowNote(false);
-        amountRef.current?.focus();
+        resetAfterSave(`Saved ${label}` + (result.movedTo ? ` · in ${result.movedTo}` : ""));
       } else {
         setSavedMessage(null);
       }
@@ -265,6 +300,8 @@ export function ExpenseEntryForm({
         <p className="min-h-5 text-sm text-ink-muted" aria-live="polite">
           {savedMessage ? (
             <span className="text-positive-text">✓ {savedMessage}</span>
+          ) : !online ? (
+            <span className="text-warning-text">Offline: expenses are kept on this phone until you&apos;re back online.</span>
           ) : (
             "Tap + to add, subtract, multiply or divide."
           )}
