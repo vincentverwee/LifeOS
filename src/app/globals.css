@@ -313,10 +313,27 @@ textarea {
   animation: fade-in 0.25s ease-out both;
 }
 
+/* A popover growing out of the button that opened it (set `origin-*` on it). */
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-pop-in {
+  animation: pop-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-rise,
   .animate-slide-in,
-  .animate-fade-in {
+  .animate-fade-in,
+  .animate-pop-in {
     animation-duration: 0.01ms;
     animation-delay: 0ms !important;
   }

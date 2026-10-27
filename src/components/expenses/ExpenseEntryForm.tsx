@@ -9,7 +9,14 @@ import type { CategoryDto } from "@/lib/actions/categories";
 import { createExpenseFromForm, type CreateExpenseFormState } from "@/lib/actions/expenses";
 import { CategoryGrid } from "@/components/expenses/CategoryGrid";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
-import { formatCurrency, formatDate, parseAmount, toDateInputValue } from "@/lib/format";
+import { formatCurrency, formatDate, hasOperator, parseAmount, toDateInputValue } from "@/lib/format";
+
+const OPERATORS = [
+  { op: "+", label: "Plus" },
+  { op: "−", label: "Minus" },
+  { op: "×", label: "Times" },
+  { op: "÷", label: "Divide by" },
+];
 
 type ExpenseEntryFormProps = {
   period: Period;
@@ -57,7 +64,9 @@ export function ExpenseEntryForm({
   const [dateChoice, setDateChoice] = useState<DateChoice>("today");
   const [otherDate, setOtherDate] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
+  const [opsOpen, setOpsOpen] = useState(false);
   const amountRef = useRef<HTMLInputElement>(null);
+  const opsRef = useRef<HTMLDivElement>(null);
 
   // Local "today" is read in the browser only (server snapshot is empty) so
   // server and browser timezones can never cause a hydration mismatch.
@@ -101,8 +110,32 @@ export function ExpenseEntryForm({
     if (window.matchMedia("(min-width: 640px)").matches) amountRef.current?.focus();
   }, []);
 
-  function appendPlus() {
-    setAmount((prev) => (prev.trim() === "" || prev.trim().endsWith("+") ? prev : `${prev.trim()}+`));
+  // Close the operator picker on a tap outside it or Escape.
+  useEffect(() => {
+    if (!opsOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (!opsRef.current?.contains(e.target as Node)) setOpsOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpsOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [opsOpen]);
+
+  function appendOperator(op: string) {
+    setAmount((prev) => {
+      const trimmed = prev.trim();
+      if (trimmed === "") return prev;
+      // A second operator in a row replaces the first ("12+" then × → "12×").
+      return /[+\-−*×/÷xX]$/.test(trimmed) ? `${trimmed.slice(0, -1)}${op}` : `${trimmed}${op}`;
+    });
+    setSavedMessage(null);
+    setOpsOpen(false);
     amountRef.current?.focus();
   }
 
@@ -116,7 +149,7 @@ export function ExpenseEntryForm({
 
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const parsedAmount = parseAmount(amount);
-  const isSum = amount.includes("+");
+  const isCalculation = hasOperator(amount);
 
   const segment = (choice: DateChoice, label: string) => (
     <button
@@ -143,40 +176,75 @@ export function ExpenseEntryForm({
           Amount
         </label>
         <div className="flex gap-2">
-          <input
-            id="amount"
-            ref={amountRef}
-            name="amount"
-            type="text"
-            inputMode="decimal"
-            autoComplete="off"
-            enterKeyHint="done"
-            value={amount}
-            onChange={(e) => {
-              setAmount(e.target.value);
-              setSavedMessage(null);
-            }}
-            placeholder="0,00"
-            required
-            className="min-w-0 flex-1 rounded-2xl border border-border bg-surface px-4 py-3 font-mono text-3xl font-semibold tabular-nums text-foreground"
-          />
-          <button
-            type="button"
-            onClick={appendPlus}
-            aria-label="Add another amount"
-            title="Add another amount (sum)"
-            className="btn flex w-16 shrink-0 rounded-2xl border border-border bg-surface-muted text-foreground hover:bg-gridline active:bg-gridline"
-          >
-            <Plus size={28} strokeWidth={1.8} aria-hidden="true" />
-          </button>
+          {/* The calculation is typed in the input; its total shows inside the same box. */}
+          <div className="flex min-w-0 flex-1 flex-col justify-center rounded-2xl border border-border bg-surface px-4 py-2 focus-within:ring-2 focus-within:ring-ring">
+            <input
+              id="amount"
+              ref={amountRef}
+              name="amount"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              enterKeyHint="done"
+              value={amount}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setSavedMessage(null);
+              }}
+              placeholder="0,00"
+              required
+              className={`w-full bg-transparent py-1 font-mono font-semibold tabular-nums text-foreground outline-none ${
+                isCalculation ? "text-2xl" : "text-3xl"
+              }`}
+            />
+            {isCalculation && (
+              <span className="animate-fade-in text-right text-lg font-semibold tabular-nums text-ink-muted" aria-live="polite">
+                {parsedAmount !== null ? `= ${formatCurrency(parsedAmount)}` : "= …"}
+              </span>
+            )}
+          </div>
+          <div ref={opsRef} className="relative flex shrink-0">
+            <button
+              type="button"
+              onClick={() => setOpsOpen((open) => !open)}
+              aria-label="Calculate"
+              aria-haspopup="true"
+              aria-expanded={opsOpen}
+              title="Add, subtract, multiply or divide"
+              className={`btn flex w-16 rounded-2xl border border-border text-foreground hover:bg-gridline active:bg-gridline ${
+                opsOpen ? "bg-gridline" : "bg-surface-muted"
+              }`}
+            >
+              <Plus size={28} strokeWidth={1.8} aria-hidden="true" />
+            </button>
+            {opsOpen && (
+              <div
+                role="group"
+                aria-label="Operators"
+                className="animate-pop-in absolute right-0 top-[calc(100%+0.5rem)] z-40 grid w-max origin-top-right grid-cols-2 gap-2 rounded-3xl border border-border bg-surface p-2 shadow-lg"
+              >
+                {OPERATORS.map(({ op, label }) => (
+                  <button
+                    key={op}
+                    type="button"
+                    // Keep focus (and the phone keyboard) in the amount field.
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={() => appendOperator(op)}
+                    aria-label={label}
+                    className="btn flex h-16 w-16 rounded-2xl bg-surface-muted text-3xl font-semibold text-foreground hover:bg-gridline active:bg-gridline"
+                  >
+                    {op}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <p className="min-h-5 text-sm text-ink-muted" aria-live="polite">
-          {isSum && parsedAmount !== null ? (
-            `= ${formatCurrency(parsedAmount)}`
-          ) : savedMessage ? (
+          {savedMessage ? (
             <span className="text-positive-text">✓ {savedMessage}</span>
           ) : (
-            "Tap + to add several purchases together."
+            "Tap + to add, subtract, multiply or divide."
           )}
         </p>
       </div>

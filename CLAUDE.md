@@ -71,7 +71,7 @@ A **month** is a `BudgetCycle` (calendar month, created automatically by `ensure
 
 - After `prisma generate`/`db:push` changes, **restart `npm run dev`** — the running server keeps the old generated client in memory.
 - Date-only columns are UTC midnight; use `dayKey()`/`toDateInputValue()` from `src/lib/format.ts` rather than `toISOString()` slices scattered around.
-- Amount inputs go through `parseAmount()` (accepts `6,8+7,4` sums).
+- Amount inputs go through `parseAmount()`, which evaluates calculations with `+ − × ÷` (`6,8+7,4`, `12,50×3`; × ÷ first, trailing operator ignored). On /budget/add the one `+` button opens the operator picker and the total shows inside the amount box.
 - **"Today" on the server** comes from `getTodayKey()` / `getTimeZone()` in `src/lib/today.ts` (browser timezone via the `tz` cookie set by `TimeZoneSync`, fallback Europe/Dublin) — never `toDateInputValue()` server-side, Vercel runs in UTC.
 - An expense's **date decides its month**: `createExpense`/`updateExpense` move it to the `BudgetCycle` that covers the date ("yesterday" on the 1st lands in last month); trips only accept dates inside the trip.
 - Pages that read the DB without searchParams/cookies need `await connection()` or they get prerendered at build time.

@@ -30,20 +30,70 @@ export function formatPercent(value: number): string {
 /** Largest amount any input accepts (the columns are Decimal(12, 2)). */
 export const MAX_AMOUNT = 1_000_000;
 
+/** Normalises typed operators: "×", "x", "*" → "*"; "÷", "/" → "/"; "−" → "-". */
+function normalizeExpression(raw: string): string {
+  return raw
+    .replace(/\s+/g, "")
+    .replace(/,/g, ".")
+    .replace(/[×xX]/g, "*")
+    .replace(/÷/g, "/")
+    .replace(/[−–]/g, "-");
+}
+
+/** True when an amount is a calculation (an operator after the first character). */
+export function hasOperator(raw: string): boolean {
+  return /[+\-*/]/.test(normalizeExpression(raw).slice(1));
+}
+
 /**
- * Parses a typed amount. Accepts comma decimals and simple sums such as
- * "6,8+7,4" (like adding several purchases in one spreadsheet cell).
- * At most two decimals, so "1.234" (a Belgian thousands separator) is rejected
- * instead of silently becoming 1,23.
- * Returns null when the input isn't a valid non-negative number/sum.
+ * Evaluates a typed calculation like "6,8+7,4" or "12,50×3-2/4" (× and ÷ before
+ * + and −, like a calculator). Comma decimals; at most two decimals per number,
+ * so "1.234" (a Belgian thousands separator) is rejected instead of silently
+ * becoming 1,23. One trailing operator is ignored ("12+" = 12) so a half-typed
+ * calculation still shows its total. A leading "-" is allowed.
+ * Returns the result rounded to cents, or null when the input isn't valid.
+ */
+export function evaluateAmount(raw: string): number | null {
+  let expr = normalizeExpression(raw);
+  if (/[+\-*/]$/.test(expr) && expr.length > 1) expr = expr.slice(0, -1);
+  const negative = expr.startsWith("-");
+  if (negative) expr = expr.slice(1);
+  const tokens = expr.split(/([+\-*/])/);
+  // Numbers sit at even indexes, operators at odd ones.
+  const numbers: number[] = [];
+  for (let i = 0; i < tokens.length; i += 2) {
+    if (!/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(tokens[i])) return null;
+    numbers.push(Number.parseFloat(tokens[i]));
+  }
+  if (negative) numbers[0] = -numbers[0];
+  // × and ÷ first: fold them into terms, then add the terms up.
+  const terms = [numbers[0]];
+  const signs = [1];
+  for (let i = 1; i < tokens.length; i += 2) {
+    const op = tokens[i];
+    const value = numbers[(i + 1) / 2];
+    if (op === "*") terms[terms.length - 1] *= value;
+    else if (op === "/") {
+      if (value === 0) return null;
+      terms[terms.length - 1] /= value;
+    } else {
+      terms.push(value);
+      signs.push(op === "-" ? -1 : 1);
+    }
+  }
+  // Sum in cents so 0.1 + 0.2 stays 0.30.
+  const cents = terms.reduce((sum, term, i) => sum + signs[i] * Math.round(term * 100), 0);
+  return Number.isFinite(cents) ? cents / 100 : null;
+}
+
+/**
+ * Parses a typed amount or calculation (see evaluateAmount).
+ * Returns null when the input isn't valid, the result is negative, or above MAX_AMOUNT.
  */
 export function parseAmount(raw: string): number | null {
-  const parts = raw.trim().replace(/\s+/g, "").replace(/,/g, ".").split("+");
-  if (parts.some((part) => !/^(\d+(\.\d{0,2})?|\.\d{1,2})$/.test(part))) return null;
-  // Sum in cents so 0.1 + 0.2 stays 0.30.
-  const cents = parts.reduce((sum, part) => sum + Math.round(Number.parseFloat(part) * 100), 0);
-  if (cents > MAX_AMOUNT * 100) return null;
-  return cents / 100;
+  const value = evaluateAmount(raw);
+  if (value === null || value < 0 || value > MAX_AMOUNT) return null;
+  return value;
 }
 
 /**
@@ -71,12 +121,9 @@ export function dayKey(value: string | Date): string {
 
 /** Like parseAmount but allows a leading "-" (balances can be negative). */
 export function parseSignedAmount(raw: string): number | null {
-  const trimmed = raw.trim();
-  if (trimmed.startsWith("-")) {
-    const value = parseAmount(trimmed.slice(1));
-    return value === null ? null : -value;
-  }
-  return parseAmount(trimmed);
+  const value = evaluateAmount(raw);
+  if (value === null || Math.abs(value) > MAX_AMOUNT) return null;
+  return value;
 }
 
 const compactCurrencyFormatter = new Intl.NumberFormat("nl-BE", {
