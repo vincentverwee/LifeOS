@@ -15,10 +15,20 @@ npm run dev         # start dev server
 npm run build       # production build (also type-checks)
 npm run lint        # ESLint
 npx prisma generate # regenerate Prisma Client (also runs automatically via postinstall)
-npm run db:push     # push prisma/schema.prisma to Supabase (no migration history yet)
+npm run db:push     # push prisma/schema.prisma to Supabase (no migration history yet) — ALSO run against the cat deployment, see below
 npx tsx prisma/apply-checks.ts  # after db:push: locks out Supabase's API (RLS + revoked grants) and adds CHECK constraints db push can't express (idempotent; --dry only reports)
 npm run db:studio   # Prisma Studio
 ```
+
+## Second deployment (cat theme) — schema changes go to BOTH databases
+
+The same repo also runs a second, separate copy for someone else: its own Vercel project (`NEXT_PUBLIC_THEME=cat`) and its own Supabase project (ref `ipcjkxtwyiumfvijxmsg`, eu-central-1; the user's own is `vmqptzdzukenkwauunex`). Every push to `main` deploys both, but **database changes don't**. Whenever `prisma/schema.prisma` or `prisma/apply-checks.ts` changes, **remind the user** that after doing their own database, they also need to run against the cat one:
+
+1. In `.env`, comment out their own `DATABASE_URL`/`DIRECT_URL` and uncomment the cat project's lines.
+2. `npm run db:push` then `npx tsx prisma/apply-checks.ts`.
+3. Switch `.env` back (otherwise local dev reads/writes the other person's data).
+
+Do this before (or right when) pushing the code, or the cat site breaks on the new schema. Never run the one-off `prisma/import-*`/`label-periods` scripts against it — those load the user's own data.
 
 ## Environment
 
