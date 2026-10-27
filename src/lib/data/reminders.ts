@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { dayKeyIn } from "@/lib/today";
 import { FINISHED_DAYS, isOpen, isRepeat, type Reminder } from "@/lib/reminders/schedule";
+import { isDue, isOverdue as isRoutineOverdue, type Routine } from "@/lib/reminders/routines";
+import { getRoutines } from "./routines";
 
 const SELECT = { id: true, title: true, repeat: true, dueOn: true, anchorDay: true, weekdays: true } as const;
 
@@ -56,14 +58,26 @@ export async function getFinishedReminders(tz: string): Promise<FinishedReminder
   return rows.map((r) => ({ id: r.id, title: r.title, doneOn: dayKeyIn(tz, r.doneAt!) }));
 }
 
-export type RemindersGlance = { open: number; overdue: number; next: Reminder | null };
+export type RemindersGlance = {
+  open: number;
+  overdue: number;
+  next: Reminder | null;
+  /** The Last done item done longest ago, for when nothing is coming up. */
+  longest: Routine | null;
+};
 
-/** For the home tile. */
+/** For the home tile: open reminders plus Last done items past their "every N days". */
 export async function getRemindersGlance(todayKey: string): Promise<RemindersGlance> {
-  const { open, upcoming } = await getReminders(todayKey);
+  const [{ open, upcoming }, routines] = await Promise.all([getReminders(todayKey), getRoutines(todayKey)]);
+  const due = routines.filter((r) => isDue(r, todayKey));
   return {
-    open: open.length,
-    overdue: open.filter((r) => r.dueOn !== null && r.dueOn < todayKey).length,
+    open: open.length + due.length,
+    overdue:
+      open.filter((r) => r.dueOn !== null && r.dueOn < todayKey).length +
+      due.filter((r) => isRoutineOverdue(r, todayKey)).length,
     next: upcoming[0] ?? null,
+    // Oldest last date wins ("YYYY-MM-DD" keys sort as dates).
+    longest:
+      routines.filter((r) => r.lastDoneOn !== null).sort((a, b) => a.lastDoneOn!.localeCompare(b.lastDoneOn!))[0] ?? null,
   };
 }

@@ -6,6 +6,7 @@ import { getRecipesGlance } from "@/lib/data/recipes";
 import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { getRemindersGlance } from "@/lib/data/reminders";
 import { describeDue } from "@/lib/reminders/schedule";
+import { describeSince } from "@/lib/reminders/routines";
 import { computeMonthStats } from "@/lib/monthStats";
 import { formatCurrency, formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -305,12 +306,20 @@ async function RemindersTileBody({ todayKey }: { todayKey: string }) {
       ) : (
         <p className="text-sm text-ink-muted">Nothing overdue</p>
       )}
-      {reminders.next && (
+      {reminders.next ? (
         <p className="mt-4 truncate text-sm text-foreground">
           <span className="text-ink-muted">Next · </span>
           {reminders.next.title}
           <span className="text-ink-muted"> · {describeDue(reminders.next.dueOn, todayKey)}</span>
         </p>
+      ) : (
+        reminders.longest && (
+          <p className="mt-4 truncate text-sm text-foreground">
+            <span className="text-ink-muted">Longest · </span>
+            {reminders.longest.name}
+            <span className="text-ink-muted"> · {describeSince(reminders.longest.lastDoneOn, todayKey).toLowerCase()}</span>
+          </p>
+        )
       )}
     </>
   );

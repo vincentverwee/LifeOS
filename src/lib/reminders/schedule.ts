@@ -124,6 +124,11 @@ export function describeRepeat(schedule: Schedule, dueOn: string | null): string
   return `Every ${days.map((d) => weekdayName(d)).join(", ")}`;
 }
 
+/** "Fri 31 Oct" */
+export function formatDay(key: string): string {
+  return shortDateFormatter.format(toDate(key));
+}
+
 /** "Today" / "Tomorrow" / "2 days overdue" / "Fri 31 Oct"; null when undated. */
 export function describeDue(dueOn: string | null, todayKey: string): string | null {
   if (!dueOn) return null;
@@ -131,7 +136,7 @@ export function describeDue(dueOn: string | null, todayKey: string): string | nu
   if (days === 0) return "Today";
   if (days === 1) return "Tomorrow";
   if (days < 0) return `${-days} ${days === -1 ? "day" : "days"} overdue`;
-  return shortDateFormatter.format(toDate(dueOn));
+  return formatDay(dueOn);
 }
 
 /** "today" / "yesterday" / "3 days ago" */

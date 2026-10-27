@@ -341,3 +341,26 @@ model Reminder {
 
   @@index([doneAt, dueOn])
 }
+
+// A "last done" item on /reminders/last-done (e.g. Wash (coloured), Training).
+// Its last time is the newest RoutineLog; logging "today" never adds a second item.
+model Routine {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  // Optional nudge: due again this many days after the last time (then it shows in To do).
+  everyDays Int?
+  createdAt DateTime     @default(now())
+  logs      RoutineLog[]
+}
+
+model RoutineLog {
+  id        String   @id @default(cuid())
+  routineId String
+  routine   Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  doneOn    DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  // Once per day, so double taps can't duplicate.
+  @@unique([routineId, doneOn])
+  @@index([doneOn])
+}

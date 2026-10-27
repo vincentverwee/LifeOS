@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { OPEN, TIMELINE, isTabActive, type RemindersTab } from "./nav";
+import { LAST_DONE, TIMELINE, TODO, isTabActive, type RemindersTab } from "./nav";
 
 function TabLink({ tab, active }: { tab: RemindersTab; active: boolean }) {
   const Icon = tab.icon;
@@ -20,7 +20,7 @@ function TabLink({ tab, active }: { tab: RemindersTab; active: boolean }) {
   );
 }
 
-/** Thumb-reachable bottom navigation for phones, with a raised "add reminder" button. */
+/** Thumb-reachable bottom navigation for phones, with a raised "add" button. */
 export function RemindersTabBar() {
   const pathname = usePathname();
   const onAdd = pathname.startsWith("/reminders/add");
@@ -31,11 +31,12 @@ export function RemindersTabBar() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
     >
       <div className="mx-auto flex max-w-md items-end px-2">
-        <TabLink tab={OPEN} active={isTabActive(pathname, OPEN.href)} />
+        <TabLink tab={TODO} active={isTabActive(pathname, TODO.href)} />
+        <TabLink tab={LAST_DONE} active={isTabActive(pathname, LAST_DONE.href)} />
         <div className="flex flex-1 justify-center">
           <Link
             href="/reminders/add"
-            aria-label="Add reminder"
+            aria-label="Add a reminder or Last done item"
             aria-current={onAdd ? "page" : undefined}
             className="btn btn-primary -mt-5 mb-1 flex h-14 w-14 text-3xl leading-none font-light shadow-lg ring-4 ring-background"
           >
