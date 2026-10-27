@@ -11,6 +11,7 @@ import { getTodayKey } from "@/lib/today";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
+import { SpendingCalendar } from "@/components/expenses/SpendingCalendar";
 import { CategoryFilter, type FilterChip } from "@/components/expenses/CategoryFilter";
 
 export default async function ExpensesPage(props: PageProps<"/budget/expenses">) {
@@ -66,6 +67,14 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
         chips={chips}
         activeId={categoryId}
         hrefFor={(id) => `/budget/expenses?${periodParam}${id ? `&category=${encodeURIComponent(id)}` : ""}`}
+      />
+
+      {/* Follows the category filter, so e.g. only beer days light up. */}
+      <SpendingCalendar
+        startDate={activePeriod.startDate.slice(0, 10)}
+        endDate={activePeriod.endDate.slice(0, 10)}
+        todayKey={todayKey}
+        expenses={shown}
       />
 
       <ExpenseList

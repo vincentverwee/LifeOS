@@ -89,7 +89,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
       {error && <p className="text-sm text-critical">{error}</p>}
       {notice && <p className="text-sm text-positive-text">{notice}</p>}
       {days.map((day) => (
-        <section key={day.date} className="flex flex-col gap-1.5">
+        <section key={day.date} id={`day-${day.date}`} className="flex scroll-mt-4 flex-col gap-1.5">
           <div className="flex items-baseline justify-between px-1 text-sm">
             <span className="font-medium capitalize text-foreground">
               {dayFormatter.format(new Date(`${day.date}T00:00:00Z`))}
