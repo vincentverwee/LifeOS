@@ -1,19 +1,19 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKeyIn } from "@/lib/today";
-import { formatCurrency, formatHours } from "@/lib/format";
-import { addDays } from "@/lib/reminders/schedule";
+import { dayKey, formatCurrency, formatHours } from "@/lib/format";
+import { addDays, daysBetween, weekdayOf } from "@/lib/reminders/schedule";
 import { describeSince, isDue } from "@/lib/reminders/routines";
 import { getReminders } from "@/lib/data/reminders";
 import { getRoutines } from "@/lib/data/routines";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { budgetGlance } from "@/lib/data/budgetGlance";
 import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
-import { computePeriodStats } from "@/lib/lessons/stats";
+import { computePeriodStats, dailyTotals } from "@/lib/lessons/stats";
 import { isPushKind, type PushKind, type PushPayload } from "@/lib/push/kinds";
 import { sendPush } from "@/lib/push/send";
 import { weatherLine } from "@/lib/push/weather";
-import { getSubscriptions } from "@/lib/data/subscriptions";
+import { getDueSubscriptions, getSubscriptions } from "@/lib/data/subscriptions";
 import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
@@ -25,6 +25,7 @@ const WINDOWS: Record<Exclude<PushKind, "timer">, [number, number]> = {
   digest: [8, 11],
   "study-evening": [20, 23],
   "budget-evening": [21, 24],
+  week: [19, 23], // Sundays only
 };
 const TIMER_NUDGE_HOURS = 3;
 const EXAM_HEADS_UP_DAYS = [0, 1, 3, 7];
@@ -32,6 +33,8 @@ const DIGEST_MAX_ITEMS = 4;
 /** The digest's body on a morning with nothing on and no weather. */
 const DIGEST_EMPTY = "Nothing on the list today.";
 const KEEP_SENT_DAYS = 45;
+/** Names listed in the review's Last done line before "+N". */
+const WEEK_MAX_NAMES = 2;
 
 function hourIn(tz: string, now: Date): number {
   return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(now));
@@ -120,6 +123,92 @@ async function budgetEvening(todayKey: string): Promise<PushPayload | null> {
   return null;
 }
 
+/** Up to WEEK_MAX_NAMES names, then "+N". */
+function names(list: string[]): string {
+  const shown = list.slice(0, WEEK_MAX_NAMES).join(", ");
+  return list.length > WEEK_MAX_NAMES ? `${shown} +${list.length - WEEK_MAX_NAMES}` : shown;
+}
+
+/** Sunday evening: Monday–today in one notification, a line per part that has something to say. */
+async function weekReview(todayKey: string): Promise<PushPayload | null> {
+  const monday = addDays(todayKey, -6);
+  const days = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  const from = new Date(`${monday}T00:00:00Z`);
+  const to = new Date(`${todayKey}T00:00:00Z`);
+  const overlaps = { startDate: { lte: to }, endDate: { gte: from } };
+
+  const [spent, cycles, trips, { period }, routines, subscriptionsLogged, dueSubscriptions] = await Promise.all([
+    prisma.expense.aggregate({ where: { date: { gte: from, lte: to } }, _sum: { amount: true } }),
+    prisma.budgetCycle.findMany({ where: overlaps, select: { startingBudget: true, startDate: true, endDate: true } }),
+    prisma.trip.findMany({ where: overlaps, select: { totalBudget: true, startDate: true, endDate: true } }),
+    loadStudyPeriods(undefined, todayKey),
+    getRoutines(todayKey),
+    prisma.expense.aggregate({
+      where: { subscriptionId: { not: null }, date: { gte: from, lte: to } },
+      _count: true,
+      _sum: { amount: true },
+    }),
+    getDueSubscriptions(todayKey),
+  ]);
+  const lines: string[] = [];
+
+  // Money: every expense of the week against each day's share of the budget
+  // running that day (a trip wins over the month, as everywhere else).
+  const ranges = [
+    ...trips.map((t) => ({ budget: t.totalBudget.toNumber(), start: dayKey(t.startDate), end: dayKey(t.endDate) })),
+    ...cycles.map((c) => ({ budget: c.startingBudget.toNumber(), start: dayKey(c.startDate), end: dayKey(c.endDate) })),
+  ];
+  const budget = days.reduce((sum, day) => {
+    const range = ranges.find((r) => r.start <= day && day <= r.end);
+    return range ? sum + range.budget / (daysBetween(range.start, range.end) + 1) : sum;
+  }, 0);
+  const total = spent._sum.amount?.toNumber() ?? 0;
+  if (budget > 0) {
+    lines.push(
+      total > budget
+        ? `Spent ${formatCurrency(total)}, ${formatCurrency(total - budget)} over the week's ${formatCurrency(budget)}`
+        : `Spent ${formatCurrency(total)} of the week's ${formatCurrency(budget)}`
+    );
+  } else if (total > 0) {
+    lines.push(`Spent ${formatCurrency(total)}`);
+  }
+
+  // Study: the daily goal for each day of the week inside the period, days off left out.
+  if (period && period.startDate <= todayKey && monday <= period.endDate) {
+    const totals = dailyTotals(period);
+    const daysOff = new Set(period.entries.filter((e) => e.hours === 0 && e.note).map((e) => e.date));
+    const goalDays = days.filter((d) => d >= period.startDate && d <= period.endDate && !daysOff.has(d));
+    const hours = days.reduce((sum, d) => sum + (totals.get(d) ?? 0), 0);
+    const atGoal = goalDays.filter((d) => (totals.get(d) ?? 0) >= period.goalHours).length;
+    if (goalDays.length > 0) {
+      lines.push(
+        `Studied ${formatHours(Math.round(hours * 100) / 100)} of ${formatHours(goalDays.length * period.goalHours)} · goal met ${atGoal} of ${goalDays.length} days`
+      );
+    }
+  }
+
+  // Last done: what got done this week, and what's waiting.
+  const done = routines.reduce((sum, r) => sum + r.recent.filter((d) => d >= monday).length, 0);
+  const due = routines.filter((r) => isDue(r, todayKey)).map((r) => r.name);
+  const nudged = routines.some((r) => r.everyDays !== null);
+  if (done > 0 || nudged) {
+    const status = due.length ? `${due.length} due (${names(due)})` : nudged ? "nothing due" : "";
+    lines.push(`Last done: ${done} done${status ? ` · ${status}` : ""}`);
+  }
+
+  // Subscriptions: renewals logged this week, and any still waiting.
+  const logged = subscriptionsLogged._count;
+  if (logged > 0 || dueSubscriptions.length > 0) {
+    const parts = [];
+    if (logged > 0) parts.push(`${logged} logged (${formatCurrency(subscriptionsLogged._sum.amount?.toNumber() ?? 0)})`);
+    if (dueSubscriptions.length > 0) parts.push(`${dueSubscriptions.length} to log`);
+    lines.push(`Subscriptions: ${parts.join(" · ")}`);
+  }
+
+  if (lines.length === 0) return null;
+  return { title: "Your week", body: lines.join("\n"), url: "/", tag: "week" };
+}
+
 async function timerNudge(now: Date): Promise<{ key: string; payload: PushPayload } | null> {
   const timer = await getStudyTimer();
   if (!timer) return null;
@@ -183,9 +272,10 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
         } else {
           const [from, to] = WINDOWS[kind];
           if (hour < from || hour >= to) continue;
+          if (kind === "week" && weekdayOf(todayKey) !== 0) continue;
           key = `${kind}:${todayKey}`;
           if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
-          const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening }[kind];
+          const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening, week: weekReview }[kind];
           payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
           // The digest goes out every morning: weather on top, then the day's lines.
           if (kind === "digest" && payload) {

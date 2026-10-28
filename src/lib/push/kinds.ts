@@ -23,6 +23,11 @@ export const PUSH_KINDS = [
     label: "Expenses",
     description: "21:00 · if nothing was logged today, or you're over today's budget.",
   },
+  {
+    key: "week",
+    label: "Sunday review",
+    description: "19:00, Sundays · this week's spending vs its share of the budget, study hours vs goal, Last done items done and due, subscriptions logged.",
+  },
 ] as const;
 
 export type PushKind = (typeof PUSH_KINDS)[number]["key"];
