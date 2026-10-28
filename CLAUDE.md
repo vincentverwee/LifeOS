@@ -37,8 +37,17 @@ Do this before (or right when) pushing the code, or the cat site breaks on the n
 - `DIRECT_URL` — direct (port 5432). Used only by Prisma CLI commands (push/migrate/studio) — DDL isn't reliable through pgbouncer.
 - `SPOONACULAR_API_KEY` — server-only, for the /recipes deck. Free tier ≈150 points/day; one deck batch (10 recipes) costs ~1.6.
 - `APP_PASSWORD` + `AUTH_SECRET` — the single-user passcode gate (`APP_PASSWORD` = 4–8 digits). Without `APP_PASSWORD` the gate is off in development and everything is locked in production.
-- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ optional `VAPID_SUBJECT`) — Web Push keys (`npx web-push generate-vapid-keys`); without them push is off. `CRON_SECRET` — bearer token for `/api/push/cron`. Both deployments need their own values in Vercel, and the GitHub repo needs `LIFEOS_URL`/`LIFEOS_CRON_SECRET` (+ `CAT_URL`/`CAT_CRON_SECRET`) secrets for `.github/workflows/push-cron.yml`.
+- `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (+ optional `VAPID_SUBJECT`) — Web Push keys (`npx web-push generate-vapid-keys`); without them push is off. Both deployments use the same VAPID values (the public key is config, not a secret; `NEXT_PUBLIC_` is inlined at build, so redeploy after changing it). `CRON_SECRET` — bearer token for `/api/push/cron`, different per deployment (the cat one is kept as a comment in `.env`). See "Push scheduler" below.
 - `NEXT_PUBLIC_THEME` — unset = green sheep (Meadow). `cat` = pink with a cat, for a second copy of the app (another Vercel project + Supabase on the same repo). Build-time: `src/lib/theme.ts` sets `data-theme` on `<html>` (pink tokens in `globals.css`), `<Sheep>` renders `<Cat>`, and loading phrases, fun facts and "tap the sheep" copy follow. App icons come from `THEME_ICONS` (all in `public/`: `icon-cat*.png`/`icon-cat.svg`/`apple-icon-cat.png`, made from `Cat.tsx`); `offline.html` and `global-error.tsx` stay sheep/green.
+
+## Push scheduler (GitHub Actions)
+
+Vercel only runs code on a request (and Hobby crons are daily), so `.github/workflows/push-cron.yml` calls `GET <site>/api/push/cron` with `Authorization: Bearer <CRON_SECRET>` every 15 minutes (GitHub may run it a few minutes late), once per deployment. It needs four repository secrets (Settings → Secrets and variables → Actions):
+
+- `LIFEOS_URL` / `LIFEOS_CRON_SECRET` — the user's site (its own `https://<project>.vercel.app`, no path) and that Vercel project's `CRON_SECRET`.
+- `CAT_URL` / `CAT_CRON_SECRET` — the same for the cat deployment. A step whose URL secret is empty is skipped.
+
+Each step prints `HTTP <code>` and the reply and fails on anything but 200: `{"devices":N,"sent":[…]}` is healthy (`devices` = subscribed phones); a 307 to `/login` means the deployed code has no `/api/push/cron` yet (still deploying); another 3xx means a redirecting URL secret; 401 means the secret doesn't match Vercel's. Test by hand with Actions → Push notifications → Run workflow. The repo is public, so Actions minutes are free, but GitHub disables scheduled workflows after 60 days without commits (re-enable on the workflow page). Git on this machine may be logged in as another GitHub account without push rights; the user pushes themselves.
 
 ## Auth
 

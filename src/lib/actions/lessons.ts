@@ -9,6 +9,7 @@ import { dayKeyIn, getTimeZone, getTodayKey } from "@/lib/today";
 import type { Prisma } from "@/generated/prisma/client";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus, type LessonKind } from "@/lib/lessons/marks";
+import { EXAM_KINDS, type ExamKind } from "@/lib/lessons/types";
 
 function revalidateLessonRoutes() {
   revalidatePath("/"); // hub shows today's hours
@@ -434,12 +435,12 @@ export async function deleteStudyCourse(id: string): Promise<LessonsResult> {
 export async function createStudyExam(input: {
   courseId: string;
   date: string;
-  kind: "exam" | "test";
+  kind: ExamKind;
   note: string | null;
 }): Promise<LessonsResult> {
   await requireAuth();
   if (!parseDateKey(input.date)) return { ok: false, error: "Pick a date." };
-  if (input.kind !== "exam" && input.kind !== "test") return { ok: false, error: "Invalid kind." };
+  if (!EXAM_KINDS.includes(input.kind)) return { ok: false, error: "Invalid kind." };
   const course = await prisma.studyCourse.findUnique({ where: { id: input.courseId }, select: { id: true } });
   if (!course) return { ok: false, error: "Pick a course." };
   await prisma.studyExam.create({

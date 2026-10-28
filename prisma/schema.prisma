@@ -317,7 +317,7 @@ model StudyEntry {
   @@index([courseId])
 }
 
-// kind: "exam" | "test"
+// kind: "exam" | "test" | "deadline" (EXAM_KINDS in src/lib/lessons/types.ts)
 model StudyExam {
   id       String      @id @default(cuid())
   courseId String

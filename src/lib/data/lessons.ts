@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus } from "@/lib/lessons/marks";
-import type { StudyPeriod, StudyTimerState } from "@/lib/lessons/types";
+import { EXAM_KINDS, type ExamKind, type StudyPeriod, type StudyTimerState } from "@/lib/lessons/types";
 import { computePeriodStats, phaseLabel, pickCurrentPeriod } from "@/lib/lessons/stats";
 
 const fullInclude = {
@@ -66,7 +66,7 @@ function toStudyPeriod(p: FullRow): StudyPeriod {
           id: x.id,
           courseId: c.id,
           date: dayKey(x.date),
-          kind: x.kind === "test" ? ("test" as const) : ("exam" as const),
+          kind: (EXAM_KINDS as readonly string[]).includes(x.kind) ? (x.kind as ExamKind) : "exam",
           note: x.note,
         }))
       )

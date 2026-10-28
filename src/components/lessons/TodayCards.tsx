@@ -88,6 +88,7 @@ export function UpcomingExams({ exams }: { exams: UpcomingExam[] }) {
               <span className="flex min-w-0 flex-col">
                 <span className="truncate text-sm text-foreground">
                   {course?.code ?? "?"} {exam.kind}
+                  {exam.note && <span className="text-ink-muted"> · {exam.note}</span>}
                 </span>
                 <span className="text-xs text-ink-muted">{formatDate(exam.date)}</span>
               </span>

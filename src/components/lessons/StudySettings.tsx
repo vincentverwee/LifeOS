@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { StudyCourse, StudyExam, StudyPeriod } from "@/lib/lessons/types";
+import { EXAM_KINDS, type ExamKind, type StudyCourse, type StudyPeriod } from "@/lib/lessons/types";
 import {
   createStudyCourse,
   createStudyExam,
@@ -281,26 +281,77 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
   );
 }
 
-// --- Exams ---
+// --- Exams, tests & deadlines ---
 
 export function ExamManager({ period }: { period: StudyPeriod }) {
   const { error, setError, isPending, run } = useAction();
   const [courseId, setCourseId] = useState(period.courses[0]?.id ?? "");
   const [date, setDate] = useState("");
-  const [kind, setKind] = useState<StudyExam["kind"]>("exam");
+  const [kind, setKind] = useState<ExamKind>("exam");
+  const [note, setNote] = useState("");
   const courseById = new Map(period.courses.map((c) => [c.id, c]));
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!courseId) return setError("Pick a course.");
     run(
-      () => createStudyExam({ courseId, date, kind, note: null }),
-      () => setDate("")
+      () => createStudyExam({ courseId, date, kind, note }),
+      () => {
+        setDate("");
+        setNote("");
+      }
     );
   }
 
   return (
     <div className="flex flex-col gap-3">
+      {period.courses.length === 0 && <p className="px-1 text-sm text-ink-muted">Add a course first.</p>}
+      {period.courses.length > 0 && (
+        <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+          <div className="flex gap-1 rounded-full bg-surface-muted p-1">
+            {EXAM_KINDS.map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                aria-pressed={kind === k}
+                className={`btn flex min-h-11 flex-1 px-3 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
+              >
+                {k}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className={label}>Course</span>
+              <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
+                {period.courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className={label}>{kind === "deadline" ? "Due" : "Date"}</span>
+              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+            </label>
+            <label className="col-span-2 flex min-w-0 flex-col gap-1">
+              <span className={label}>Note (optional)</span>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={kind === "deadline" ? "Paper hand-in" : "Chapters 1–4"}
+                className={input}
+              />
+            </label>
+          </div>
+          {error && <p className="text-sm text-critical">{error}</p>}
+          <div className="flex">
+            <SaveButton pending={isPending}>Add {kind}</SaveButton>
+          </div>
+        </form>
+      )}
       {period.exams.length > 0 && (
         <ul className="overflow-hidden rounded-xl border border-border bg-surface">
           {period.exams.map((exam) => {
@@ -311,6 +362,7 @@ export function ExamManager({ period }: { period: StudyPeriod }) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm text-foreground">
                     {course?.code} {exam.kind}
+                    {exam.note && <span className="text-ink-muted"> · {exam.note}</span>}
                   </span>
                   <span className="text-xs text-ink-muted">{formatDate(exam.date)}</span>
                 </span>
@@ -326,44 +378,6 @@ export function ExamManager({ period }: { period: StudyPeriod }) {
             );
           })}
         </ul>
-      )}
-      {period.courses.length > 0 && (
-        <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-          <h3 className="text-sm font-medium text-foreground">New exam or test</h3>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex min-w-0 flex-col gap-1">
-              <span className={label}>Course</span>
-              <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
-                {period.courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex min-w-0 flex-col gap-1">
-              <span className={label}>Date</span>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
-            </label>
-          </div>
-          <div className="flex gap-1 rounded-full bg-surface-muted p-1">
-            {(["exam", "test"] as const).map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                aria-pressed={kind === k}
-                className={`btn flex min-h-11 flex-1 px-3 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
-              >
-                {k}
-              </button>
-            ))}
-          </div>
-          {error && <p className="text-sm text-critical">{error}</p>}
-          <div className="flex">
-            <SaveButton pending={isPending}>Add {kind}</SaveButton>
-          </div>
-        </form>
       )}
     </div>
   );

@@ -21,6 +21,11 @@ export default async function LessonsSettingsPage({ searchParams }: PageProps<"/
       {period && (
         <>
           <section className="flex flex-col gap-2">
+            <h2 className="px-1 font-medium text-foreground">Exams, tests &amp; deadlines</h2>
+            <ExamManager key={period.id} period={period} />
+          </section>
+
+          <section className="flex flex-col gap-2">
             <h2 className="px-1 font-medium text-foreground">{period.name}</h2>
             <div className="rounded-xl border border-border bg-surface p-4">
               <StudyPeriodForm key={period.id} period={period} />
@@ -33,11 +38,6 @@ export default async function LessonsSettingsPage({ searchParams }: PageProps<"/
               <p className="text-sm text-ink-muted">The code is what you tap when logging time.</p>
             </div>
             <CourseManager key={period.id} period={period} />
-          </section>
-
-          <section className="flex flex-col gap-2">
-            <h2 className="px-1 font-medium text-foreground">Exams &amp; tests</h2>
-            <ExamManager key={period.id} period={period} />
           </section>
 
           <DeletePeriodButton period={period} />

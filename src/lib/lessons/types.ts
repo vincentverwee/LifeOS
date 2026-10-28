@@ -20,11 +20,14 @@ export type StudyEntry = {
   note: string | null;
 };
 
+export const EXAM_KINDS = ["exam", "test", "deadline"] as const;
+export type ExamKind = (typeof EXAM_KINDS)[number];
+
 export type StudyExam = {
   id: string;
   courseId: string;
   date: string;
-  kind: "exam" | "test";
+  kind: ExamKind;
   note: string | null;
 };
 
