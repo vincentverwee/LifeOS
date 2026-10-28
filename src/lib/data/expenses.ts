@@ -13,6 +13,8 @@ export type ListExpense = {
   categoryId: string;
   categoryName: string;
   categoryColor: CategoryColorSlot;
+  /** Logged from a subscription's renewal. */
+  fromSubscription: boolean;
 };
 
 /** Newest expenses of a period first; `limit: null` returns all of them. */
@@ -32,5 +34,6 @@ export async function getRecentExpenses(period: Period, limit: number | null = 5
     categoryId: row.categoryId,
     categoryName: row.category.name,
     categoryColor: row.category.color as CategoryColorSlot,
+    fromSubscription: row.subscriptionId !== null,
   }));
 }

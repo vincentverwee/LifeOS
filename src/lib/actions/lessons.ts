@@ -367,9 +367,11 @@ export async function deleteStudyPeriod(id: string): Promise<LessonsResult> {
 
 export type StudyCourseInput = { name: string; color: string; hasWc: boolean };
 
-function validateCourse(input: StudyCourseInput): string | null {
-  if (!input.name.trim()) return "Give the course a name.";
-  if (input.name.trim().length > 40) return "Keep the name short (40 characters at most).";
+/** `currentName`: a course's existing name may stay longer than the limit (from before it). */
+function validateCourse(input: StudyCourseInput, currentName?: string): string | null {
+  const name = input.name.trim();
+  if (!name) return "Give the course a name.";
+  if (name.length > 40 && name !== currentName) return "Keep the name short (40 characters at most).";
   if (!isCategoryColorSlot(input.color)) return "Pick a colour.";
   return null;
 }
@@ -402,7 +404,9 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
 
 export async function updateStudyCourse(id: string, input: StudyCourseInput): Promise<LessonsResult> {
   await requireAuth();
-  const error = validateCourse(input);
+  const current = await prisma.studyCourse.findUnique({ where: { id }, select: { name: true } });
+  if (!current) return { ok: false, error: "That course no longer exists." };
+  const error = validateCourse(input, current.name);
   if (error) return { ok: false, error };
   const name = input.name.trim();
   try {

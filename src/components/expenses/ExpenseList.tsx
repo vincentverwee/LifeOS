@@ -131,6 +131,11 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                         <span className="flex min-w-0 flex-col">
                           <span className="truncate text-sm font-medium text-foreground">
                             {expense.categoryName}
+                            {expense.fromSubscription && (
+                              <span className="ml-1 text-ink-muted" title="Subscription" aria-label="(subscription)">
+                                ↻
+                              </span>
+                            )}
                           </span>
                           {expense.note && (
                             <span className="truncate text-xs text-ink-muted">{expense.note}</span>
