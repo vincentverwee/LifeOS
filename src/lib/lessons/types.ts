@@ -52,3 +52,10 @@ export type StudyPeriod = {
   exams: StudyExam[];
   marks: LessonMark[];
 };
+
+/** The running study timer. `startedAt` is an ISO instant. */
+export type StudyTimerState = {
+  periodId: string;
+  startedAt: string;
+  courses: Pick<StudyCourse, "id" | "code" | "color">[];
+};

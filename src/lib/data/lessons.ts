@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus } from "@/lib/lessons/marks";
-import type { StudyPeriod } from "@/lib/lessons/types";
+import type { StudyPeriod, StudyTimerState } from "@/lib/lessons/types";
 import { computePeriodStats, phaseLabel, pickCurrentPeriod } from "@/lib/lessons/stats";
 
 const fullInclude = {
@@ -143,11 +143,12 @@ export type LessonsGlance = {
   goalHours: number;
   status: string;
   nextExam: { label: string; daysUntil: number } | null;
+  timer: StudyTimerState | null;
 };
 
 /** For the home tile. */
 export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance | null> {
-  const { period } = await loadStudyPeriods(undefined, todayKey);
+  const [{ period }, timer] = await Promise.all([loadStudyPeriods(undefined, todayKey), getStudyTimer()]);
   if (!period) return null;
   const stats = computePeriodStats(period, todayKey);
   const next = stats.upcomingExams[0];
@@ -160,5 +161,24 @@ export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance 
     nextExam: next
       ? { label: `${next.course?.code ?? "?"} ${next.exam.kind}`, daysUntil: next.daysUntil }
       : null,
+    timer,
+  };
+}
+
+/** The running study timer with its courses (in course order), or null. */
+export async function getStudyTimer(): Promise<StudyTimerState | null> {
+  const timer = await prisma.studyTimer.findUnique({ where: { id: "current" } });
+  if (!timer) return null;
+  const courses = timer.courseIds.length
+    ? await prisma.studyCourse.findMany({
+        where: { id: { in: timer.courseIds } },
+        select: { id: true, code: true, color: true },
+        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+      })
+    : [];
+  return {
+    periodId: timer.periodId,
+    startedAt: timer.startedAt.toISOString(),
+    courses: courses.map((c) => ({ ...c, color: isCategoryColorSlot(c.color) ? c.color : "blue" })),
   };
 }

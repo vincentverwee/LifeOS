@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { loadStudyPeriods } from "@/lib/data/lessons";
+import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
-import { StudyEntryForm } from "@/components/lessons/StudyEntryForm";
+import { LogTimePanel } from "@/components/lessons/LogTimePanel";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 export default async function AddStudyTimePage({ searchParams }: PageProps<"/lessons/add">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey);
+  const [{ periods, period }, timer] = await Promise.all([
+    loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey),
+    getStudyTimer(),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -16,12 +19,13 @@ export default async function AddStudyTimePage({ searchParams }: PageProps<"/les
         {period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
       </div>
       {period ? (
-        <StudyEntryForm
+        <LogTimePanel
           key={period.id}
           periodId={period.id}
           startDate={period.startDate}
           endDate={period.endDate}
           courses={period.courses}
+          timer={timer}
         />
       ) : (
         <p className="text-sm text-ink-muted">

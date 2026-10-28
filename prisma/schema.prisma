@@ -268,8 +268,19 @@ model StudyPeriod {
   updatedAt   DateTime      @updatedAt
   courses     StudyCourse[]
   entries     StudyEntry[]
+  timers      StudyTimer[]
 
   @@index([startDate])
+}
+
+// The running study timer, if any: one row, id "current". Stopping it saves
+// StudyEntry rows like the Log time form (split over the courses).
+model StudyTimer {
+  id        String      @id @default("current")
+  periodId  String
+  period    StudyPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  courseIds String[]
+  startedAt DateTime    @default(now())
 }
 
 // "color" is a palette slot key, like Category.color.

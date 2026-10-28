@@ -13,6 +13,7 @@ import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
 import { BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
+import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { logout } from "@/lib/actions/auth";
 import { authDisabled } from "@/lib/authToken";
 
@@ -287,6 +288,7 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
         {lessons.nextExam &&
           ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
       </p>
+      {lessons.timer && <RunningTimerBadge timer={lessons.timer} />}
       <LessonsWeek glance={lessons} />
     </>
   );

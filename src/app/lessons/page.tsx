@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { loadStudyPeriods } from "@/lib/data/lessons";
+import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
+import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, lessonWeekCount, lessonWeekOf, phaseLabel } from "@/lib/lessons/stats";
 import { StudyHero, StudyPace, UpcomingExams } from "@/components/lessons/TodayCards";
@@ -11,7 +12,10 @@ import { formatHours } from "@/lib/format";
 export default async function LessonsTodayPage({ searchParams }: PageProps<"/lessons">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true });
+  const [{ periods, period }, timer] = await Promise.all([
+    loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true }),
+    getStudyTimer(),
+  ]);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -55,6 +59,8 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
           </Link>
         </div>
       </div>
+
+      {timer && <RunningTimerBadge timer={timer} card />}
 
       <StudyHero stats={stats} goal={period.goalHours} status={phaseLabel(stats.phase)} todayKey={todayKey} />
 

@@ -2,9 +2,10 @@
 // Only /budget/add is kept (network-first, so it's as fresh as the last online visit);
 // every other page shows offline.html when there's no connection, never stale numbers.
 // Expenses saved offline are queued by the page itself (src/lib/offline/outbox.ts).
+// Tapping the study timer notification opens Log time (src/lib/lessons/timerNotification.ts).
 // Bump VERSION when changing what gets cached here.
 
-const VERSION = "v3";
+const VERSION = "v4";
 const SHELL_CACHE = `lifeos-shell-${VERSION}`; // offline.html + icons
 const PAGES_CACHE = `lifeos-pages-${VERSION}`; // the last /budget/add
 // Hashed build files. Not versioned: a cached page needs its own build's chunks,
@@ -50,6 +51,18 @@ self.addEventListener("fetch", (event) => {
   } else if (SHELL.includes(url.pathname) || /^\/(icon|apple-icon)/.test(url.pathname)) {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
   }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+      const open = windows[0];
+      if (open) return open.navigate(target).then((client) => (client || open).focus());
+      return self.clients.openWindow(target);
+    })
+  );
 });
 
 // In-app taps are client-side navigations (RSC fetches, not page loads), so the

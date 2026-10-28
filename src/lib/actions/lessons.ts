@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { formatDate, parseDateKey, parseHours } from "@/lib/format";
 import { knownError } from "@/lib/prismaErrors";
-import { getTodayKey } from "@/lib/today";
+import { dayKeyIn, getTimeZone, getTodayKey } from "@/lib/today";
+import type { Prisma } from "@/generated/prisma/client";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus, type LessonKind } from "@/lib/lessons/marks";
 
@@ -52,6 +53,46 @@ function splitHours(hours: number, parts: number): number[] {
   return Array.from({ length: parts }, (_, i) => (base + (i < cents % parts ? 1 : 0)) / 100);
 }
 
+/**
+ * Saves `hours` on `dateKey` as StudyEntry rows, split over the courses. The
+ * entry goes to whichever period covers the date. Shared by the form and the timer.
+ */
+async function saveStudyEntries(
+  input: { periodId: string; dateKey: string; hours: number; courseIds: string[]; note: string | null },
+  db: Prisma.TransactionClient = prisma
+): Promise<{ ok: true; movedTo: string | null } | { ok: false; error: string }> {
+  const { periodId, hours, courseIds, note } = input;
+  const date = utc(input.dateKey);
+  const target = await resolvePeriod(periodId, date);
+  if (!target.ok) return target;
+
+  const courses = courseIds.length
+    ? await db.studyCourse.findMany({ where: { id: { in: courseIds }, periodId: target.period.id }, select: { id: true } })
+    : [];
+  if (courses.length !== courseIds.length) {
+    return { ok: false, error: "Those courses belong to another period; pick them again." };
+  }
+
+  if (hours > 0 && Math.round(hours * 100) < courses.length) {
+    return { ok: false, error: "Too little time to split over that many courses." };
+  }
+
+  // Studied time is split over the courses. A 0 h day off is one row: it keeps
+  // its course only when exactly one was picked.
+  const split = courses.length > 0 && hours > 0;
+  const shares = split ? splitHours(hours, courses.length) : [hours];
+  await db.studyEntry.createMany({
+    data: shares.map((share, i) => ({
+      periodId: target.period.id,
+      courseId: split ? courses[i].id : courses.length === 1 ? courses[0].id : null,
+      date,
+      hours: share,
+      note: i === 0 ? (note?.slice(0, 500) ?? null) : null,
+    })),
+  });
+  return { ok: true, movedTo: target.period.id !== periodId ? target.period.name : null };
+}
+
 export type StudyEntryFormState = ({ ok: true; hours: number; movedTo: string | null } | { ok: false; error: string }) | null;
 
 export async function createStudyEntriesFromForm(
@@ -73,37 +114,82 @@ export async function createStudyEntriesFromForm(
   const rawDate = formData.get("date");
   const dateKey = rawDate ? parseDateKey(rawDate) : await getTodayKey();
   if (!dateKey) return { ok: false, error: "Pick a valid date." };
-  const date = utc(dateKey);
-  const target = await resolvePeriod(periodId, date);
-  if (!target.ok) return target;
-
-  const courses = courseIds.length
-    ? await prisma.studyCourse.findMany({ where: { id: { in: courseIds }, periodId: target.period.id }, select: { id: true } })
-    : [];
-  if (courses.length !== courseIds.length) {
-    return { ok: false, error: "Those courses belong to another period; pick them again." };
-  }
-
-  if (hours > 0 && Math.round(hours * 100) < courses.length) {
-    return { ok: false, error: "Too little time to split over that many courses." };
-  }
-
-  // Studied time is split over the courses. A 0 h day off is one row: it keeps
-  // its course only when exactly one was picked.
-  const split = courses.length > 0 && hours > 0;
-  const shares = split ? splitHours(hours, courses.length) : [hours];
-  await prisma.studyEntry.createMany({
-    data: shares.map((share, i) => ({
-      periodId: target.period.id,
-      courseId: split ? courses[i].id : courses.length === 1 ? courses[0].id : null,
-      date,
-      hours: share,
-      note: i === 0 ? (note?.slice(0, 500) ?? null) : null,
-    })),
-  });
+  const saved = await saveStudyEntries({ periodId, dateKey, hours, courseIds, note });
+  if (!saved.ok) return saved;
 
   revalidateLessonRoutes();
-  return { ok: true, hours, movedTo: target.period.id !== periodId ? target.period.name : null };
+  return { ok: true, hours, movedTo: saved.movedTo };
+}
+
+// --- Study timer ---
+
+const TIMER_ID = "current";
+/** Longer than this is a forgotten timer, not a study session. */
+const TIMER_MAX_HOURS = 12;
+
+export async function startStudyTimer(input: { periodId: string; courseIds: string[] }): Promise<LessonsResult> {
+  await requireAuth();
+  const courseIds = [...new Set(input.courseIds.map(String).filter(Boolean))];
+  const period = await prisma.studyPeriod.findUnique({ where: { id: input.periodId }, select: { id: true } });
+  if (!period) return { ok: false, error: "That study period no longer exists." };
+  if (courseIds.length) {
+    const count = await prisma.studyCourse.count({ where: { id: { in: courseIds }, periodId: period.id } });
+    if (count !== courseIds.length) return { ok: false, error: "Those courses belong to another period; pick them again." };
+  }
+  try {
+    await prisma.studyTimer.create({ data: { id: TIMER_ID, periodId: period.id, courseIds } });
+  } catch (error) {
+    return knownError(error, { P2002: "A timer is already running." });
+  }
+  revalidateLessonRoutes();
+  return { ok: true };
+}
+
+export type StopStudyTimerResult = { ok: true; hours: number; movedTo: string | null } | { ok: false; error: string };
+
+/** Saves the running timer as study time on the day it started, then removes it. */
+export async function stopStudyTimer(): Promise<StopStudyTimerResult> {
+  await requireAuth();
+  const timer = await prisma.studyTimer.findUnique({ where: { id: TIMER_ID } });
+  if (!timer) return { ok: false, error: "No timer is running." };
+
+  const minutes = Math.floor((Date.now() - timer.startedAt.getTime()) / 60_000);
+  if (minutes < 1) return { ok: false, error: "Less than a minute so far; discard it instead." };
+  const hours = Math.round((minutes / 60) * 100) / 100;
+  if (hours > TIMER_MAX_HOURS) {
+    return { ok: false, error: `The timer ran over ${TIMER_MAX_HOURS} h; discard it and log the time by hand.` };
+  }
+
+  // A session past midnight counts on the day it began.
+  const dateKey = dayKeyIn(await getTimeZone(), timer.startedAt);
+  // Courses deleted while the timer ran are dropped rather than failing the save.
+  const existing = await prisma.studyCourse.findMany({ where: { id: { in: timer.courseIds } }, select: { id: true } });
+  const courseIds = timer.courseIds.filter((id) => existing.some((c) => c.id === id));
+
+  const saved = await prisma.$transaction(async (tx) => {
+    const result = await saveStudyEntries({ periodId: timer.periodId, dateKey, hours, courseIds, note: null }, tx);
+    // deleteMany: a second tap that raced this one finds nothing and rolls back.
+    if (result.ok && (await tx.studyTimer.deleteMany({ where: { id: TIMER_ID } })).count === 0) {
+      throw new Error("Timer already stopped");
+    }
+    return result;
+  }).catch((error: unknown) => {
+    if (error instanceof Error && error.message === "Timer already stopped") {
+      return { ok: false as const, error: "That timer was already stopped." };
+    }
+    throw error;
+  });
+  if (!saved.ok) return saved;
+
+  revalidateLessonRoutes();
+  return { ok: true, hours, movedTo: saved.movedTo };
+}
+
+export async function discardStudyTimer(): Promise<LessonsResult> {
+  await requireAuth();
+  await prisma.studyTimer.deleteMany({ where: { id: TIMER_ID } });
+  revalidateLessonRoutes();
+  return { ok: true };
 }
 
 export async function updateStudyEntry(input: {
