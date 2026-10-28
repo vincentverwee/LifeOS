@@ -450,6 +450,27 @@ export async function createStudyExam(input: {
   return { ok: true };
 }
 
+export async function updateStudyExam(input: {
+  id: string;
+  courseId: string;
+  date: string;
+  kind: ExamKind;
+  note: string | null;
+}): Promise<LessonsResult> {
+  await requireAuth();
+  if (!parseDateKey(input.date)) return { ok: false, error: "Pick a date." };
+  if (!EXAM_KINDS.includes(input.kind)) return { ok: false, error: "Invalid kind." };
+  const course = await prisma.studyCourse.findUnique({ where: { id: input.courseId }, select: { id: true } });
+  if (!course) return { ok: false, error: "Pick a course." };
+  const { count } = await prisma.studyExam.updateMany({
+    where: { id: input.id },
+    data: { courseId: course.id, date: utc(input.date), kind: input.kind, note: input.note?.trim().slice(0, 200) || null },
+  });
+  if (count === 0) return { ok: false, error: "This one was already deleted." };
+  revalidateLessonRoutes();
+  return { ok: true };
+}
+
 export async function deleteStudyExam(id: string): Promise<LessonsResult> {
   await requireAuth();
   await prisma.studyExam.deleteMany({ where: { id } });

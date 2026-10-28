@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { EXAM_KINDS, type ExamKind, type StudyCourse, type StudyPeriod } from "@/lib/lessons/types";
+import { EXAM_KINDS, type ExamKind, type StudyCourse, type StudyExam, type StudyPeriod } from "@/lib/lessons/types";
 import {
   createStudyCourse,
   createStudyExam,
@@ -11,12 +11,14 @@ import {
   deleteStudyExam,
   deleteStudyPeriod,
   updateStudyCourse,
+  updateStudyExam,
   updateStudyPeriod,
   type LessonsResult,
 } from "@/lib/actions/lessons";
 import { CATEGORY_COLOR_SLOTS, type CategoryColorSlot } from "@/lib/categoryPalette";
 import { formatDate, parseHours } from "@/lib/format";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
+import { Sheet } from "@/components/recipes/Sheet";
 
 const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
 const label = "text-xs text-ink-muted";
@@ -283,102 +285,129 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
 
 // --- Exams, tests & deadlines ---
 
-export function ExamManager({ period }: { period: StudyPeriod }) {
+/** Adds a new one, or edits `exam` (then with a Delete button). */
+function ExamForm({ courses, exam, onDone }: { courses: StudyCourse[]; exam?: StudyExam; onDone?: () => void }) {
   const { error, setError, isPending, run } = useAction();
-  const [courseId, setCourseId] = useState(period.courses[0]?.id ?? "");
-  const [date, setDate] = useState("");
-  const [kind, setKind] = useState<ExamKind>("exam");
-  const [note, setNote] = useState("");
-  const courseById = new Map(period.courses.map((c) => [c.id, c]));
+  const [courseId, setCourseId] = useState(exam?.courseId ?? courses[0]?.id ?? "");
+  const [date, setDate] = useState(exam?.date ?? "");
+  const [kind, setKind] = useState<ExamKind>(exam?.kind ?? "exam");
+  const [note, setNote] = useState(exam?.note ?? "");
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!courseId) return setError("Pick a course.");
+    const fields = { courseId, date, kind, note };
     run(
-      () => createStudyExam({ courseId, date, kind, note }),
+      () => (exam ? updateStudyExam({ id: exam.id, ...fields }) : createStudyExam(fields)),
       () => {
-        setDate("");
-        setNote("");
+        if (!exam) {
+          setDate("");
+          setNote("");
+        }
+        onDone?.();
       }
     );
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {period.courses.length === 0 && <p className="px-1 text-sm text-ink-muted">Add a course first.</p>}
-      {period.courses.length > 0 && (
-        <form onSubmit={submit} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-          <div className="flex gap-1 rounded-full bg-surface-muted p-1">
-            {EXAM_KINDS.map((k) => (
-              <button
-                key={k}
-                type="button"
-                onClick={() => setKind(k)}
-                aria-pressed={kind === k}
-                className={`btn flex min-h-11 flex-1 px-3 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
-              >
-                {k}
-              </button>
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      <div className="flex gap-1 rounded-full bg-surface-muted p-1">
+        {EXAM_KINDS.map((k) => (
+          <button
+            key={k}
+            type="button"
+            onClick={() => setKind(k)}
+            aria-pressed={kind === k}
+            className={`btn flex min-h-11 flex-1 px-3 text-sm capitalize ${kind === k ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"}`}
+          >
+            {k}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className={label}>Course</span>
+          <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
+            {courses.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code}
+              </option>
             ))}
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex min-w-0 flex-col gap-1">
-              <span className={label}>Course</span>
-              <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
-                {period.courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex min-w-0 flex-col gap-1">
-              <span className={label}>{kind === "deadline" ? "Due" : "Date"}</span>
-              <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
-            </label>
-            <label className="col-span-2 flex min-w-0 flex-col gap-1">
-              <span className={label}>Note (optional)</span>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={kind === "deadline" ? "Paper hand-in" : "Chapters 1–4"}
-                className={input}
-              />
-            </label>
-          </div>
-          {error && <p className="text-sm text-critical">{error}</p>}
-          <div className="flex">
-            <SaveButton pending={isPending}>Add {kind}</SaveButton>
-          </div>
-        </form>
+          </select>
+        </label>
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className={label}>{kind === "deadline" ? "Due" : "Date"}</span>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+        </label>
+        <label className="col-span-2 flex min-w-0 flex-col gap-1">
+          <span className={label}>Note (optional)</span>
+          <input
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder={kind === "deadline" ? "Paper hand-in" : "Chapters 1–4"}
+            className={input}
+          />
+        </label>
+      </div>
+      {error && <p className="text-sm text-critical">{error}</p>}
+      <div className="flex gap-2">
+        <SaveButton pending={isPending}>{exam ? "Save" : `Add ${kind}`}</SaveButton>
+        {exam && (
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={() => run(() => deleteStudyExam(exam.id), () => onDone?.())}
+            className="btn btn-destructive px-5 py-3 text-sm"
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+export function ExamManager({ period }: { period: StudyPeriod }) {
+  const [editing, setEditing] = useState<StudyExam | null>(null);
+  const courseById = new Map(period.courses.map((c) => [c.id, c]));
+
+  return (
+    <div className="flex flex-col gap-3">
+      {period.courses.length === 0 ? (
+        <p className="px-1 text-sm text-ink-muted">Add a course first.</p>
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <ExamForm courses={period.courses} />
+        </div>
       )}
       {period.exams.length > 0 && (
         <ul className="overflow-hidden rounded-xl border border-border bg-surface">
           {period.exams.map((exam) => {
             const course = courseById.get(exam.courseId);
             return (
-              <li key={exam.id} className="flex items-center gap-2 border-b border-border p-3 last:border-b-0">
-                <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course?.color ?? "blue"})` }} aria-hidden="true" />
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-sm text-foreground">
-                    {course?.code} {exam.kind}
-                    {exam.note && <span className="text-ink-muted"> · {exam.note}</span>}
-                  </span>
-                  <span className="text-xs text-ink-muted">{formatDate(exam.date)}</span>
-                </span>
+              <li key={exam.id} className="border-b border-border last:border-b-0">
                 <button
                   type="button"
-                  disabled={isPending}
-                  onClick={() => run(() => deleteStudyExam(exam.id))}
-                  className="btn min-h-11 px-4 text-sm text-critical hover:bg-critical/10 active:bg-critical/15"
+                  onClick={() => setEditing(exam)}
+                  className="tap flex min-h-12 w-full items-center gap-2.5 px-4 py-2 text-left"
                 >
-                  Delete
+                  <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course?.color ?? "blue"})` }} aria-hidden="true" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm text-foreground">
+                      {course?.code} {exam.kind}
+                      {exam.note && <span className="text-ink-muted"> · {exam.note}</span>}
+                    </span>
+                    <span className="text-xs text-ink-muted">{formatDate(exam.date)}</span>
+                  </span>
                 </button>
               </li>
             );
           })}
         </ul>
       )}
+      <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title={`Edit ${editing?.kind ?? ""}`}>
+        {editing && <ExamForm key={editing.id} courses={period.courses} exam={editing} onDone={() => setEditing(null)} />}
+      </Sheet>
     </div>
   );
 }
