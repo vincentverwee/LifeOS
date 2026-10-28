@@ -15,7 +15,17 @@ export default async function AddStudyTimePage({ searchParams }: PageProps<"/les
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Log study time</h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Log study time</h1>
+          {period && (
+            <Link
+              href={typeof requested === "string" ? `/lessons/log?period=${encodeURIComponent(requested)}` : "/lessons/log"}
+              className="btn btn-ghost -ml-3 inline-flex min-h-11 px-3 text-sm"
+            >
+              Full log ›
+            </Link>
+          )}
+        </div>
         {period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
       </div>
       {period ? (
