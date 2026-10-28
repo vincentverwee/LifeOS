@@ -399,15 +399,22 @@ model RoutineLog {
 // A phone/browser that gets push notifications (Web Push). `kinds` are the
 // notifications it wants (src/lib/push/kinds.ts); `timeZone` decides when
 // "morning" and "evening" are. Removed when the push service says it's gone.
+// The optional location puts a weather line in its morning digest (set on
+// /settings; "gps" is refreshed quietly when the app opens, "city" stays put).
 model PushSubscription {
-  id        String   @id @default(cuid())
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  timeZone  String
-  kinds     String[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String    @id @default(cuid())
+  endpoint       String    @unique
+  p256dh         String
+  auth           String
+  timeZone       String
+  kinds          String[]
+  latitude       Float?
+  longitude      Float?
+  placeLabel     String?
+  locationSource String? // "gps" | "city"
+  locationAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 // What the scheduler already sent ("<subscription>:<kind>:<day or item>"), so

@@ -7,6 +7,12 @@ import { Pool } from "pg";
 const dry = process.argv.includes("--dry");
 const pool = new Pool({ connectionString: process.env.DIRECT_URL });
 
+const PUSH_LOCATION_CHECK = `(
+  ("latitude" IS NULL AND "longitude" IS NULL AND "placeLabel" IS NULL AND "locationSource" IS NULL)
+  OR ("latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180
+      AND "placeLabel" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
+)`;
+
 // Supabase exposes the public schema through its REST/GraphQL API as `anon`/`authenticated`.
 // The app only talks to Postgres as `postgres` (owner, bypasses RLS), so those roles need
 // nothing: take their grants away (also for tables created later) and turn on RLS with no
@@ -50,8 +56,19 @@ async function main() {
   );
   console.log(`Expenses without exactly one month or trip: ${badTargets.rowCount}`, badTargets.rows);
 
+  const badLocations = await pool.query(
+    `SELECT id FROM "PushSubscription" WHERE NOT (${PUSH_LOCATION_CHECK})`
+  );
+  console.log(`Push devices with a half-set location: ${badLocations.rowCount}`, badLocations.rows);
+
   if (dry) return;
   if (badTargets.rowCount) throw new Error("Fix those expenses first.");
+  if (badLocations.rowCount) throw new Error("Fix those push devices first.");
+
+  // A device's weather location is all set or all empty, with a known source.
+  await pool.query(`ALTER TABLE "PushSubscription" DROP CONSTRAINT IF EXISTS push_location`);
+  await pool.query(`ALTER TABLE "PushSubscription" ADD CONSTRAINT push_location CHECK (${PUSH_LOCATION_CHECK})`);
+  console.log("Constraint push_location in place.");
 
   // Every expense belongs to exactly one month or one trip.
   await pool.query(`ALTER TABLE "Expense" DROP CONSTRAINT IF EXISTS expense_one_target`);

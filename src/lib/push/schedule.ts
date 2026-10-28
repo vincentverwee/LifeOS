@@ -12,6 +12,7 @@ import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { computePeriodStats } from "@/lib/lessons/stats";
 import { isPushKind, type PushKind, type PushPayload } from "@/lib/push/kinds";
 import { sendPush } from "@/lib/push/send";
+import { weatherLine } from "@/lib/push/weather";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
 // a window in the device's local time and a key in PushSent, so it goes out once,
@@ -170,6 +171,11 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
         if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
         const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening }[kind];
         payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
+        // Weather heads a digest that has something to say; it never sends one alone.
+        if (kind === "digest" && payload) {
+          const weather = await weatherLine(sub, todayKey);
+          if (weather) payload = { ...payload, body: `${weather}\n${payload.body}` };
+        }
       }
       if (!payload) continue;
 

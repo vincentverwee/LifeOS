@@ -118,8 +118,8 @@ export default async function HomePage() {
       </ul>
 
       <div className="flex justify-center gap-2">
-        <Link href="/notifications" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
-          Notifications
+        <Link href="/settings" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
+          Settings
         </Link>
         {!authDisabled() && (
           <form action={logout}>

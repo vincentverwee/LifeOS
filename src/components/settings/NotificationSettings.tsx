@@ -9,15 +9,9 @@ import {
 } from "@/lib/actions/push";
 import { PUSH_KINDS, type PushKind } from "@/lib/push/kinds";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
+import { writeLocationMarker, type DeviceStatus } from "@/lib/push/device";
 
-type Device = { endpoint: string; kinds: PushKind[] };
-
-type Status =
-  | { kind: "checking" }
-  | { kind: "unsupported" } // not the Home Screen app, or an old iOS
-  | { kind: "no-worker" } // development: the service worker is production-only
-  | { kind: "blocked" }
-  | { kind: "ready"; endpoint: string | null }; // null = not subscribed here
+export type Device = { endpoint: string; kinds: PushKind[] };
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   const base64 = (base64url + "=".repeat((4 - (base64url.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
@@ -29,28 +23,20 @@ function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
 
 const timeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-async function detect(): Promise<Status> {
-  if (!("serviceWorker" in navigator) || !("PushManager" in window) || typeof Notification === "undefined") {
-    return { kind: "unsupported" };
-  }
-  if (Notification.permission === "denied") return { kind: "blocked" };
-  const registration = await navigator.serviceWorker.getRegistration();
-  if (!registration) return { kind: "no-worker" };
-  const subscription = await registration.pushManager.getSubscription();
-  return { kind: "ready", endpoint: subscription?.endpoint ?? null };
-}
-
-export function NotificationSettings({ devices, publicKey }: { devices: Device[]; publicKey: string | null }) {
-  const [status, setStatus] = useState<Status>({ kind: "checking" });
+export function NotificationSettings({
+  devices,
+  publicKey,
+  status,
+  setStatus,
+}: {
+  devices: Device[];
+  publicKey: string | null;
+  status: DeviceStatus;
+  setStatus: (status: DeviceStatus) => void;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  useEffect(() => {
-    detect()
-      .then(setStatus)
-      .catch(() => setStatus({ kind: "unsupported" }));
-  }, []);
 
   const endpoint = status.kind === "ready" ? status.endpoint : null;
   const device = endpoint ? devices.find((d) => d.endpoint === endpoint) : undefined;
@@ -104,6 +90,7 @@ export function NotificationSettings({ devices, publicKey }: { devices: Device[]
         // the server side is removed either way
       }
       await removePushSubscription(endpoint);
+      writeLocationMarker(null); // the device's weather location went with it
       setStatus({ kind: "ready", endpoint: null });
     });
   }

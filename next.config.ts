@@ -10,6 +10,10 @@ const nextConfig: NextConfig = {
     // Recipe photos from the Spoonacular API.
     remotePatterns: [{ protocol: "https", hostname: "img.spoonacular.com" }],
   },
+  async redirects() {
+    // Was the Notifications page; old links and notification taps still land.
+    return [{ source: "/notifications", destination: "/settings", permanent: true }];
+  },
   async headers() {
     return [
       {
