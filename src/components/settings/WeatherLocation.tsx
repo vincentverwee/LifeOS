@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { clearWeatherLocation, setWeatherLocation, type LocationInput } from "@/lib/actions/push";
-import { writeLocationMarker, type DeviceStatus } from "@/lib/push/device";
+import { readLocationMarker, writeLocationMarker, type DeviceStatus } from "@/lib/push/device";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 export type DeviceLocation = { endpoint: string; placeLabel: string | null; locationSource: string | null };
@@ -27,9 +27,12 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Keep LocationSync's marker in line with the server (e.g. after a reinstall).
+  // Keep LocationSync's marker in line with the server (e.g. after a reinstall). Only
+  // rewritten when the source differs, so visiting this page doesn't reset its refresh clock.
   useEffect(() => {
-    if (device) writeLocationMarker(device.locationSource === "gps" || device.locationSource === "city" ? device.locationSource : null);
+    if (!device) return;
+    const source = device.locationSource === "gps" || device.locationSource === "city" ? device.locationSource : null;
+    if ((readLocationMarker()?.source ?? null) !== source) writeLocationMarker(source);
   }, [device]);
 
   // Searches as you type (debounced); results remember which query they are for.

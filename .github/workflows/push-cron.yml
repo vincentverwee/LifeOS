@@ -28,6 +28,8 @@ jobs:
           echo "HTTP $code"; cat body.txt; echo
           case "$code" in 200*) ;; 3*) echo "::error::Redirected. Use the site's own https address as the URL secret, without a path."; exit 1 ;; *) exit 1 ;; esac
       - name: Cat deployment
+        # Runs even when the step above failed, so one site being down doesn't silence the other.
+        if: ${{ !cancelled() }}
         env:
           URL: ${{ secrets.CAT_URL }}
           SECRET: ${{ secrets.CAT_CRON_SECRET }}

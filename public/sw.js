@@ -75,9 +75,17 @@ self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const target = new URL(event.notification.data?.url || "/", self.location.origin).href;
   event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
+    // Only windows this worker controls can be navigated; anything else opens a new one.
+    self.clients.matchAll({ type: "window" }).then(async (windows) => {
       const open = windows[0];
-      if (open) return open.navigate(target).then((client) => (client || open).focus());
+      if (open) {
+        try {
+          const client = await open.navigate(target);
+          return (client || open).focus();
+        } catch {
+          // fall through to a new window
+        }
+      }
       return self.clients.openWindow(target);
     })
   );

@@ -137,57 +137,66 @@ async function claim(key: string): Promise<boolean> {
   }
 }
 
-export type PushRunResult = { devices: number; sent: string[] };
+export type PushRunResult = { devices: number; sent: string[]; failed: string[] };
 
 export async function runPushSchedule(now = new Date()): Promise<PushRunResult> {
   await prisma.pushSent.deleteMany({ where: { sentAt: { lt: new Date(now.getTime() - KEEP_SENT_DAYS * 86_400_000) } } });
   const subscriptions = await prisma.pushSubscription.findMany();
   const sent: string[] = [];
+  const failed: string[] = [];
 
-  // Loaded once per run, whatever the number of devices.
+  // Loaded once per run, whatever the number of devices. A load that throws is
+  // forgotten, so the next device tries again.
   const cache = new Map<string, Promise<PushPayload | null>>();
   const once = (name: string, load: () => Promise<PushPayload | null>) => {
-    if (!cache.has(name)) cache.set(name, load());
+    if (!cache.has(name)) cache.set(name, load().catch((error) => (cache.delete(name), Promise.reject(error))));
     return cache.get(name)!;
   };
-  const timer = timerNudge(now);
+  let timer: ReturnType<typeof timerNudge> | null = null;
 
   for (const sub of subscriptions) {
     const todayKey = dayKeyIn(sub.timeZone, now);
     const hour = hourIn(sub.timeZone, now);
 
     for (const kind of sub.kinds.filter(isPushKind)) {
-      let key: string;
-      let payload: PushPayload | null;
-      if (kind === "timer") {
-        const nudge = await timer;
-        if (!nudge) continue;
-        key = nudge.key;
-        payload = nudge.payload;
-      } else {
-        const [from, to] = WINDOWS[kind];
-        if (hour < from || hour >= to) continue;
-        key = `${kind}:${todayKey}`;
-        if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
-        const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening }[kind];
-        payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
-        // Weather heads a digest that has something to say; it never sends one alone.
-        if (kind === "digest" && payload) {
-          const weather = await weatherLine(sub, todayKey);
-          if (weather) payload = { ...payload, body: `${weather}\n${payload.body}` };
+      // One failing query or send must not hold up the other devices and kinds.
+      try {
+        let key: string;
+        let payload: PushPayload | null;
+        if (kind === "timer") {
+          timer ??= timerNudge(now).catch((error) => ((timer = null), Promise.reject(error)));
+          const nudge = await timer;
+          if (!nudge) continue;
+          key = nudge.key;
+          payload = nudge.payload;
+        } else {
+          const [from, to] = WINDOWS[kind];
+          if (hour < from || hour >= to) continue;
+          key = `${kind}:${todayKey}`;
+          if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
+          const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening }[kind];
+          payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
+          // Weather heads a digest that has something to say; it never sends one alone.
+          if (kind === "digest" && payload) {
+            const weather = await weatherLine(sub, todayKey);
+            if (weather) payload = { ...payload, body: `${weather}\n${payload.body}` };
+          }
         }
-      }
-      if (!payload) continue;
+        if (!payload) continue;
 
-      const sentKey = `${sub.id}:${key}`;
-      if (!(await claim(sentKey))) continue;
-      if (await sendPush(sub, payload)) {
-        sent.push(sentKey);
-      } else {
-        // Not delivered (or the device is gone): let a later run try again.
-        await prisma.pushSent.deleteMany({ where: { key: sentKey } });
+        const sentKey = `${sub.id}:${key}`;
+        if (!(await claim(sentKey))) continue;
+        if (await sendPush(sub, payload)) {
+          sent.push(sentKey);
+        } else {
+          // Not delivered (or the device is gone): let a later run try again.
+          await prisma.pushSent.deleteMany({ where: { key: sentKey } });
+        }
+      } catch (error) {
+        console.error("Push schedule failed", sub.id, kind, error);
+        failed.push(`${sub.id}:${kind}`);
       }
     }
   }
-  return { devices: subscriptions.length, sent };
+  return { devices: subscriptions.length, sent, failed };
 }

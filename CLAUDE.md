@@ -47,7 +47,7 @@ Vercel only runs code on a request (and Hobby crons are daily), so `.github/work
 - `LIFEOS_URL` / `LIFEOS_CRON_SECRET` — the user's site (its own `https://<project>.vercel.app`, no path) and that Vercel project's `CRON_SECRET`.
 - `CAT_URL` / `CAT_CRON_SECRET` — the same for the cat deployment. A step whose URL secret is empty is skipped.
 
-Each step prints `HTTP <code>` and the reply and fails on anything but 200: `{"devices":N,"sent":[…]}` is healthy (`devices` = subscribed phones); a 307 to `/login` means the deployed code has no `/api/push/cron` yet (still deploying); another 3xx means a redirecting URL secret; 401 means the secret doesn't match Vercel's. Test by hand with Actions → Push notifications → Run workflow. The repo is public, so Actions minutes are free, but GitHub disables scheduled workflows after 60 days without commits (re-enable on the workflow page). Git on this machine may be logged in as another GitHub account without push rights; the user pushes themselves.
+Each step prints `HTTP <code>` and the reply and fails on anything but 200: `{"devices":N,"sent":[…],"failed":[…]}` is healthy (`devices` = subscribed phones; `failed` = `<sub>:<kind>` that threw this run, logged in Vercel and retried next run); a 307 to `/login` means the deployed code has no `/api/push/cron` yet (still deploying); another 3xx means a redirecting URL secret; 401 means the secret doesn't match Vercel's. Test by hand with Actions → Push notifications → Run workflow. The repo is public, so Actions minutes are free, but GitHub disables scheduled workflows after 60 days without commits (re-enable on the workflow page). Git on this machine may be logged in as another GitHub account without push rights; the user pushes themselves.
 
 ## Auth
 
