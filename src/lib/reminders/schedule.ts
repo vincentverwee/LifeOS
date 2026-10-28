@@ -50,7 +50,7 @@ export function daysBetween(from: string, to: string): number {
 }
 
 /** The `anchorDay` of the month after `key`'s, clamped to that month's length (31 → 30 Nov). */
-function nextMonth(key: string, anchorDay: number): string {
+export function nextMonth(key: string, anchorDay: number): string {
   const date = toDate(key);
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
@@ -107,7 +107,7 @@ export function weekdayName(day: number, style: "short" | "long" = "short"): str
   return (style === "long" ? weekdayFormatter : weekdayShortFormatter).format(date);
 }
 
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
   const suffix = n % 10 === 1 && n !== 11 ? "st" : n % 10 === 2 && n !== 12 ? "nd" : n % 10 === 3 && n !== 13 ? "rd" : "th";
   return `${n}${suffix}`;
 }

@@ -13,6 +13,8 @@ import { computePeriodStats } from "@/lib/lessons/stats";
 import { isPushKind, type PushKind, type PushPayload } from "@/lib/push/kinds";
 import { sendPush } from "@/lib/push/send";
 import { weatherLine } from "@/lib/push/weather";
+import { getSubscriptions } from "@/lib/data/subscriptions";
+import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
 // a window in the device's local time and a key in PushSent, so it goes out once,
@@ -45,16 +47,19 @@ function rentDateIn(key: string, rentDay: number): string {
 }
 
 async function digest(todayKey: string): Promise<PushPayload | null> {
-  const [{ open }, routines, { period }, running] = await Promise.all([
+  const [{ open }, routines, subscriptions, { period }, running] = await Promise.all([
     getReminders(todayKey),
     getRoutines(todayKey),
+    getSubscriptions(),
     loadStudyPeriods(undefined, todayKey),
     getAllPeriods().then((all) => getRunningPeriods(all, todayKey).find((p) => p.type === "cycle")),
   ]);
 
+  const dueSubscriptions = subscriptions.filter((s) => isSubscriptionDue(s, todayKey));
   const todo = [
     ...open.map((r) => r.title),
     ...routines.filter((r) => isDue(r, todayKey)).map((r) => `${r.name} · ${describeSince(r.lastDoneOn, todayKey).toLowerCase()}`),
+    ...dueSubscriptions.map((s) => `Log ${s.name} ${formatCurrency(s.amount)}`),
   ];
   const lines = todo.slice(0, DIGEST_MAX_ITEMS);
   if (todo.length > DIGEST_MAX_ITEMS) lines.push(`+${todo.length - DIGEST_MAX_ITEMS} more`);
@@ -65,17 +70,21 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
     }
   }
 
+  const tomorrow = addDays(todayKey, 1);
   const month = running ? await getPeriodData(running) : null;
   if (month && month.rent > 0 && month.rentDay) {
-    const tomorrow = addDays(todayKey, 1);
     if (rentDateIn(tomorrow, month.rentDay) === tomorrow) lines.push(`Rent ${formatCurrency(month.rent)} tomorrow`);
+  }
+  for (const s of subscriptions) {
+    if (s.isActive && s.nextDueOn === tomorrow) lines.push(`${s.name} ${formatCurrency(s.amount)} renews tomorrow`);
   }
 
   if (lines.length === 0) return null;
   return {
     title: todo.length ? `${todo.length} to do today` : "Good morning",
     body: lines.join("\n"),
-    url: todo.length ? "/reminders" : "/lessons",
+    // Renewals to log are confirmed on Budget Today; everything else to do is in Reminders.
+    url: todo.length === 0 ? "/lessons" : todo.length === dueSubscriptions.length ? "/budget" : "/reminders",
     tag: "digest",
   };
 }

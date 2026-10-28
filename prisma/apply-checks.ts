@@ -13,6 +13,12 @@ const PUSH_LOCATION_CHECK = `(
       AND "placeLabel" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
 )`;
 
+const SUBSCRIPTION_CHECK = `(
+  "amount" > 0 AND "anchorDay" BETWEEN 1 AND 31 AND "repeat" IN ('monthly', 'yearly')
+  AND ("repeat" = 'yearly') = ("anchorMonth" IS NOT NULL)
+  AND ("anchorMonth" IS NULL OR "anchorMonth" BETWEEN 1 AND 12)
+)`;
+
 // Supabase exposes the public schema through its REST/GraphQL API as `anon`/`authenticated`.
 // The app only talks to Postgres as `postgres` (owner, bypasses RLS), so those roles need
 // nothing: take their grants away (also for tables created later) and turn on RLS with no
@@ -61,14 +67,23 @@ async function main() {
   );
   console.log(`Push devices with a half-set location: ${badLocations.rowCount}`, badLocations.rows);
 
+  const badSubscriptions = await pool.query(`SELECT id, name FROM "Subscription" WHERE NOT (${SUBSCRIPTION_CHECK})`);
+  console.log(`Subscriptions with an invalid schedule or amount: ${badSubscriptions.rowCount}`, badSubscriptions.rows);
+
   if (dry) return;
   if (badTargets.rowCount) throw new Error("Fix those expenses first.");
   if (badLocations.rowCount) throw new Error("Fix those push devices first.");
+  if (badSubscriptions.rowCount) throw new Error("Fix those subscriptions first.");
 
   // A device's weather location is all set or all empty, with a known source.
   await pool.query(`ALTER TABLE "PushSubscription" DROP CONSTRAINT IF EXISTS push_location`);
   await pool.query(`ALTER TABLE "PushSubscription" ADD CONSTRAINT push_location CHECK (${PUSH_LOCATION_CHECK})`);
   console.log("Constraint push_location in place.");
+
+  // A subscription has a positive price and a valid monthly or yearly schedule.
+  await pool.query(`ALTER TABLE "Subscription" DROP CONSTRAINT IF EXISTS subscription_valid`);
+  await pool.query(`ALTER TABLE "Subscription" ADD CONSTRAINT subscription_valid CHECK (${SUBSCRIPTION_CHECK})`);
+  console.log("Constraint subscription_valid in place.");
 
   // Every expense belongs to exactly one month or one trip.
   await pool.query(`ALTER TABLE "Expense" DROP CONSTRAINT IF EXISTS expense_one_target`);

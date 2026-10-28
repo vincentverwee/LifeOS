@@ -110,3 +110,17 @@ export const ensureCurrentMonth = cache(async (): Promise<void> => {
   const todayKey = await getTodayKey();
   await ensureMonthFor(todayKey, todayKey);
 });
+
+/**
+ * The month an expense dated `dateKey` belongs to, created first when needed (the
+ * date decides: "yesterday" on the 1st is last month). Null past the end of next month.
+ */
+export async function monthFor(dateKey: string, todayKey: string): Promise<{ id: string; name: string } | null> {
+  await ensureMonthFor(dateKey, todayKey);
+  const date = utcDate(dateKey);
+  return prisma.budgetCycle.findFirst({
+    where: { startDate: { lte: date }, endDate: { gte: date } },
+    orderBy: { startDate: "desc" },
+    select: { id: true, name: true },
+  });
+}

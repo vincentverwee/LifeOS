@@ -51,7 +51,7 @@ export function BudgetTabBar() {
           </Link>
         </div>
         <TabLink tab={INSIGHTS} active={pathname.startsWith("/budget/insights")} />
-        <TabLink tab={SETTINGS} active={pathname.startsWith("/budget/settings")} />
+        <TabLink tab={SETTINGS} active={pathname.startsWith("/budget/settings") || pathname.startsWith("/budget/subscriptions")} />
       </div>
     </nav>
   );

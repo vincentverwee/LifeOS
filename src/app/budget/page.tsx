@@ -8,6 +8,8 @@ import { TodayPanel } from "@/components/dashboard/TodayPanel";
 import type { PaceRow } from "@/components/dashboard/PaceComparison";
 import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChart";
 import { DebtsList } from "@/components/dashboard/DebtsList";
+import { getDueSubscriptions } from "@/lib/data/subscriptions";
+import { DueSubscriptions } from "@/components/subscriptions/DueSubscriptions";
 
 function daysBetween(fromKey: string, toKey: string): number {
   return Math.round((Date.parse(`${toKey}T00:00:00Z`) - Date.parse(`${fromKey}T00:00:00Z`)) / 86_400_000);
@@ -92,6 +94,10 @@ export default async function TodayPage() {
         </Link>
       </div>
 
+      <Suspense>
+        <DueSubscriptionsCard todayKey={todayKey} />
+      </Suspense>
+
       {running.map((entry, i) => (
         <TodayPanel
           key={entry.month.id}
@@ -114,6 +120,11 @@ export default async function TodayPage() {
       </Suspense>
     </div>
   );
+}
+
+async function DueSubscriptionsCard({ todayKey }: { todayKey: string }) {
+  const due = await getDueSubscriptions(todayKey);
+  return due.length > 0 ? <DueSubscriptions due={due} todayKey={todayKey} /> : null;
 }
 
 /** Display-only for now: only shown once there's something in them. */

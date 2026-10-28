@@ -12,7 +12,10 @@ const LINKS = [
 ];
 
 function isActive(pathname: string, href: string) {
-  return href === "/budget" ? pathname === href : pathname.startsWith(href);
+  if (href === "/budget") return pathname === href;
+  // Subscriptions are reached from Settings.
+  if (href === "/budget/settings" && pathname.startsWith("/budget/subscriptions")) return true;
+  return pathname.startsWith(href);
 }
 
 /** Text tabs above the content — tablet/desktop only. Phones use BudgetTabBar. */

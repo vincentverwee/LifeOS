@@ -5,6 +5,7 @@ import { getRecipesGlance } from "@/lib/data/recipes";
 import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { getRemindersGlance } from "@/lib/data/reminders";
 import { budgetGlance, type BudgetGlance } from "@/lib/data/budgetGlance";
+import { getDueSubscriptions } from "@/lib/data/subscriptions";
 import { describeDue } from "@/lib/reminders/schedule";
 import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
@@ -225,14 +226,17 @@ function TileSkeleton() {
 }
 
 async function BudgetTileBody({ todayKey }: { todayKey: string }) {
-  const budget = await budgetGlance(todayKey);
+  const [budget, due] = await Promise.all([budgetGlance(todayKey), getDueSubscriptions(todayKey)]);
   if (!budget) return <p className="text-sm text-ink-muted">No period running today</p>;
   return (
     <>
       <p className={`font-mono text-3xl font-semibold tabular-nums ${budget.over ? "text-critical" : "text-foreground"}`}>
         {budget.amount}
       </p>
-      <p className={`text-sm ${budget.over ? "text-critical" : "text-positive-text"}`}>{budget.label}</p>
+      <p className={`text-sm ${budget.over ? "text-critical" : "text-positive-text"}`}>
+        {budget.label}
+        {due.length > 0 && <span className="text-ink-muted"> · {due.length} subscription{due.length === 1 ? "" : "s"} to log</span>}
+      </p>
       <BudgetBar glance={budget} />
     </>
   );

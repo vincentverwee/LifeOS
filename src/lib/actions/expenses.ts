@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { MAX_AMOUNT, formatDate, parseAmount, parseDateKey } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
-import { ensureMonthFor } from "@/lib/data/ensureMonth";
+import { monthFor } from "@/lib/data/ensureMonth";
 import { knownError } from "@/lib/prismaErrors";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -66,12 +66,7 @@ async function resolveTarget(period: ExpensePeriod, date: Date, todayKey: string
   if (date >= cycle.startDate && date <= cycle.endDate) return { ok: true, period, name: cycle.name };
 
   // Dates in a month that doesn't exist yet (next month, or one the app was never opened in).
-  await ensureMonthFor(date.toISOString().slice(0, 10), todayKey);
-  const covering = await prisma.budgetCycle.findFirst({
-    where: { startDate: { lte: date }, endDate: { gte: date } },
-    orderBy: { startDate: "desc" },
-    select: { id: true, name: true },
-  });
+  const covering = await monthFor(date.toISOString().slice(0, 10), todayKey);
   if (!covering) return { ok: false, error: `No month covers ${formatDate(date)}.` };
   return { ok: true, period: { type: "cycle", id: covering.id }, name: covering.name };
 }

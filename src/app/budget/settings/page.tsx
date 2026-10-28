@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { getSettingsData } from "@/lib/data";
 import { NewTripForm } from "@/components/settings/NewTripForm";
@@ -17,6 +18,19 @@ export default async function SettingsPage() {
           Months are created automatically. Add a trip when you want a separate budget for it.
         </p>
       </div>
+
+      <Link
+        href="/budget/subscriptions"
+        className="tap flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+      >
+        <span className="flex flex-col">
+          <span className="font-medium text-foreground">Subscriptions</span>
+          <span className="text-sm text-ink-muted">Recurring charges to log with one tap on their renewal day.</span>
+        </span>
+        <span aria-hidden="true" className="text-xl text-ink-muted">
+          ›
+        </span>
+      </Link>
 
       <NewTripForm />
 
