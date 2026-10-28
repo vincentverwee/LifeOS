@@ -29,6 +29,8 @@ const WINDOWS: Record<Exclude<PushKind, "timer">, [number, number]> = {
 const TIMER_NUDGE_HOURS = 3;
 const EXAM_HEADS_UP_DAYS = [0, 1, 3, 7];
 const DIGEST_MAX_ITEMS = 4;
+/** The digest's body on a morning with nothing on and no weather. */
+const DIGEST_EMPTY = "Nothing on the list today.";
 const KEEP_SENT_DAYS = 45;
 
 function hourIn(tz: string, now: Date): number {
@@ -79,12 +81,12 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
     if (s.isActive && s.nextDueOn === tomorrow) lines.push(`${s.name} ${formatCurrency(s.amount)} renews tomorrow`);
   }
 
-  if (lines.length === 0) return null;
+  // Sent every morning, also with nothing on: the runner adds the weather or a quiet line.
   return {
     title: todo.length ? `${todo.length} to do today` : "Good morning",
     body: lines.join("\n"),
     // Renewals to log are confirmed on Budget Today; everything else to do is in Reminders.
-    url: todo.length === 0 ? "/lessons" : todo.length === dueSubscriptions.length ? "/budget" : "/reminders",
+    url: todo.length === 0 ? (lines.length ? "/lessons" : "/") : todo.length === dueSubscriptions.length ? "/budget" : "/reminders",
     tag: "digest",
   };
 }
@@ -185,10 +187,11 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
           if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
           const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening }[kind];
           payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
-          // Weather heads a digest that has something to say; it never sends one alone.
+          // The digest goes out every morning: weather on top, then the day's lines.
           if (kind === "digest" && payload) {
             const weather = await weatherLine(sub, todayKey);
-            if (weather) payload = { ...payload, body: `${weather}\n${payload.body}` };
+            const body = [weather, payload.body].filter(Boolean).join("\n") || DIGEST_EMPTY;
+            payload = { ...payload, body };
           }
         }
         if (!payload) continue;

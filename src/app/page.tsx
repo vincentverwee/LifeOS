@@ -14,6 +14,7 @@ import { getFactOfTheDay } from "@/lib/funFacts";
 import { BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { SheepMark } from "@/components/icons/SheepMark";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
+import { HomeWeather } from "@/components/home/HomeWeather";
 import { logout } from "@/lib/actions/auth";
 import { authDisabled } from "@/lib/authToken";
 
@@ -58,6 +59,7 @@ export default async function HomePage() {
       <div>
         <p className="text-sm font-medium text-ink-muted">{dateLabel}</p>
         <h1 className="mt-1 text-3xl font-semibold text-foreground">{greeting(tz)}</h1>
+        <HomeWeather />
       </div>
 
       <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">

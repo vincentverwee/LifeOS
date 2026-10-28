@@ -6,7 +6,7 @@ export const PUSH_KINDS = [
   {
     key: "digest",
     label: "Morning to-do",
-    description: "8:00 · open reminders, Last done items that are due, subscriptions to log or renewing tomorrow, exams in 7/3/1 days, rent tomorrow.",
+    description: "8:00, every day · the weather (if a location is set), open reminders, Last done items that are due, subscriptions to log or renewing tomorrow, exams in 7/3/1 days, rent tomorrow.",
   },
   {
     key: "timer",

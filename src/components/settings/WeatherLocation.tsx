@@ -187,7 +187,7 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
       )}
 
       {error && <p className="text-sm text-critical">{error}</p>}
-      <p className="text-sm text-ink-muted">One line at the top of the morning digest. It never sends a notification by itself.</p>
+      <p className="text-sm text-ink-muted">One line at the top of the morning digest, and under the greeting on Home on this device.</p>
     </div>
   );
 }
