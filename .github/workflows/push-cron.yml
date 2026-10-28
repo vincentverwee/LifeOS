@@ -23,11 +23,17 @@ jobs:
           SECRET: ${{ secrets.LIFEOS_CRON_SECRET }}
         run: |
           if [ -z "$URL" ]; then echo "not configured, skipped"; exit 0; fi
-          curl --fail-with-body -sS -H "Authorization: Bearer $SECRET" "$URL/api/push/cron"
+          # No -L: a redirect (wrong URL, or the login page) is shown and fails the run.
+          code=$(curl -sS -o body.txt -w "%{http_code} %{redirect_url}" -H "Authorization: Bearer $SECRET" "${URL%/}/api/push/cron")
+          echo "HTTP $code"; cat body.txt; echo
+          case "$code" in 200*) ;; 3*) echo "::error::Redirected. Use the site's own https address as the URL secret, without a path."; exit 1 ;; *) exit 1 ;; esac
       - name: Cat deployment
         env:
           URL: ${{ secrets.CAT_URL }}
           SECRET: ${{ secrets.CAT_CRON_SECRET }}
         run: |
           if [ -z "$URL" ]; then echo "not configured, skipped"; exit 0; fi
-          curl --fail-with-body -sS -H "Authorization: Bearer $SECRET" "$URL/api/push/cron"
+          # No -L: a redirect (wrong URL, or the login page) is shown and fails the run.
+          code=$(curl -sS -o body.txt -w "%{http_code} %{redirect_url}" -H "Authorization: Bearer $SECRET" "${URL%/}/api/push/cron")
+          echo "HTTP $code"; cat body.txt; echo
+          case "$code" in 200*) ;; 3*) echo "::error::Redirected. Use the site's own https address as the URL secret, without a path."; exit 1 ;; *) exit 1 ;; esac
