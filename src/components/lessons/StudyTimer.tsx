@@ -34,7 +34,7 @@ export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
     setSavedMessage(null);
     // Asked before any await: iOS only prompts inside the tap itself.
     const allowed = askTimerNotificationPermission();
-    const codes = courses.filter((c) => selected.includes(c.id)).map((c) => c.code);
+    const names = courses.filter((c) => selected.includes(c.id)).map((c) => c.name);
     startTransition(async () => {
       const result = await startStudyTimer({ periodId, courseIds: selected });
       if (!result.ok) {
@@ -42,14 +42,14 @@ export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
         return;
       }
       setSelected([]);
-      if (await allowed) await showTimerNotification(codes, new Date());
+      if (await allowed) await showTimerNotification(names, new Date());
     });
   }
 
   function stop() {
     if (!timer) return;
     setError(null);
-    const codes = timer.courses.map((c) => c.code);
+    const names = timer.courses.map((c) => c.name);
     startTransition(async () => {
       const result = await stopStudyTimer();
       if (!result.ok) {
@@ -58,7 +58,7 @@ export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
       }
       await clearTimerNotification();
       setSavedMessage(
-        `Saved ${formatHours(result.hours)}${codes.length ? ` · ${codes.join(", ")}` : ""}` +
+        `Saved ${formatHours(result.hours)}${names.length ? ` · ${names.join(", ")}` : ""}` +
           (result.movedTo ? ` · in ${result.movedTo}` : "")
       );
     });
@@ -90,7 +90,7 @@ export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
           {timer.courses.length > 0 && (
             <div className="mt-1 flex flex-wrap justify-center gap-2">
               {timer.courses.map((c) => (
-                <CategoryChip key={c.id} name={c.code} color={c.color} />
+                <CategoryChip key={c.id} name={c.name} color={c.color} />
               ))}
             </div>
           )}
@@ -140,7 +140,7 @@ export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
             {courses.map((c) => (
               <CategoryChip
                 key={c.id}
-                name={c.code}
+                name={c.name}
                 color={c.color}
                 selected={selected.includes(c.id)}
                 onClick={() => {

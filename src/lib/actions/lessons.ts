@@ -365,12 +365,11 @@ export async function deleteStudyPeriod(id: string): Promise<LessonsResult> {
 
 // --- Courses ---
 
-export type StudyCourseInput = { code: string; name: string; color: string; hasWc: boolean };
+export type StudyCourseInput = { name: string; color: string; hasWc: boolean };
 
 function validateCourse(input: StudyCourseInput): string | null {
-  if (!input.code.trim()) return "Give the course a short code, e.g. DBT.";
-  if (input.code.trim().length > 12) return "Keep the code short (12 characters at most).";
-  if (input.name.trim().length > 80) return "Keep the name under 80 characters.";
+  if (!input.name.trim()) return "Give the course a name.";
+  if (input.name.trim().length > 40) return "Keep the name short (40 characters at most).";
   if (!isCategoryColorSlot(input.color)) return "Pick a colour.";
   return null;
 }
@@ -379,14 +378,13 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
   await requireAuth();
   const error = validateCourse(input);
   if (error) return { ok: false, error };
-  const code = input.code.trim();
+  const name = input.name.trim();
   const last = await prisma.studyCourse.findFirst({ where: { periodId }, orderBy: { sortOrder: "desc" } });
   try {
     await prisma.studyCourse.create({
       data: {
         periodId,
-        code,
-        name: input.name.trim() || code,
+        name,
         color: input.color,
         hasWc: input.hasWc,
         sortOrder: (last?.sortOrder ?? 0) + 10,
@@ -394,7 +392,7 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
     });
   } catch (e) {
     return knownError(e, {
-      P2002: `${code} already exists in this period.`,
+      P2002: `${name} already exists in this period.`,
       P2003: "That period no longer exists.",
     });
   }
@@ -406,15 +404,15 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
   await requireAuth();
   const error = validateCourse(input);
   if (error) return { ok: false, error };
-  const code = input.code.trim();
+  const name = input.name.trim();
   try {
     await prisma.studyCourse.update({
       where: { id },
-      data: { code, name: input.name.trim() || code, color: input.color, hasWc: input.hasWc },
+      data: { name, color: input.color, hasWc: input.hasWc },
     });
   } catch (e) {
     return knownError(e, {
-      P2002: `${code} already exists in this period.`,
+      P2002: `${name} already exists in this period.`,
       P2025: "That course no longer exists.",
     });
   }

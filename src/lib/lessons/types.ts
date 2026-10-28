@@ -5,7 +5,6 @@ import type { LessonKind, LessonStatus } from "@/lib/lessons/marks";
 
 export type StudyCourse = {
   id: string;
-  code: string;
   name: string;
   color: CategoryColorSlot;
   sortOrder: number;
@@ -60,5 +59,5 @@ export type StudyPeriod = {
 export type StudyTimerState = {
   periodId: string;
   startedAt: string;
-  courses: Pick<StudyCourse, "id" | "code" | "color">[];
+  courses: Pick<StudyCourse, "id" | "name" | "color">[];
 };

@@ -179,19 +179,17 @@ function CourseForm({
   onDone?: () => void;
 }) {
   const { error, isPending, run } = useAction();
-  const [code, setCode] = useState(course?.code ?? "");
   const [name, setName] = useState(course?.name ?? "");
   const [color, setColor] = useState<CategoryColorSlot>(course?.color ?? nextColor);
   const [hasWc, setHasWc] = useState(course?.hasWc ?? false);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const fields = { code, name, color, hasWc };
+    const fields = { name, color, hasWc };
     run(
       () => (course ? updateStudyCourse(course.id, fields) : createStudyCourse(periodId, fields)),
       () => {
         if (!course) {
-          setCode("");
           setName("");
           setHasWc(false);
         }
@@ -202,16 +200,10 @@ function CourseForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-3">
-      <div className="grid grid-cols-3 gap-2">
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className={label}>Code</span>
-          <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="DBT" className={input} />
-        </label>
-        <label className="col-span-2 flex min-w-0 flex-col gap-1">
-          <span className={label}>Name</span>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Database Technologies" className={input} />
-        </label>
-      </div>
+      <label className="flex min-w-0 flex-col gap-1">
+        <span className={label}>Name</span>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Database Technologies" className={input} />
+      </label>
       <ColorPicker value={color} onChange={setColor} />
       <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
         <input type="checkbox" checked={hasWc} onChange={(e) => setHasWc(e.target.checked)} className="h-5 w-5 accent-[var(--color-primary)]" />
@@ -249,11 +241,8 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                 <div className="flex items-center gap-2">
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
                   <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-medium text-foreground">{course.code}</span>
-                    <span className="truncate text-xs text-ink-muted">
-                      {course.name}
-                      {course.hasWc ? " · HC + WC" : ""}
-                    </span>
+                    <span className="truncate text-sm font-medium text-foreground">{course.name}</span>
+                    {course.hasWc && <span className="truncate text-xs text-ink-muted">HC + WC</span>}
                   </span>
                   <button type="button" onClick={() => setEditingId(course.id)} className="btn btn-ghost min-h-11 px-4 text-sm">
                     Edit
@@ -262,7 +251,7 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                     type="button"
                     disabled={isPending}
                     onClick={() => {
-                      if (!window.confirm(`Delete ${course.code}? Its logged hours stay, without a course; its exams and lesson marks go.`)) return;
+                      if (!window.confirm(`Delete ${course.name}? Its logged hours stay, without a course; its exams and lesson marks go.`)) return;
                       run(() => deleteStudyCourse(course.id));
                     }}
                     className="btn min-h-11 px-4 text-sm text-critical hover:bg-critical/10 active:bg-critical/15"
@@ -330,7 +319,7 @@ function ExamForm({ courses, exam, onDone }: { courses: StudyCourse[]; exam?: St
           <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.code}
+                {c.name}
               </option>
             ))}
           </select>
@@ -394,7 +383,7 @@ export function ExamManager({ period }: { period: StudyPeriod }) {
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course?.color ?? "blue"})` }} aria-hidden="true" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm text-foreground">
-                      {course?.code} {exam.kind}
+                      {course?.name} {exam.kind}
                       {exam.note && <span className="text-ink-muted"> · {exam.note}</span>}
                     </span>
                     <span className="text-xs text-ink-muted">{formatDate(exam.date)}</span>

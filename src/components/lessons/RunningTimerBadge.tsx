@@ -8,11 +8,11 @@ import { formatElapsed, useNowSeconds } from "@/components/lessons/useNowSeconds
 export function RunningTimerBadge({ timer, card = false }: { timer: StudyTimerState; card?: boolean }) {
   const now = useNowSeconds();
   const elapsed = now === null ? null : now - new Date(timer.startedAt).getTime() / 1000;
-  const codes = timer.courses.map((c) => c.code).join(", ");
+  const names = timer.courses.map((c) => c.name).join(", ");
   const text = (
     <>
       <span aria-hidden="true">⏱ </span>
-      Studying{codes ? ` ${codes}` : ""}
+      Studying{names ? ` ${names}` : ""}
       <span className="font-mono tabular-nums"> · {elapsed === null ? "–:––" : formatElapsed(elapsed, false)}</span>
     </>
   );

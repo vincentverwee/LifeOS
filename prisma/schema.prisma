@@ -288,7 +288,6 @@ model StudyCourse {
   id        String       @id @default(cuid())
   periodId  String
   period    StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  code      String
   name      String
   color     String       @default("blue")
   sortOrder Int          @default(0)
@@ -297,7 +296,7 @@ model StudyCourse {
   exams     StudyExam[]
   lessons   LessonMark[]
 
-  @@unique([periodId, code])
+  @@unique([periodId, name])
 }
 
 // One row per (day, course). Studying several courses in one go is split

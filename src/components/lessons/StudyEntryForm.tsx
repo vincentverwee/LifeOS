@@ -75,9 +75,9 @@ export function StudyEntryForm({ periodId, startDate, endDate, courses }: StudyE
   const [state, formAction] = useActionState(async (prev: StudyEntryFormState, formData: FormData) => {
     const result = await createStudyEntriesFromForm(prev, formData);
     if (result?.ok) {
-      const codes = courses.filter((c) => selected.includes(c.id)).map((c) => c.code);
+      const names = courses.filter((c) => selected.includes(c.id)).map((c) => c.name);
       setSavedMessage(
-        `Saved ${formatHours(result.hours)}${codes.length ? ` · ${codes.join(", ")}` : ""}` +
+        `Saved ${formatHours(result.hours)}${names.length ? ` · ${names.join(", ")}` : ""}` +
           (result.movedTo ? ` · in ${result.movedTo}` : "")
       );
       setHours("");
@@ -180,7 +180,7 @@ export function StudyEntryForm({ periodId, startDate, endDate, courses }: StudyE
             {courses.map((c) => (
               <CategoryChip
                 key={c.id}
-                name={c.code}
+                name={c.name}
                 color={c.color}
                 selected={selected.includes(c.id)}
                 onClick={() => toggle(c.id)}

@@ -108,7 +108,7 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
                 <li key={c.course.id}>
                   <div className="flex items-baseline justify-between gap-3 text-sm">
                     <span className="min-w-0 truncate text-foreground">
-                      {c.course.code} <span className="text-ink-muted">{c.course.name !== c.course.code ? c.course.name : ""}</span>
+                      {c.course.name}
                     </span>
                     <span className="shrink-0 font-mono tabular-nums text-foreground">{formatHours(c.hours)}</span>
                   </div>

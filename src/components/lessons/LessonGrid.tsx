@@ -166,9 +166,9 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
               {columns.map(({ course, kind }) => (
                 <th key={`${course.id}${kind}`} className="sticky top-0 z-10 border-b border-border bg-surface px-1.5 py-2 text-center font-medium">
                   <span className="flex flex-col items-center gap-0.5">
-                    <span className="inline-flex items-center gap-1 text-foreground">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
-                      {course.code}
+                    <span className="inline-flex max-w-24 items-center gap-1 whitespace-normal text-balance text-foreground">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
+                      {course.name}
                     </span>
                     <span className="text-xs font-normal text-ink-muted">{kind}</span>
                   </span>
@@ -202,7 +202,7 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
                         <button
                           type="button"
                           onClick={() => setOpen(cell)}
-                          aria-label={`${course.code} ${kind} week ${week}: ${LESSON_STATUS_INFO[marks.get(cell)!]?.label ?? "empty"}`}
+                          aria-label={`${course.name} ${kind} week ${week}: ${LESSON_STATUS_INFO[marks.get(cell)!]?.label ?? "empty"}`}
                           className="tap flex h-11 w-14 items-center justify-center rounded-md"
                         >
                           <MarkBadge status={marks.get(cell)} />
@@ -234,7 +234,7 @@ export function LessonGrid({ courses, marks: initial, startDate, blokStart, week
       </div>
       <StatusSheet
         cell={open}
-        title={open && openCourse ? `${openCourse.code} ${open.kind} · week ${open.week}` : ""}
+        title={open && openCourse ? `${openCourse.name} ${open.kind} · week ${open.week}` : ""}
         current={open ? marks.get(open) : undefined}
         onPick={(status) => {
           if (open) marks.set(open, status);
@@ -268,7 +268,7 @@ export function WeekLessons({ courses, marks: initial, week }: { courses: StudyC
               >
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
                 <span className="flex-1 truncate text-foreground">
-                  {course.code} <span className="text-ink-muted">{kind}</span>
+                  {course.name} <span className="text-ink-muted">{kind}</span>
                 </span>
                 <span className="w-12 shrink-0">
                   <MarkBadge status={marks.get(cell)} />
@@ -280,7 +280,7 @@ export function WeekLessons({ courses, marks: initial, week }: { courses: StudyC
       </ul>
       <StatusSheet
         cell={open}
-        title={open && openCourse ? `${openCourse.code} ${open.kind} · week ${open.week}` : ""}
+        title={open && openCourse ? `${openCourse.name} ${open.kind} · week ${open.week}` : ""}
         current={open ? marks.get(open) : undefined}
         onPick={(status) => {
           if (open) marks.set(open, status);

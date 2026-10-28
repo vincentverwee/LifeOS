@@ -8,7 +8,7 @@ import { computePeriodStats, phaseLabel, pickCurrentPeriod } from "@/lib/lessons
 
 const fullInclude = {
   courses: {
-    orderBy: [{ sortOrder: "asc" as const }, { code: "asc" as const }],
+    orderBy: [{ sortOrder: "asc" as const }, { name: "asc" as const }],
     include: { exams: { orderBy: { date: "asc" as const } }, lessons: true },
   },
   entries: { orderBy: [{ date: "asc" as const }, { createdAt: "asc" as const }] },
@@ -47,7 +47,6 @@ function toStudyPeriod(p: FullRow): StudyPeriod {
     ...toHeader(p),
     courses: p.courses.map((c) => ({
       id: c.id,
-      code: c.code,
       name: c.name,
       color: isCategoryColorSlot(c.color) ? c.color : "blue",
       sortOrder: c.sortOrder,
@@ -159,7 +158,7 @@ export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance 
     goalHours: period.goalHours,
     status: phaseLabel(stats.phase),
     nextExam: next
-      ? { label: `${next.course?.code ?? "?"} ${next.exam.kind}`, daysUntil: next.daysUntil }
+      ? { label: `${next.course?.name ?? "?"} ${next.exam.kind}`, daysUntil: next.daysUntil }
       : null,
     timer,
   };
@@ -172,8 +171,8 @@ export async function getStudyTimer(): Promise<StudyTimerState | null> {
   const courses = timer.courseIds.length
     ? await prisma.studyCourse.findMany({
         where: { id: { in: timer.courseIds } },
-        select: { id: true, code: true, color: true },
-        orderBy: [{ sortOrder: "asc" }, { code: "asc" }],
+        select: { id: true, name: true, color: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       })
     : [];
   return {

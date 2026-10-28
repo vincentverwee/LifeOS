@@ -45,7 +45,7 @@ export function StudyEntryList({ entries, courses, groupByDay = false, empty = "
               aria-hidden="true"
             />
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm text-foreground">{course?.code ?? (e.hours > 0 ? "No course" : "Day off")}</span>
+              <span className="truncate text-sm text-foreground">{course?.name ?? (e.hours > 0 ? "No course" : "Day off")}</span>
               {e.note && <span className="truncate text-xs text-ink-muted">{e.note}</span>}
             </span>
           </span>
@@ -138,7 +138,7 @@ function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses:
             <option value="">No course</option>
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.code} — {c.name}
+                {c.name}
               </option>
             ))}
           </select>

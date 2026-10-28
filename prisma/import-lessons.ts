@@ -28,7 +28,7 @@ const COLORS = ["blue", "orange", "aqua", "yellow", "magenta", "green", "violet"
 // Rows dated after this are plans, not logged days.
 const TODAY = new Date().toISOString().slice(0, 10);
 
-type CourseDef = { code: string; name: string; aliases?: string[]; hasWc?: boolean };
+type CourseDef = { /** key used by this script only */ code: string; name: string; aliases?: string[]; hasWc?: boolean };
 
 type PeriodDef = {
   name: string;
@@ -318,7 +318,6 @@ async function main() {
         endDate: utc(def.endDate),
         courses: {
           create: def.courses.map((c, i) => ({
-            code: c.code,
             name: c.name,
             color: COLORS[i % COLORS.length],
             sortOrder: i * 10,
@@ -328,7 +327,8 @@ async function main() {
       },
       include: { courses: true },
     });
-    const courseId = new Map(period.courses.map((c) => [c.code, c.id]));
+    // `code` is only this script's key for a course; the database stores the name.
+    const courseId = new Map(def.courses.map((c) => [c.code, period.courses.find((p) => p.name === c.name)!.id]));
 
     await prisma.studyEntry.createMany({
       data: entries.map((e) => ({

@@ -60,7 +60,7 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
 
   if (period) {
     for (const { exam, course, daysUntil } of computePeriodStats(period, todayKey).upcomingExams) {
-      if (EXAM_HEADS_UP_DAYS.includes(daysUntil)) lines.push(`${course?.code ?? "?"} ${exam.kind} ${inDays(daysUntil)}`);
+      if (EXAM_HEADS_UP_DAYS.includes(daysUntil)) lines.push(`${course?.name ?? "?"} ${exam.kind} ${inDays(daysUntil)}`);
     }
   }
 
@@ -114,11 +114,11 @@ async function timerNudge(now: Date): Promise<{ key: string; payload: PushPayloa
   const started = new Date(timer.startedAt);
   const hours = (now.getTime() - started.getTime()) / 3_600_000;
   if (hours < TIMER_NUDGE_HOURS) return null;
-  const codes = timer.courses.map((c) => c.code).join(", ");
+  const names = timer.courses.map((c) => c.name).join(", ");
   return {
     key: `timer:${started.getTime()}`,
     payload: {
-      title: codes ? `Still studying ${codes}?` : "Still studying?",
+      title: names ? `Still studying ${names}?` : "Still studying?",
       body: `The timer has been running for ${Math.floor(hours)} h. Tap to stop it.`,
       url: "/lessons/add",
       tag: "study-timer",
