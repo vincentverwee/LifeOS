@@ -396,3 +396,26 @@ model RoutineLog {
   @@unique([routineId, doneOn])
   @@index([doneOn])
 }
+
+// A phone/browser that gets push notifications (Web Push). `kinds` are the
+// notifications it wants (src/lib/push/kinds.ts); `timeZone` decides when
+// "morning" and "evening" are. Removed when the push service says it's gone.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  timeZone  String
+  kinds     String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// What the scheduler already sent ("<subscription>:<kind>:<day or item>"), so
+// a run every 15 minutes sends each notification once. Pruned after 45 days.
+model PushSent {
+  key    String   @id
+  sentAt DateTime @default(now())
+
+  @@index([sentAt])
+}

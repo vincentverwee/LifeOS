@@ -2,10 +2,11 @@
 // Only /budget/add is kept (network-first, so it's as fresh as the last online visit);
 // every other page shows offline.html when there's no connection, never stale numbers.
 // Expenses saved offline are queued by the page itself (src/lib/offline/outbox.ts).
-// Tapping the study timer notification opens Log time (src/lib/lessons/timerNotification.ts).
+// Push notifications (src/lib/push/) are shown here; tapping one, or the study timer
+// notification (src/lib/lessons/timerNotification.ts), opens its page.
 // Bump VERSION when changing what gets cached here.
 
-const VERSION = "v4";
+const VERSION = "v5";
 const SHELL_CACHE = `lifeos-shell-${VERSION}`; // offline.html + icons
 const PAGES_CACHE = `lifeos-pages-${VERSION}`; // the last /budget/add
 // Hashed build files. Not versioned: a cached page needs its own build's chunks,
@@ -51,6 +52,23 @@ self.addEventListener("fetch", (event) => {
   } else if (SHELL.includes(url.pathname) || /^\/(icon|apple-icon)/.test(url.pathname)) {
     event.respondWith(cacheFirst(request, SHELL_CACHE));
   }
+});
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(data.title || "LifeOS", {
+      body: data.body || "",
+      tag: data.tag,
+      icon: "/icon-192.png",
+      data: { url: data.url || "/" },
+    })
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

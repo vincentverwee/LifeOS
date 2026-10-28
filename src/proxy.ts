@@ -22,6 +22,7 @@ export const config = {
   matcher: [
     // Everything except /login, Next internals and the PWA/static assets (incl. the
     // service worker and its offline page, which must load without a session).
-    "/((?!login|_next/static|_next/image|favicon\\.ico|icon|apple-icon|manifest\\.webmanifest|sw\\.js|offline\\.html|.*\\.(?:png|svg|ico|jpg|webp)$).*)",
+    // /api/push/cron checks its own secret (it's called by a scheduler, not a browser).
+    "/((?!login|api/push/cron|_next/static|_next/image|favicon\\.ico|icon|apple-icon|manifest\\.webmanifest|sw\\.js|offline\\.html|.*\\.(?:png|svg|ico|jpg|webp)$).*)",
   ],
 };

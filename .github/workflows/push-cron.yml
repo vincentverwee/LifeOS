@@ -1,0 +1,33 @@
+# Every 15 minutes, asks each deployment to send the push notifications that are
+# due (src/app/api/push/cron/route.ts). GitHub may run scheduled jobs a few
+# minutes late; the windows in src/lib/push/schedule.ts allow for that.
+#
+# Repository secrets (Settings → Secrets and variables → Actions):
+#   LIFEOS_URL, LIFEOS_CRON_SECRET  – your deployment (https://…, no trailing slash) and its CRON_SECRET
+#   CAT_URL, CAT_CRON_SECRET        – the cat deployment (optional)
+name: Push notifications
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Your deployment
+        env:
+          URL: ${{ secrets.LIFEOS_URL }}
+          SECRET: ${{ secrets.LIFEOS_CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ]; then echo "not configured, skipped"; exit 0; fi
+          curl --fail-with-body -sS -H "Authorization: Bearer $SECRET" "$URL/api/push/cron"
+      - name: Cat deployment
+        env:
+          URL: ${{ secrets.CAT_URL }}
+          SECRET: ${{ secrets.CAT_CRON_SECRET }}
+        run: |
+          if [ -z "$URL" ]; then echo "not configured, skipped"; exit 0; fi
+          curl --fail-with-body -sS -H "Authorization: Bearer $SECRET" "$URL/api/push/cron"

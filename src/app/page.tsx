@@ -1,14 +1,13 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { getAllTripSummaries } from "@/lib/data/waypoint";
 import { getRecipesGlance } from "@/lib/data/recipes";
 import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { getRemindersGlance } from "@/lib/data/reminders";
+import { budgetGlance, type BudgetGlance } from "@/lib/data/budgetGlance";
 import { describeDue } from "@/lib/reminders/schedule";
 import { describeSince } from "@/lib/reminders/routines";
-import { computeMonthStats } from "@/lib/monthStats";
-import { formatCurrency, formatCurrencyShort, formatHours } from "@/lib/format";
+import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
 import { BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
@@ -16,47 +15,6 @@ import { SheepMark } from "@/components/icons/SheepMark";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { logout } from "@/lib/actions/auth";
 import { authDisabled } from "@/lib/authToken";
-
-type BudgetGlance = {
-  /** "€ 23,65" */
-  amount: string;
-  /** "left today" / "over today" / "over budget" */
-  label: string;
-  over: boolean;
-  spent: number;
-  budget: number;
-  /** share of the period's days that has passed, today included (0–1) */
-  timeProgress: number;
-  daysLeft: number;
-};
-
-/** Today's allowance and the period's progress, from the period running today. */
-async function budgetGlance(todayKey: string): Promise<BudgetGlance | null> {
-  const running = getRunningPeriods(await getAllPeriods(), todayKey)[0];
-  if (!running) return null;
-  const data = await getPeriodData(running);
-  if (!data) return null;
-  const stats = computeMonthStats(data, todayKey);
-  const today = stats.today;
-  if (!today) return null;
-
-  const progress = {
-    spent: stats.spent,
-    budget: data.budget,
-    timeProgress: stats.daysElapsed / stats.daysInMonth,
-    daysLeft: today.daysLeftInclToday,
-  };
-  if (today.budgetGoneBeforeToday) {
-    return { amount: formatCurrency(-today.budgetLeft), label: "over budget", over: true, ...progress };
-  }
-  const over = today.leftToday < 0;
-  return {
-    amount: formatCurrency(Math.abs(today.leftToday)),
-    label: over ? "over today" : "left today",
-    over,
-    ...progress,
-  };
-}
 
 type WaypointGlance = { totalKm: number; trips: number; latest: string | null };
 
@@ -159,13 +117,18 @@ export default async function HomePage() {
 
       </ul>
 
-      {!authDisabled() && (
-        <form action={logout} className="flex justify-center">
-          <button type="submit" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
-            Log out
-          </button>
-        </form>
-      )}
+      <div className="flex justify-center gap-2">
+        <Link href="/notifications" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
+          Notifications
+        </Link>
+        {!authDisabled() && (
+          <form action={logout}>
+            <button type="submit" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
+              Log out
+            </button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }
