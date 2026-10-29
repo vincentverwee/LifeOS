@@ -1,8 +1,8 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { dayKeyIn } from "@/lib/today";
+import { dayKeyIn } from "@/lib/timeZone";
 import { dayKey, formatCurrency, formatHours } from "@/lib/format";
-import { addDays, daysBetween, weekdayOf } from "@/lib/reminders/schedule";
+import { addDays } from "@/lib/reminders/schedule";
 import { describeSince, isDue } from "@/lib/reminders/routines";
 import { getReminders } from "@/lib/data/reminders";
 import { getRoutines } from "@/lib/data/routines";
@@ -10,14 +10,8 @@ import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { budgetGlance } from "@/lib/data/budgetGlance";
 import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { computePeriodStats, dailyTotals } from "@/lib/lessons/stats";
-import {
-  defaultPushTime,
-  isPushKind,
-  minutesOf,
-  parsePushTimes,
-  type PushPayload,
-  type TimedPushKind,
-} from "@/lib/push/kinds";
+import { isPushKind, parsePushTimes, type PushPayload } from "@/lib/push/kinds";
+import { isKindDueNow, minuteIn, rentDateIn, weekBudget } from "@/lib/push/window";
 import { sendPush } from "@/lib/push/send";
 import { weatherLine } from "@/lib/push/weather";
 import { getDueSubscriptions, getSubscriptions } from "@/lib/data/subscriptions";
@@ -28,13 +22,6 @@ import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
 // else the default in kinds.ts) on, and a key in PushSent, so it goes out once, on
 // the first run inside its window where there's something to say.
 
-/** How long after its time a kind may still be sent (GitHub runs can be late). */
-const WINDOW_HOURS: Record<TimedPushKind, number> = {
-  digest: 3,
-  "study-evening": 3,
-  "budget-evening": 3,
-  week: 4, // Sundays only
-};
 const TIMER_NUDGE_HOURS = 3;
 const EXAM_HEADS_UP_DAYS = [0, 1, 3, 7];
 const DIGEST_MAX_ITEMS = 4;
@@ -44,22 +31,8 @@ const KEEP_SENT_DAYS = 45;
 /** Names listed in the review's Last done line before "+N". */
 const WEEK_MAX_NAMES = 2;
 
-/** Minutes after local midnight in `tz`. */
-function minuteIn(tz: string, now: Date): number {
-  const parts = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "numeric", hourCycle: "h23", timeZone: tz }).formatToParts(now);
-  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
-  return part("hour") * 60 + part("minute");
-}
-
 function inDays(days: number): string {
   return days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
-}
-
-/** The rent day as a date in the month of `key` (29–31 clamp to the month's last day). */
-function rentDateIn(key: string, rentDay: number): string {
-  const [y, m] = key.split("-").map(Number);
-  const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  return `${key.slice(0, 8)}${String(Math.min(rentDay, last)).padStart(2, "0")}`;
 }
 
 async function digest(todayKey: string): Promise<PushPayload | null> {
@@ -169,10 +142,7 @@ async function weekReview(todayKey: string): Promise<PushPayload | null> {
     ...trips.map((t) => ({ budget: t.totalBudget.toNumber(), start: dayKey(t.startDate), end: dayKey(t.endDate) })),
     ...cycles.map((c) => ({ budget: c.startingBudget.toNumber(), start: dayKey(c.startDate), end: dayKey(c.endDate) })),
   ];
-  const budget = days.reduce((sum, day) => {
-    const range = ranges.find((r) => r.start <= day && day <= r.end);
-    return range ? sum + range.budget / (daysBetween(range.start, range.end) + 1) : sum;
-  }, 0);
+  const budget = weekBudget(monday, ranges);
   const total = spent._sum.amount?.toNumber() ?? 0;
   if (budget > 0) {
     lines.push(
@@ -282,11 +252,7 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
           key = nudge.key;
           payload = nudge.payload;
         } else {
-          // Never past midnight: the next day would get its own key and a second send.
-          const from = minutesOf(times[kind] ?? defaultPushTime(kind));
-          const to = Math.min(from + WINDOW_HOURS[kind] * 60, 24 * 60);
-          if (minute < from || minute >= to) continue;
-          if (kind === "week" && weekdayOf(todayKey) !== 0) continue;
+          if (!isKindDueNow(kind, minute, times, todayKey)) continue;
           key = `${kind}:${todayKey}`;
           if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
           const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening, week: weekReview }[kind];

@@ -77,7 +77,7 @@ export async function getBeerGlance(todayKey: string): Promise<BeerGlance> {
   const [month, last] = await Promise.all([
     getBeerVisits({ from: monthStarts(todayKey).thisMonth }),
     prisma.expense.findFirst({
-      where: beer,
+      where: { ...beer, date: { lte: new Date(`${todayKey}T00:00:00Z`) } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       select: { date: true, pub: { select: { name: true } } },
     }),

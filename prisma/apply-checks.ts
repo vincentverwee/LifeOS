@@ -1,52 +1,25 @@
 // What `prisma db push` can't express: API lockdown + constraints. Idempotent; run after every db:push:
 //   npx tsx prisma/apply-checks.ts [--dry]
 // --dry only reports open tables and rows that would violate the constraints.
+// The constraints themselves are listed in checks.ts; `npm run db:check` confirms both databases have them.
 import "dotenv/config";
 import { Pool } from "pg";
+import { apiExposure, CHECKS } from "./checks";
 
 const dry = process.argv.includes("--dry");
 const pool = new Pool({ connectionString: process.env.DIRECT_URL });
-
-const PUSH_LOCATION_CHECK = `(
-  ("latitude" IS NULL AND "longitude" IS NULL AND "placeLabel" IS NULL AND "locationSource" IS NULL)
-  OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL
-      AND "latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180
-      AND "placeLabel" IS NOT NULL AND "locationSource" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
-)`;
-
-const SUBSCRIPTION_CHECK = `(
-  "amount" > 0 AND "anchorDay" BETWEEN 1 AND 31 AND "repeat" IN ('monthly', 'yearly')
-  AND ("repeat" = 'yearly') = ("anchorMonth" IS NOT NULL)
-  AND ("anchorMonth" IS NULL OR "anchorMonth" BETWEEN 1 AND 12)
-)`;
-
-// Every branch spells out IS NOT NULL: a CHECK that comes out NULL counts as passed,
-// so "latitude set, longitude NULL" would otherwise slip through.
-const PUB_LOCATION_CHECK = `(
-  ("latitude" IS NULL AND "longitude" IS NULL)
-  OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL
-      AND "latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180)
-)`;
-
-const EXPENSE_PINTS_CHECK = `("pints" IS NULL OR "pints" BETWEEN 1 AND 50)`;
 
 // Supabase exposes the public schema through its REST/GraphQL API as `anon`/`authenticated`.
 // The app only talks to Postgres as `postgres` (owner, bypasses RLS), so those roles need
 // nothing: take their grants away (also for tables created later) and turn on RLS with no
 // policies as a second lock. Runs first so a failing data check below can't skip it.
 async function lockDown() {
-  const open = await pool.query(
-    `SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND NOT rowsecurity`
-  );
-  const granted = await pool.query(
-    `SELECT DISTINCT table_name FROM information_schema.role_table_grants
-     WHERE table_schema = 'public' AND grantee IN ('anon', 'authenticated')`
-  );
-  console.log(`Tables without RLS: ${open.rowCount}`, open.rows.map((r) => r.tablename));
-  console.log(`Tables the API roles can use: ${granted.rowCount}`);
+  const { withoutRls, granted } = await apiExposure(pool);
+  console.log(`Tables without RLS: ${withoutRls.length}`, withoutRls);
+  console.log(`Tables the API roles can use: ${granted.length}`);
   if (dry) return;
 
-  for (const { tablename } of open.rows) {
+  for (const tablename of withoutRls) {
     await pool.query(`ALTER TABLE public."${tablename.replace(/"/g, '""')}" ENABLE ROW LEVEL SECURITY`);
   }
   await pool.query(`REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated`);
@@ -68,58 +41,21 @@ async function main() {
   );
   console.log(`BudgetCycle rows sharing a startDate: ${dupMonths.rowCount}`, dupMonths.rows);
 
-  const badTargets = await pool.query(
-    `SELECT id, "cycleId", "tripId" FROM "Expense" WHERE ("cycleId" IS NULL) = ("tripId" IS NULL)`
-  );
-  console.log(`Expenses without exactly one month or trip: ${badTargets.rowCount}`, badTargets.rows);
-
-  const badLocations = await pool.query(
-    `SELECT id FROM "PushSubscription" WHERE NOT (${PUSH_LOCATION_CHECK})`
-  );
-  console.log(`Push devices with a half-set location: ${badLocations.rowCount}`, badLocations.rows);
-
-  const badSubscriptions = await pool.query(`SELECT id, name FROM "Subscription" WHERE NOT (${SUBSCRIPTION_CHECK})`);
-  console.log(`Subscriptions with an invalid schedule or amount: ${badSubscriptions.rowCount}`, badSubscriptions.rows);
-
-  const badPubs = await pool.query(`SELECT id, name FROM "Pub" WHERE NOT (${PUB_LOCATION_CHECK})`);
-  console.log(`Pubs with a half-set location: ${badPubs.rowCount}`, badPubs.rows);
-
-  const badPints = await pool.query(`SELECT id, pints FROM "Expense" WHERE NOT (${EXPENSE_PINTS_CHECK})`);
-  console.log(`Expenses with an invalid pint count: ${badPints.rowCount}`, badPints.rows);
+  const broken = [];
+  for (const c of CHECKS) {
+    const bad = await pool.query(`SELECT ${c.columns} FROM "${c.table}" WHERE NOT (${c.check})`);
+    console.log(`${c.label}: ${bad.rowCount}`, bad.rows);
+    if (bad.rowCount) broken.push(c);
+  }
 
   if (dry) return;
-  if (badPubs.rowCount) throw new Error("Fix those pubs first.");
-  if (badPints.rowCount) throw new Error("Fix those pint counts first.");
-  if (badTargets.rowCount) throw new Error("Fix those expenses first.");
-  if (badLocations.rowCount) throw new Error("Fix those push devices first.");
-  if (badSubscriptions.rowCount) throw new Error("Fix those subscriptions first.");
+  if (broken.length) throw new Error(broken.map((c) => c.fix).join(" "));
 
-  // A device's weather location is all set or all empty, with a known source.
-  await pool.query(`ALTER TABLE "PushSubscription" DROP CONSTRAINT IF EXISTS push_location`);
-  await pool.query(`ALTER TABLE "PushSubscription" ADD CONSTRAINT push_location CHECK (${PUSH_LOCATION_CHECK})`);
-  console.log("Constraint push_location in place.");
-
-  // A subscription has a positive price and a valid monthly or yearly schedule.
-  await pool.query(`ALTER TABLE "Subscription" DROP CONSTRAINT IF EXISTS subscription_valid`);
-  await pool.query(`ALTER TABLE "Subscription" ADD CONSTRAINT subscription_valid CHECK (${SUBSCRIPTION_CHECK})`);
-  console.log("Constraint subscription_valid in place.");
-
-  // Every expense belongs to exactly one month or one trip.
-  await pool.query(`ALTER TABLE "Expense" DROP CONSTRAINT IF EXISTS expense_one_target`);
-  await pool.query(
-    `ALTER TABLE "Expense" ADD CONSTRAINT expense_one_target CHECK (("cycleId" IS NULL) <> ("tripId" IS NULL))`
-  );
-  console.log("Constraint expense_one_target in place.");
-
-  // A pub has a full position or none.
-  await pool.query(`ALTER TABLE "Pub" DROP CONSTRAINT IF EXISTS pub_location`);
-  await pool.query(`ALTER TABLE "Pub" ADD CONSTRAINT pub_location CHECK (${PUB_LOCATION_CHECK})`);
-  console.log("Constraint pub_location in place.");
-
-  // A counted beer is 1–50 pints.
-  await pool.query(`ALTER TABLE "Expense" DROP CONSTRAINT IF EXISTS expense_pints`);
-  await pool.query(`ALTER TABLE "Expense" ADD CONSTRAINT expense_pints CHECK (${EXPENSE_PINTS_CHECK})`);
-  console.log("Constraint expense_pints in place.");
+  for (const c of CHECKS) {
+    await pool.query(`ALTER TABLE "${c.table}" DROP CONSTRAINT IF EXISTS ${c.name}`);
+    await pool.query(`ALTER TABLE "${c.table}" ADD CONSTRAINT ${c.name} CHECK (${c.check})`);
+    console.log(`Constraint ${c.name} in place.`);
+  }
 }
 
 main()

@@ -119,7 +119,11 @@ export function toDateInputValue(date: Date = new Date()): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Date-only ISO string -> "YYYY-MM-DD" (the @db.Date columns are UTC midnight). */
+/**
+ * Date-only ISO string -> "YYYY-MM-DD" (the @db.Date columns are UTC midnight).
+ * Reads the UTC day, so a local Date (e.g. `new Date()` in Brussels just after
+ * midnight) comes out a day early: use toDateInputValue / dayKeyIn for those.
+ */
 export function dayKey(value: string | Date): string {
   return (typeof value === "string" ? value : value.toISOString()).slice(0, 10);
 }

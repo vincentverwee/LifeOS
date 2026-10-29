@@ -14,6 +14,11 @@ import { distanceM } from "@/lib/beer/nearby";
 /** A typed pub this close to an OpenStreetMap pick of the same name is taken to be that place. */
 const OSM_MATCH_M = 300;
 
+/** An osmId (or other unique value) another save took a moment ago. */
+function isUniqueViolation(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
+
 function revalidateExpenseRoutes() {
   revalidatePath("/"); // hub shows "left today"
   revalidatePath("/budget/expenses");
@@ -38,15 +43,18 @@ async function resolvePub(choice: PubChoice): Promise<string | null> {
     if (!pub) return null;
     // Found on the map for one of yours without a spot: place it (its name stays yours).
     if (choice.place && pub.latitude === null) {
+      const position = { latitude: choice.place.latitude, longitude: choice.place.longitude };
       const taken = await prisma.pub.findUnique({ where: { osmId: choice.place.osmId }, select: { id: true } });
-      await prisma.pub.update({
-        where: { id: pub.id },
-        data: {
-          latitude: choice.place.latitude,
-          longitude: choice.place.longitude,
-          ...(pub.osmId === null && !taken && { osmId: choice.place.osmId }),
-        },
-      });
+      try {
+        await prisma.pub.update({
+          where: { id: pub.id },
+          data: { ...position, ...(pub.osmId === null && !taken && { osmId: choice.place.osmId }) },
+        });
+      } catch (e) {
+        // Another save linked that place meanwhile: just take the position.
+        if (!isUniqueViolation(e)) throw e;
+        await prisma.pub.update({ where: { id: pub.id }, data: position });
+      }
     }
     return pub.id;
   }
@@ -70,19 +78,19 @@ async function resolvePub(choice: PubChoice): Promise<string | null> {
         p.longitude === null ||
         distanceM(p.latitude, p.longitude, choice.latitude, choice.longitude) <= OSM_MATCH_M
     );
-    if (typed) {
-      await prisma.pub.update({
-        where: { id: typed.id },
-        data: { osmId: choice.osmId, ...(typed.latitude === null && position) },
-      });
-      return typed.id;
-    }
     try {
+      if (typed) {
+        await prisma.pub.update({
+          where: { id: typed.id },
+          data: { osmId: choice.osmId, ...(typed.latitude === null && position) },
+        });
+        return typed.id;
+      }
       const pub = await prisma.pub.create({ data: { name: choice.name, osmId: choice.osmId, ...position }, select: { id: true } });
       return pub.id;
     } catch (e) {
-      // Another save created it at the same moment.
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      // Another save linked or created that place at the same moment: use that one.
+      if (isUniqueViolation(e)) {
         const pub = await prisma.pub.findUnique({ where: { osmId: choice.osmId }, select: { id: true } });
         if (pub) return pub.id;
       }
@@ -222,7 +230,6 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
   ]);
   if (!category) return { ok: false, error: "That category no longer exists." };
   if (!target.ok) return target;
-  if (category.pintPrice === null && input.pub) return { ok: false, error: "Only beer can have a pub." };
   const beer = await beerFields(category, input.pub, input.pints);
 
   let expense: { id: string };

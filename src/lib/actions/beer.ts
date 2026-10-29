@@ -61,18 +61,23 @@ export async function mergePub(fromId: string, intoId: string): Promise<BeerResu
     prisma.pub.findUnique({ where: { id: intoId }, select: { osmId: true, latitude: true } }),
   ]);
   if (!from || !into) return { ok: false, error: "That pub no longer exists." };
-  await prisma.$transaction([
-    prisma.expense.updateMany({ where: { pubId: fromId }, data: { pubId: intoId } }),
-    prisma.pub.delete({ where: { id: fromId } }),
-    // Keep what only the merged one knew: its OpenStreetMap id and position.
-    prisma.pub.update({
-      where: { id: intoId },
-      data: {
-        ...(into.osmId === null && from.osmId !== null && { osmId: from.osmId }),
-        ...(into.latitude === null && from.latitude !== null && { latitude: from.latitude, longitude: from.longitude }),
-      },
-    }),
-  ]);
+  try {
+    await prisma.$transaction([
+      prisma.expense.updateMany({ where: { pubId: fromId }, data: { pubId: intoId } }),
+      prisma.pub.delete({ where: { id: fromId } }),
+      // Keep what only the merged one knew: its OpenStreetMap id and position.
+      prisma.pub.update({
+        where: { id: intoId },
+        data: {
+          ...(into.osmId === null && from.osmId !== null && { osmId: from.osmId }),
+          ...(into.latitude === null && from.latitude !== null && { latitude: from.latitude, longitude: from.longitude }),
+        },
+      }),
+    ]);
+  } catch (e) {
+    // Merged or deleted on another device in the meantime.
+    return knownError(e, { P2025: "That pub no longer exists." });
+  }
   revalidateBeer();
   return { ok: true };
 }

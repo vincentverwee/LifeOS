@@ -221,12 +221,17 @@ export function computePeriodStats(period: StudyPeriod, todayKey: string): Perio
 
 // --- Comparison with earlier periods, counting down to the last exam ---
 //
-// Logging didn't always start at the same point before the exams. To keep the
-// periods in sync, the days before a period's first log are filled in with the
-// hours of the most recent other period that did log that day (what the old
-// "Vergelijking" sheets did by hand). The period being looked at is never
-// filled in: it starts at 0 on its first log. Filled-in hours only exist here;
-// totals and KPIs elsewhere stay real.
+// The semesters imported from the spreadsheets started logging at different
+// points before the exams. To keep them in sync, the days before an imported
+// period's first log are filled in with the hours of the most recent other
+// period (never the one being looked at) that did log that day, as the old
+// "Vergelijking" sheets did by hand. Semesters logged in the app are never
+// filled in: a day without a log is 0 h, so starting earlier shows as ahead.
+// The period being looked at starts at 0 on its own first log. Filled-in hours
+// only exist here; totals and KPIs elsewhere stay real.
+
+/** Semesters starting on or after this were logged in the app from the start (3.1 on). */
+const LOGGED_IN_APP_FROM = "2026-09-06";
 
 /** x = days before the last exam, negated: 0 is the last exam, -7 a week before. */
 function xOf(period: StudyPeriod, date: string): number {
@@ -260,15 +265,17 @@ function syncedCurves(periods: StudyPeriod[], active: StudyPeriod, todayKey: str
   const curves = covered.map((c) => {
     const cumulative = new Map<number, number>();
     let sum = 0;
-    // The period being looked at starts at 0 on its own first log; only the
-    // earlier ones are filled in.
-    const from = c.period.id === active.id ? c.first : -lead;
+    const isActive = c.period.id === active.id;
+    const imported = !isActive && c.period.startDate < LOGGED_IN_APP_FROM;
+    // The period being looked at starts at 0 on its own first log; the others
+    // run from the common start.
+    const from = isActive ? c.first : -lead;
     for (let x = from; x <= c.last; x++) {
       let hours = 0;
       if (x >= c.first) {
         hours = c.daily.get(x) ?? 0;
-      } else {
-        const source = mostRecentFirst.find((s) => s !== c && x >= s.first && x <= s.last);
+      } else if (imported) {
+        const source = mostRecentFirst.find((s) => s !== c && s.period.id !== active.id && x >= s.first && x <= s.last);
         hours = source?.daily.get(x) ?? 0;
       }
       sum = round2(sum + hours);
@@ -277,7 +284,8 @@ function syncedCurves(periods: StudyPeriod[], active: StudyPeriod, todayKey: str
     return {
       period: c.period,
       cumulative,
-      first: c.first,
+      // An app-logged peer has nothing filled in: its zeros before the first log are real.
+      first: isActive || imported ? c.first : -lead,
       last: c.last,
     };
   });

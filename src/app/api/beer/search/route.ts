@@ -13,9 +13,12 @@ export async function GET(request: Request): Promise<Response> {
   const params = new URL(request.url).searchParams;
   const q = params.get("q")?.trim() ?? "";
   if (q.length < 2 || q.length > 100) return Response.json([]);
-  const lat = Number(params.get("lat"));
-  const lng = Number(params.get("lng"));
-  const near = params.has("lat") && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
+  // Number("") and Number(null) are 0, so both must be really there.
+  const [rawLat, rawLng] = [params.get("lat"), params.get("lng")];
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+  const near =
+    !!rawLat?.trim() && !!rawLng?.trim() && Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
   const url = new URL("https://nominatim.openstreetmap.org/search");
   url.searchParams.set("q", q);

@@ -16,8 +16,6 @@ export type MonthExpense = {
   pintPrice: number | null;
   /** pints counted when it was logged (null = guessed from pintPrice, see pintsOf) */
   pints: number | null;
-  /** the pub it was bought at (beer only) */
-  pubName: string | null;
 };
 
 export type Month = {

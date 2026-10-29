@@ -60,7 +60,9 @@ export function nextMonth(key: string, anchorDay: number): string {
 
 /** Weekly days to use: the chosen ones, or the weekday of `dueOn` when none are stored. */
 function daysOf(weekdays: number[], dueOn: string): number[] {
-  return weekdays.length ? weekdays : [weekdayOf(dueOn)];
+  // Out-of-range days would never match and loop onOrAfterWeekday forever.
+  const valid = weekdays.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  return valid.length ? valid : [weekdayOf(dueOn)];
 }
 
 /** First chosen weekday on or after `key`. */

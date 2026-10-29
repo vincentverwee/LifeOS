@@ -6,7 +6,7 @@ import type { Month, MonthExpense } from "@/lib/monthStats";
 
 const expenseInclude = {
   orderBy: [{ date: "asc" as const }, { createdAt: "asc" as const }],
-  include: { category: { select: { name: true, color: true, pintPrice: true } }, pub: { select: { name: true } } },
+  include: { category: { select: { name: true, color: true, pintPrice: true } } },
 };
 
 type ExpenseRow = {
@@ -17,7 +17,6 @@ type ExpenseRow = {
   categoryId: string;
   category: { name: string; color: string; pintPrice: { toNumber(): number } | null };
   pints: number | null;
-  pub: { name: string } | null;
 };
 
 function toExpense(e: ExpenseRow): MonthExpense {
@@ -31,7 +30,6 @@ function toExpense(e: ExpenseRow): MonthExpense {
     categoryColor: e.category.color,
     pintPrice: e.category.pintPrice?.toNumber() ?? null,
     pints: e.pints,
-    pubName: e.pub?.name ?? null,
   };
 }
 
@@ -157,7 +155,6 @@ export async function getPeriodSummaries(): Promise<Month[]> {
       pintPrice: category.pintPrice?.toNumber() ?? null,
       // Counted pints of the day (a mix with uncounted beers undercounts the guess).
       pints: g._sum.pints,
-      pubName: null,
     });
     byPeriod.set(periodId, list);
   }
