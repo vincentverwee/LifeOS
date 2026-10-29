@@ -1,18 +1,30 @@
-// Pubs and bars near a point, from OpenStreetMap's Overpass API. Called from the
+// Places to drink near a point (pubs and bars first, also restaurants, cafés and hotels:
+// see venues.ts), from OpenStreetMap's Overpass API. Called from the
 // browser on the Nearby tap (the public servers are meant for human-operated tools,
 // not server traffic), first the main server, then a mirror, within NEARBY_TIMEOUT_MS
 // overall. Any failure is just "no suggestions": the name can always be typed.
 
 import { greatCircleKm } from "@/lib/waypoint/routing/lines";
+import { NEARBY_TAGS, venueLabel, venueRank, venueType } from "@/lib/beer/venues";
 
-export type NearbyPlace = { osmId: string; name: string; latitude: number; longitude: number; distance: number };
+export type NearbyPlace = {
+  osmId: string;
+  name: string;
+  /** "Pub", "Restaurant", … */
+  kind: string;
+  latitude: number;
+  longitude: number;
+  distance: number;
+};
 
 const SERVERS = ["https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"];
 export const NEARBY_TIMEOUT_MS = 4000;
 /** How far around the phone to look, in metres. */
 export const NEARBY_RADIUS_M = 150;
 const FIRST_TRY_MS = 2500;
-const MAX_PLACES = 20;
+/** Asked of Overpass (restaurants can crowd a city centre), and shown after sorting. */
+const MAX_PLACES = 40;
+const SHOWN_PLACES = 12;
 
 /** Metres between two points (Waypoint's great-circle formula). */
 export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -20,7 +32,9 @@ export function distanceM(lat1: number, lng1: number, lat2: number, lng2: number
 }
 
 export function nearbyQuery(latitude: number, longitude: number, radius = NEARBY_RADIUS_M): string {
-  return `[out:json][timeout:5];nwr["amenity"~"^(pub|bar|biergarten)$"](around:${radius},${latitude},${longitude});out center ${MAX_PLACES};`;
+  const around = `(around:${radius},${latitude},${longitude})`;
+  const parts = Object.entries(NEARBY_TAGS).map(([key, values]) => `nwr["${key}"~"${values}"]${around};`);
+  return `[out:json][timeout:5];(${parts.join("")});out center ${MAX_PLACES};`;
 }
 
 type OverpassElement = {
@@ -32,7 +46,7 @@ type OverpassElement = {
   tags?: Record<string, string>;
 };
 
-/** Named places from an Overpass reply, nearest first. Ways and areas use their centre. */
+/** Named places from an Overpass reply: pubs and bars first, then nearest. Ways and areas use their centre. */
 export function parseNearby(json: unknown, latitude: number, longitude: number): NearbyPlace[] {
   const elements = (json as { elements?: OverpassElement[] })?.elements ?? [];
   const places: NearbyPlace[] = [];
@@ -44,12 +58,16 @@ export function parseNearby(json: unknown, latitude: number, longitude: number):
     places.push({
       osmId: `${el.type}/${el.id}`,
       name: name.slice(0, 80),
+      kind: venueType(el.tags ?? {}),
       latitude: lat,
       longitude: lon,
       distance: Math.round(distanceM(latitude, longitude, lat, lon)),
     });
   }
-  return places.sort((a, b) => a.distance - b.distance);
+  return places
+    .sort((a, b) => venueRank(a.kind) - venueRank(b.kind) || a.distance - b.distance)
+    .slice(0, SHOWN_PLACES)
+    .map((p) => ({ ...p, kind: venueLabel(p.kind) }));
 }
 
 /** Nearby pubs and bars, or [] when every server failed or took too long. */

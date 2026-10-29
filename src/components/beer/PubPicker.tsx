@@ -127,6 +127,7 @@ export function PubPicker({
         name: place.name,
         choice: { kind: "osm", osmId: place.osmId, name: place.name, latitude: place.latitude, longitude: place.longitude },
         distance: place.distance,
+        place: place.kind,
         mine: false,
       }));
     setNearby([...mine, ...osm]);
@@ -162,7 +163,7 @@ export function PubPicker({
           ? { kind: "known", id: unplaced.id, place: { osmId: f.osmId, latitude: f.latitude, longitude: f.longitude } }
           : { kind: "osm", osmId: f.osmId, name: f.name, latitude: f.latitude, longitude: f.longitude },
         distance: f.distance ?? undefined,
-        place: f.place,
+        place: [f.kind, f.place].filter(Boolean).join(" · "),
         mine: false,
       }));
     setNearby(results);

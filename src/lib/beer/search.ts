@@ -1,12 +1,16 @@
-// Pubs by name from Nominatim (/api/beer/search). Client-safe: the picker calls searchPubs,
-// the route uses parsePubSearch.
+// Places by name from Nominatim (/api/beer/search): any venue, pubs and bars first (an
+// airport bar can be tagged restaurant; see venues.ts). Client-safe: the picker calls
+// searchPubs, the route uses parsePubSearch.
 
 import { distanceM } from "@/lib/beer/nearby";
+import { isVenue, venueLabel, venueRank } from "@/lib/beer/venues";
 
 export type FoundPub = {
   osmId: string;
   name: string;
-  /** town and country, to tell same-named places apart */
+  /** "Pub", "Restaurant", … */
+  kind: string;
+  /** street, town and country, to tell same-named places apart */
   place: string;
   latitude: number;
   longitude: number;
@@ -16,7 +20,6 @@ export type FoundPub = {
 
 /** Half the side of the box the search leans toward, in degrees (~50 km). */
 export const PUB_SEARCH_VIEWBOX_DEG = 0.5;
-const KINDS = new Set(["pub", "bar", "biergarten", "nightclub"]);
 const MAX_RESULTS = 6;
 
 type NominatimRow = {
@@ -30,12 +33,12 @@ type NominatimRow = {
   address?: Record<string, string>;
 };
 
-/** Only pubs, bars, beer gardens and clubs; nearest first when there's a spot to lean toward. */
+/** Venues only (no streets, towns or benches); nearest first when there's a spot to lean toward, else pubs and bars first. */
 export function parsePubSearch(json: unknown, near: { latitude: number; longitude: number } | null): FoundPub[] {
   const rows = Array.isArray(json) ? (json as NominatimRow[]) : [];
   const found: FoundPub[] = [];
   for (const r of rows) {
-    if (r.class !== "amenity" || !KINDS.has(r.type ?? "") || !r.name || !r.osm_type || !r.osm_id) continue;
+    if (!isVenue(r.class, r.type) || !r.name || !r.osm_type || !r.osm_id) continue;
     const latitude = Number(r.lat);
     const longitude = Number(r.lon);
     if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) continue;
@@ -44,14 +47,16 @@ export function parsePubSearch(json: unknown, near: { latitude: number; longitud
     found.push({
       osmId: `${r.osm_type}/${r.osm_id}`,
       name: r.name.slice(0, 80),
+      kind: r.type!,
       place: [a.road, town, a.country].filter(Boolean).join(", "),
       latitude,
       longitude,
       distance: near ? Math.round(distanceM(near.latitude, near.longitude, latitude, longitude)) : null,
     });
   }
-  if (near) found.sort((a, b) => a.distance! - b.distance!);
-  return found.slice(0, MAX_RESULTS);
+  // Stable sort: without a spot, Nominatim's own relevance order stays within each rank.
+  found.sort(near ? (a, b) => a.distance! - b.distance! : (a, b) => venueRank(a.kind) - venueRank(b.kind));
+  return found.slice(0, MAX_RESULTS).map((f) => ({ ...f, kind: venueLabel(f.kind) }));
 }
 
 /** Pubs matching `name`, leaning toward `near`; [] on any failure. */
