@@ -10,22 +10,30 @@ import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { budgetGlance } from "@/lib/data/budgetGlance";
 import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { computePeriodStats, dailyTotals } from "@/lib/lessons/stats";
-import { isPushKind, type PushKind, type PushPayload } from "@/lib/push/kinds";
+import {
+  defaultPushTime,
+  isPushKind,
+  minutesOf,
+  parsePushTimes,
+  type PushPayload,
+  type TimedPushKind,
+} from "@/lib/push/kinds";
 import { sendPush } from "@/lib/push/send";
 import { weatherLine } from "@/lib/push/weather";
 import { getDueSubscriptions, getSubscriptions } from "@/lib/data/subscriptions";
 import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
-// a window in the device's local time and a key in PushSent, so it goes out once,
-// on the first run inside its window where there's something to say.
+// a window in the device's local time, from its chosen time (PushSubscription.times,
+// else the default in kinds.ts) on, and a key in PushSent, so it goes out once, on
+// the first run inside its window where there's something to say.
 
-/** Local hours [from, to) a kind may be sent in. */
-const WINDOWS: Record<Exclude<PushKind, "timer">, [number, number]> = {
-  digest: [8, 11],
-  "study-evening": [20, 23],
-  "budget-evening": [21, 24],
-  week: [19, 23], // Sundays only
+/** How long after its time a kind may still be sent (GitHub runs can be late). */
+const WINDOW_HOURS: Record<TimedPushKind, number> = {
+  digest: 3,
+  "study-evening": 3,
+  "budget-evening": 3,
+  week: 4, // Sundays only
 };
 const TIMER_NUDGE_HOURS = 3;
 const EXAM_HEADS_UP_DAYS = [0, 1, 3, 7];
@@ -36,8 +44,11 @@ const KEEP_SENT_DAYS = 45;
 /** Names listed in the review's Last done line before "+N". */
 const WEEK_MAX_NAMES = 2;
 
-function hourIn(tz: string, now: Date): number {
-  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(now));
+/** Minutes after local midnight in `tz`. */
+function minuteIn(tz: string, now: Date): number {
+  const parts = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "numeric", hourCycle: "h23", timeZone: tz }).formatToParts(now);
+  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return part("hour") * 60 + part("minute");
 }
 
 function inDays(days: number): string {
@@ -256,7 +267,8 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
 
   for (const sub of subscriptions) {
     const todayKey = dayKeyIn(sub.timeZone, now);
-    const hour = hourIn(sub.timeZone, now);
+    const minute = minuteIn(sub.timeZone, now);
+    const times = parsePushTimes(sub.times);
 
     for (const kind of sub.kinds.filter(isPushKind)) {
       // One failing query or send must not hold up the other devices and kinds.
@@ -270,8 +282,10 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
           key = nudge.key;
           payload = nudge.payload;
         } else {
-          const [from, to] = WINDOWS[kind];
-          if (hour < from || hour >= to) continue;
+          // Never past midnight: the next day would get its own key and a second send.
+          const from = minutesOf(times[kind] ?? defaultPushTime(kind));
+          const to = Math.min(from + WINDOW_HOURS[kind] * 60, 24 * 60);
+          if (minute < from || minute >= to) continue;
           if (kind === "week" && weekdayOf(todayKey) !== 0) continue;
           key = `${kind}:${todayKey}`;
           if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;

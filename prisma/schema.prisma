@@ -440,6 +440,7 @@ model PushSubscription {
   auth           String
   timeZone       String
   kinds          String[]
+  times          Json      @default("{}") // { kind: "HH:MM" } chosen on /settings; missing = default in src/lib/push/kinds.ts
   latitude       Float?
   longitude      Float?
   placeLabel     String?

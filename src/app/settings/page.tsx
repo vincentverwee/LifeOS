@@ -1,15 +1,30 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { isPushKind } from "@/lib/push/kinds";
+import { isPushKind, parsePushTimes, type PushKind } from "@/lib/push/kinds";
 import { DeviceSettings } from "@/components/settings/DeviceSettings";
 
 export default async function SettingsPage() {
   await connection();
-  const rows = await prisma.pushSubscription.findMany({
-    select: { endpoint: true, kinds: true, placeLabel: true, locationSource: true },
-  });
-  const devices = rows.map((r) => ({ ...r, kinds: r.kinds.filter(isPushKind) }));
+  const [rows, sent] = await Promise.all([
+    prisma.pushSubscription.findMany({
+      select: { id: true, endpoint: true, kinds: true, times: true, placeLabel: true, locationSource: true },
+    }),
+    prisma.pushSent.findMany({ select: { key: true, sentAt: true }, orderBy: { sentAt: "asc" } }),
+  ]);
+  // Newest send per device and kind ("<sub>:<kind>:…" keys), so a missing one can be told apart from a late one.
+  const lastSent = new Map<string, Partial<Record<PushKind, string>>>();
+  for (const { key, sentAt } of sent) {
+    const [subId, kind] = key.split(":");
+    if (!isPushKind(kind)) continue;
+    lastSent.set(subId, { ...lastSent.get(subId), [kind]: sentAt.toISOString() });
+  }
+  const devices = rows.map(({ id, times, ...r }) => ({
+    ...r,
+    kinds: r.kinds.filter(isPushKind),
+    times: parsePushTimes(times),
+    lastSent: lastSent.get(id) ?? {},
+  }));
 
   return (
     <div className="flex flex-col gap-8">

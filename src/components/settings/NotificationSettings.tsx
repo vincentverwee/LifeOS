@@ -5,13 +5,34 @@ import {
   removePushSubscription,
   savePushSubscription,
   setPushKinds,
+  setPushTime,
   touchPushSubscription,
 } from "@/lib/actions/push";
-import { PUSH_KINDS, type PushKind } from "@/lib/push/kinds";
+import { defaultPushTime, isTimedPushKind, PUSH_KINDS, type PushKind, type PushTimes } from "@/lib/push/kinds";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { writeLocationMarker, type DeviceStatus } from "@/lib/push/device";
 
-export type Device = { endpoint: string; kinds: PushKind[] };
+export type Device = {
+  endpoint: string;
+  kinds: PushKind[];
+  times: PushTimes;
+  /** When the server last handed each kind to the push service (ISO). */
+  lastSent: Partial<Record<PushKind, string>>;
+};
+
+const timeInput = "rounded-lg border border-border bg-surface px-2 py-2 text-sm text-foreground";
+
+/** "today 08:07", "yesterday 21:02", "Mon 27 Oct 08:15" in this phone's time. */
+function describeSent(iso: string): string {
+  const at = new Date(iso);
+  const time = at.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const day = (d: Date) => d.toDateString();
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (day(at) === day(new Date())) return `today ${time}`;
+  if (day(at) === day(yesterday)) return `yesterday ${time}`;
+  return `${at.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })} ${time}`;
+}
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {
   const base64 = (base64url + "=".repeat((4 - (base64url.length % 4)) % 4)).replace(/-/g, "+").replace(/_/g, "/");
@@ -95,6 +116,15 @@ export function NotificationSettings({
     });
   }
 
+  function changeTime(kind: PushKind, time: string) {
+    if (!device || !time) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await setPushTime(device.endpoint, kind, time);
+      if (!result.ok) setError(result.error);
+    });
+  }
+
   function toggle(kind: PushKind, on: boolean) {
     if (!device) return;
     setError(null);
@@ -132,9 +162,11 @@ export function NotificationSettings({
         <section className="rounded-xl border border-border bg-surface">
           <h2 className="px-4 pt-4 pb-1 font-medium text-foreground">On this device</h2>
           <ul>
-            {PUSH_KINDS.map((k) => (
-              <li key={k.key}>
-                <label className="tap flex min-h-11 items-start gap-3 px-4 py-3">
+            {PUSH_KINDS.map((k) => {
+              const time = isTimedPushKind(k.key) ? (device.times[k.key] ?? defaultPushTime(k.key)) : null;
+              return (
+              <li key={k.key} className="flex items-start">
+                <label className="tap flex min-h-11 flex-1 items-start gap-3 py-3 pl-4 pr-2">
                   <input
                     type="checkbox"
                     checked={device.kinds.includes(k.key)}
@@ -145,10 +177,29 @@ export function NotificationSettings({
                   <span className="flex flex-col">
                     <span className="text-foreground">{k.label}</span>
                     <span className="text-sm text-ink-muted">{k.description}</span>
+                    {device.lastSent[k.key] && (
+                      <span className="text-xs text-ink-muted">Last sent {describeSent(device.lastSent[k.key]!)}</span>
+                    )}
                   </span>
                 </label>
+                {time && (
+                  <input
+                    type="time"
+                    aria-label={`${k.label} time`}
+                    // Re-mounted when the saved time changes, so the field shows what's stored.
+                    key={time}
+                    defaultValue={time}
+                    disabled={pending || !device.kinds.includes(k.key)}
+                    // On blur, not on change: iOS commits the wheel when it closes, desktop mid-typing.
+                    onBlur={(e) => {
+                      if (e.target.value && e.target.value !== time) changeTime(k.key, e.target.value);
+                    }}
+                    className={`${timeInput} mt-2 mr-4 shrink-0 disabled:opacity-50`}
+                  />
+                )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         </section>
       ) : (
@@ -166,7 +217,8 @@ export function NotificationSettings({
       {error && <p className="text-sm text-critical">{error}</p>}
 
       <p className="text-sm text-ink-muted">
-        Times are in this phone&apos;s timezone. Nothing is sent when there&apos;s nothing to say.
+        Times are in this phone&apos;s timezone; each goes out on the first check after its time (checks run
+        every 15 minutes and can be a little late). Nothing is sent when there&apos;s nothing to say.
         {others > 0 && ` Also on ${others} other device${others > 1 ? "s" : ""}.`}
       </p>
 

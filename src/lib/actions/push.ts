@@ -3,7 +3,15 @@
 import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { ALL_PUSH_KINDS, isPushKind, type PushKind } from "@/lib/push/kinds";
+import {
+  ALL_PUSH_KINDS,
+  defaultPushTime,
+  isPushKind,
+  isPushTime,
+  isTimedPushKind,
+  parsePushTimes,
+  type PushKind,
+} from "@/lib/push/kinds";
 import { pushConfigured, sendPush } from "@/lib/push/send";
 
 export type PushResult = { ok: true } | { ok: false; error: string };
@@ -64,6 +72,20 @@ export async function setPushKinds(endpoint: string, kinds: PushKind[]): Promise
   const { count } = await prisma.pushSubscription.updateMany({ where: { endpoint }, data: { kinds: clean } });
   revalidatePath("/settings");
   return count ? { ok: true } : { ok: false, error: "This device isn't subscribed any more; turn notifications on again." };
+}
+
+/** Sets when one kind goes out on this device ("HH:MM", its local time). */
+export async function setPushTime(endpoint: string, kind: PushKind, time: string): Promise<PushResult> {
+  await requireAuth();
+  if (!isTimedPushKind(kind) || !isPushTime(time)) return { ok: false, error: "That time doesn't look right." };
+  const device = await prisma.pushSubscription.findUnique({ where: { endpoint }, select: { id: true, times: true } });
+  if (!device) return { ok: false, error: "This device isn't subscribed any more; turn notifications on again." };
+  const times = parsePushTimes(device.times);
+  if (time === defaultPushTime(kind)) delete times[kind];
+  else times[kind] = time;
+  await prisma.pushSubscription.update({ where: { id: device.id }, data: { times } });
+  revalidatePath("/settings");
+  return { ok: true };
 }
 
 export async function removePushSubscription(endpoint: string): Promise<PushResult> {

@@ -1,6 +1,7 @@
 # Every 15 minutes, asks each deployment to send the push notifications that are
-# due (src/app/api/push/cron/route.ts). GitHub may run scheduled jobs a few
-# minutes late; the windows in src/lib/push/schedule.ts allow for that.
+# due (src/app/api/push/cron/route.ts). GitHub may run scheduled jobs late, most
+# of all at the top of the hour, so this runs at :02/:17/:32/:47 instead; the
+# windows in src/lib/push/schedule.ts allow for lateness.
 #
 # Repository secrets (Settings → Secrets and variables → Actions):
 #   LIFEOS_URL, LIFEOS_CRON_SECRET  – your deployment (https://…, no trailing slash) and its CRON_SECRET
@@ -9,7 +10,7 @@ name: Push notifications
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "2,17,32,47 * * * *"
   workflow_dispatch:
 
 jobs:
