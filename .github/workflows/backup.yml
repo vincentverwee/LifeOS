@@ -27,7 +27,7 @@ on:
 
 jobs:
   backup:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: the PGDG apt repo can lag behind a new Ubuntu
     timeout-minutes: 15
     services:
       postgres:
@@ -78,7 +78,7 @@ jobs:
           if [ -z "$(ls out)" ]; then echo "::error::No database configured"; exit 1; fi
 
       - name: Check out the backup repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: ${{ secrets.BACKUP_REPO }}
           ssh-key: ${{ secrets.BACKUP_DEPLOY_KEY }}
