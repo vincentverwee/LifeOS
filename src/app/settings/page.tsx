@@ -39,7 +39,7 @@ export default async function SettingsPage() {
         <h2 className="text-lg font-semibold text-foreground">Backup</h2>
         <p className="text-sm text-ink-muted">Everything you&apos;ve logged, as one JSON file.</p>
         {/* A plain link: the route sends it as an attachment. */}
-        <a href="/api/export" download className="btn btn-outline min-h-11 self-start px-5">
+        <a href="/api/export" download className="btn btn-outline inline-flex min-h-11 self-start px-5 text-sm font-semibold">
           Download everything
         </a>
       </section>
