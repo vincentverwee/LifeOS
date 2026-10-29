@@ -15,7 +15,7 @@ function primary(): string {
 }
 
 /**
- * Your pubs as dots, bigger the more you've been; a tap opens the pub. Same tiles as
+ * Your pubs as small dots in the theme colour; a tap opens the pub. Same tiles as
  * Waypoint's maps. `cooperativeGestures` (touch only) lets one finger scroll the page.
  */
 export default function PubMap({ pubs, cooperativeGestures = true }: { pubs: MapPub[]; cooperativeGestures?: boolean }) {
@@ -50,7 +50,6 @@ export default function PubMap({ pubs, cooperativeGestures = true }: { pubs: Map
         properties: { id: p.id, name: p.name, visits: p.visits },
       })),
     };
-    const most = Math.max(1, ...pubs.map((p) => p.visits));
 
     map.on("load", () => {
       const color = primary();
@@ -60,12 +59,19 @@ export default function PubMap({ pubs, cooperativeGestures = true }: { pubs: Map
         type: "circle",
         source: SOURCE,
         paint: {
+          // One small dot per pub, however often you've been: lots of pubs stay readable.
           "circle-color": color,
-          "circle-opacity": ["interpolate", ["linear"], ["get", "visits"], 0, 0.45, most, 0.95],
-          "circle-radius": ["interpolate", ["linear"], ["get", "visits"], 0, 6, most, 16],
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 4, 4, 14, 6],
           "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 2,
+          "circle-stroke-width": 1.5,
         },
+      });
+      // Invisible, finger-sized: the dots are small, taps shouldn't have to be.
+      map.addLayer({
+        id: "pub-hit",
+        type: "circle",
+        source: SOURCE,
+        paint: { "circle-radius": 18, "circle-opacity": 0 },
       });
       map.addLayer({
         id: "pub-labels",
@@ -91,12 +97,12 @@ export default function PubMap({ pubs, cooperativeGestures = true }: { pubs: Map
       }
     });
 
-    map.on("click", "pub-dots", (e) => {
+    map.on("click", "pub-hit", (e) => {
       const id = e.features?.[0]?.properties?.id;
       if (typeof id === "string") routerRef.current.push(`/beer/pubs/${id}`);
     });
-    map.on("mouseenter", "pub-dots", () => (map.getCanvas().style.cursor = "pointer"));
-    map.on("mouseleave", "pub-dots", () => (map.getCanvas().style.cursor = ""));
+    map.on("mouseenter", "pub-hit", () => (map.getCanvas().style.cursor = "pointer"));
+    map.on("mouseleave", "pub-hit", () => (map.getCanvas().style.cursor = ""));
 
     return () => map.remove();
   }, [pubsKey, cooperativeGestures]);
