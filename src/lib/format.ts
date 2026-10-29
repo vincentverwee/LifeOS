@@ -15,6 +15,11 @@ const percentFormatter = new Intl.NumberFormat("nl-BE", {
   maximumFractionDigits: 0,
 });
 
+/** "1 pint", "3 pints" */
+export function plural(n: number, one: string, many: string): string {
+  return `${n} ${n === 1 ? one : many}`;
+}
+
 export function formatCurrency(value: number): string {
   return currencyFormatter.format(value);
 }

@@ -9,8 +9,9 @@ const pool = new Pool({ connectionString: process.env.DIRECT_URL });
 
 const PUSH_LOCATION_CHECK = `(
   ("latitude" IS NULL AND "longitude" IS NULL AND "placeLabel" IS NULL AND "locationSource" IS NULL)
-  OR ("latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180
-      AND "placeLabel" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
+  OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL
+      AND "latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180
+      AND "placeLabel" IS NOT NULL AND "locationSource" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
 )`;
 
 const SUBSCRIPTION_CHECK = `(
@@ -18,6 +19,16 @@ const SUBSCRIPTION_CHECK = `(
   AND ("repeat" = 'yearly') = ("anchorMonth" IS NOT NULL)
   AND ("anchorMonth" IS NULL OR "anchorMonth" BETWEEN 1 AND 12)
 )`;
+
+// Every branch spells out IS NOT NULL: a CHECK that comes out NULL counts as passed,
+// so "latitude set, longitude NULL" would otherwise slip through.
+const PUB_LOCATION_CHECK = `(
+  ("latitude" IS NULL AND "longitude" IS NULL)
+  OR ("latitude" IS NOT NULL AND "longitude" IS NOT NULL
+      AND "latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180)
+)`;
+
+const EXPENSE_PINTS_CHECK = `("pints" IS NULL OR "pints" BETWEEN 1 AND 50)`;
 
 // Supabase exposes the public schema through its REST/GraphQL API as `anon`/`authenticated`.
 // The app only talks to Postgres as `postgres` (owner, bypasses RLS), so those roles need
@@ -70,7 +81,15 @@ async function main() {
   const badSubscriptions = await pool.query(`SELECT id, name FROM "Subscription" WHERE NOT (${SUBSCRIPTION_CHECK})`);
   console.log(`Subscriptions with an invalid schedule or amount: ${badSubscriptions.rowCount}`, badSubscriptions.rows);
 
+  const badPubs = await pool.query(`SELECT id, name FROM "Pub" WHERE NOT (${PUB_LOCATION_CHECK})`);
+  console.log(`Pubs with a half-set location: ${badPubs.rowCount}`, badPubs.rows);
+
+  const badPints = await pool.query(`SELECT id, pints FROM "Expense" WHERE NOT (${EXPENSE_PINTS_CHECK})`);
+  console.log(`Expenses with an invalid pint count: ${badPints.rowCount}`, badPints.rows);
+
   if (dry) return;
+  if (badPubs.rowCount) throw new Error("Fix those pubs first.");
+  if (badPints.rowCount) throw new Error("Fix those pint counts first.");
   if (badTargets.rowCount) throw new Error("Fix those expenses first.");
   if (badLocations.rowCount) throw new Error("Fix those push devices first.");
   if (badSubscriptions.rowCount) throw new Error("Fix those subscriptions first.");
@@ -91,6 +110,16 @@ async function main() {
     `ALTER TABLE "Expense" ADD CONSTRAINT expense_one_target CHECK (("cycleId" IS NULL) <> ("tripId" IS NULL))`
   );
   console.log("Constraint expense_one_target in place.");
+
+  // A pub has a full position or none.
+  await pool.query(`ALTER TABLE "Pub" DROP CONSTRAINT IF EXISTS pub_location`);
+  await pool.query(`ALTER TABLE "Pub" ADD CONSTRAINT pub_location CHECK (${PUB_LOCATION_CHECK})`);
+  console.log("Constraint pub_location in place.");
+
+  // A counted beer is 1–50 pints.
+  await pool.query(`ALTER TABLE "Expense" DROP CONSTRAINT IF EXISTS expense_pints`);
+  await pool.query(`ALTER TABLE "Expense" ADD CONSTRAINT expense_pints CHECK (${EXPENSE_PINTS_CHECK})`);
+  console.log("Constraint expense_pints in place.");
 }
 
 main()

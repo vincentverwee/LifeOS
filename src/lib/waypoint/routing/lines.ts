@@ -32,12 +32,17 @@ const rad = (deg: number) => (deg * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
 
 /** Great-circle distance in km, rounded to 0.1 like the OSRM distances. */
-export function haversineKm(a: Point, b: Point): number {
+/** Great-circle distance in km, unrounded (Beer's Nearby needs metres). */
+export function greatCircleKm(a: Point, b: Point): number {
   const dLat = rad(b.latitude - a.latitude);
   const dLng = rad(b.longitude - a.longitude);
   const h =
     Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
-  return Math.round(2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h))) * 10) / 10;
+  return 2 * EARTH_KM * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+
+export function haversineKm(a: Point, b: Point): number {
+  return Math.round(greatCircleKm(a, b) * 10) / 10;
 }
 
 /**

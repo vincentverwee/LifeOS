@@ -122,12 +122,31 @@ model Expense {
   // Logged from a subscription's renewal (src/lib/actions/subscriptions.ts).
   subscriptionId String?
   subscription   Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  // Beer only (category with a pintPrice): where, and how many pints (null = guessed
+  // from the price, src/lib/monthStats.ts). CHECK expense_pints in apply-checks.ts.
+  pubId          String?
+  pub            Pub?          @relation(fields: [pubId], references: [id], onDelete: SetNull)
+  pints          Int?
   createdAt      DateTime      @default(now())
 
   @@index([categoryId, date])
   @@index([tripId, date])
   @@index([cycleId, date])
   @@index([subscriptionId, date])
+  @@index([pubId, date])
+}
+
+// A pub or bar beers were bought at (/beer). Picked from OpenStreetMap nearby
+// (osmId "node/123") or typed; a typed one gets the phone's position when there is
+// one. latitude/longitude both or neither (CHECK pub_location).
+model Pub {
+  id        String    @id @default(cuid())
+  name      String
+  latitude  Float?
+  longitude Float?
+  osmId     String?   @unique
+  createdAt DateTime  @default(now())
+  expenses  Expense[]
 }
 
 // A recurring charge (Spotify, a yearly domain…). Nothing is logged by itself: from

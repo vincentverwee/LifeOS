@@ -6,7 +6,7 @@ import type { Month, MonthExpense } from "@/lib/monthStats";
 
 const expenseInclude = {
   orderBy: [{ date: "asc" as const }, { createdAt: "asc" as const }],
-  include: { category: { select: { name: true, color: true, pintPrice: true } } },
+  include: { category: { select: { name: true, color: true, pintPrice: true } }, pub: { select: { name: true } } },
 };
 
 type ExpenseRow = {
@@ -16,6 +16,8 @@ type ExpenseRow = {
   note: string | null;
   categoryId: string;
   category: { name: string; color: string; pintPrice: { toNumber(): number } | null };
+  pints: number | null;
+  pub: { name: string } | null;
 };
 
 function toExpense(e: ExpenseRow): MonthExpense {
@@ -28,6 +30,8 @@ function toExpense(e: ExpenseRow): MonthExpense {
     categoryName: e.category.name,
     categoryColor: e.category.color,
     pintPrice: e.category.pintPrice?.toNumber() ?? null,
+    pints: e.pints,
+    pubName: e.pub?.name ?? null,
   };
 }
 
@@ -129,7 +133,7 @@ export async function getPeriodSummaries(): Promise<Month[]> {
     prisma.category.findMany({ select: { id: true, name: true, color: true, pintPrice: true } }),
     prisma.expense.groupBy({
       by: ["cycleId", "tripId", "date", "categoryId"],
-      _sum: { amount: true },
+      _sum: { amount: true, pints: true },
       orderBy: [{ date: "asc" }],
     }),
   ]);
@@ -151,6 +155,9 @@ export async function getPeriodSummaries(): Promise<Month[]> {
       categoryName: category.name,
       categoryColor: category.color,
       pintPrice: category.pintPrice?.toNumber() ?? null,
+      // Counted pints of the day (a mix with uncounted beers undercounts the guess).
+      pints: g._sum.pints,
+      pubName: null,
     });
     byPeriod.set(periodId, list);
   }

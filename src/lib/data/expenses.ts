@@ -15,6 +15,10 @@ export type ListExpense = {
   categoryColor: CategoryColorSlot;
   /** Logged from a subscription's renewal. */
   fromSubscription: boolean;
+  /** beer only */
+  pubId: string | null;
+  pubName: string | null;
+  pints: number | null;
 };
 
 /** Newest expenses of a period first; `limit: null` returns all of them. */
@@ -23,7 +27,7 @@ export async function getRecentExpenses(period: Period, limit: number | null = 5
     where: period.type === "cycle" ? { cycleId: period.id } : { tripId: period.id },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: limit ?? undefined,
-    include: { category: { select: { name: true, color: true } } },
+    include: { category: { select: { name: true, color: true } }, pub: { select: { name: true } } },
   });
 
   return rows.map((row) => ({
@@ -35,5 +39,8 @@ export async function getRecentExpenses(period: Period, limit: number | null = 5
     categoryName: row.category.name,
     categoryColor: row.category.color as CategoryColorSlot,
     fromSubscription: row.subscriptionId !== null,
+    pubId: row.pubId,
+    pubName: row.pub?.name ?? null,
+    pints: row.pints,
   }));
 }

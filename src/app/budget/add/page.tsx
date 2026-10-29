@@ -12,13 +12,19 @@ import { EmptyState } from "@/components/dashboard/EmptyState";
 import { CategoryManager } from "@/components/categories/CategoryManager";
 import { ExpenseEntryForm } from "@/components/expenses/ExpenseEntryForm";
 import { PendingExpenses } from "@/components/expenses/PendingExpenses";
+import { getPubOptions } from "@/lib/data/beer";
 
 export default async function AddExpensePage(props: PageProps<"/budget/add">) {
   const searchParams = await props.searchParams;
   const requestedPeriod = searchParams.period;
   const requestedKey = Array.isArray(requestedPeriod) ? requestedPeriod[0] : requestedPeriod;
 
-  const [periods, todayKey, allCategories] = await Promise.all([getAllPeriods(), getTodayKey(), getAllCategories()]);
+  const [periods, todayKey, allCategories, pubs] = await Promise.all([
+    getAllPeriods(),
+    getTodayKey(),
+    getAllCategories(),
+    getPubOptions(),
+  ]);
   const activePeriod = resolveActivePeriod(periods, requestedKey, todayKey);
 
   if (!activePeriod) {
@@ -51,6 +57,7 @@ export default async function AddExpensePage(props: PageProps<"/budget/add">) {
         period={activePeriod}
         categories={activeCategories}
         defaultCategoryId={defaultCategoryId}
+        pubs={pubs}
       />
 
       <PendingExpenses />

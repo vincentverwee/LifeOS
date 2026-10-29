@@ -8,6 +8,11 @@ import { getTodayKey } from "@/lib/today";
 import { monthFor } from "@/lib/data/ensureMonth";
 import { knownError } from "@/lib/prismaErrors";
 import { Prisma } from "@/generated/prisma/client";
+import { parsePints, parsePubChoice, type PubChoice } from "@/lib/beer/types";
+import { distanceM } from "@/lib/beer/nearby";
+
+/** A typed pub this close to an OpenStreetMap pick of the same name is taken to be that place. */
+const OSM_MATCH_M = 300;
 
 function revalidateExpenseRoutes() {
   revalidatePath("/"); // hub shows "left today"
@@ -16,6 +21,101 @@ function revalidateExpenseRoutes() {
   revalidatePath("/budget");
   revalidatePath("/budget/insights");
   revalidatePath("/budget/settings"); // spent per month/trip
+  revalidatePath("/beer", "layout"); // pints, pubs, map
+}
+
+/**
+ * The Pub row id for a picked pub, created when it's new; null when a picked pub of yours
+ * has since been merged or deleted (the beer then saves without one: the pub is optional,
+ * and an offline entry must never get stuck on it). An OpenStreetMap place is matched by
+ * osmId, else by name to one you typed that has no position yet or is right there. A
+ * typed name matches yours case-insensitively. Only missing positions are filled in:
+ * a spot you set and your renames are never overwritten.
+ */
+async function resolvePub(choice: PubChoice): Promise<string | null> {
+  if (choice.kind === "known") {
+    const pub = await prisma.pub.findUnique({ where: { id: choice.id }, select: { id: true, latitude: true, osmId: true } });
+    if (!pub) return null;
+    // Found on the map for one of yours without a spot: place it (its name stays yours).
+    if (choice.place && pub.latitude === null) {
+      const taken = await prisma.pub.findUnique({ where: { osmId: choice.place.osmId }, select: { id: true } });
+      await prisma.pub.update({
+        where: { id: pub.id },
+        data: {
+          latitude: choice.place.latitude,
+          longitude: choice.place.longitude,
+          ...(pub.osmId === null && !taken && { osmId: choice.place.osmId }),
+        },
+      });
+    }
+    return pub.id;
+  }
+
+  const position =
+    choice.latitude !== undefined && choice.longitude !== undefined
+      ? { latitude: choice.latitude, longitude: choice.longitude }
+      : null;
+
+  if (choice.kind === "osm") {
+    const linked = await prisma.pub.findUnique({ where: { osmId: choice.osmId }, select: { id: true } });
+    if (linked) return linked.id;
+    const sameName = await prisma.pub.findMany({
+      where: { osmId: null, name: { equals: choice.name, mode: "insensitive" } },
+      orderBy: { createdAt: "asc" },
+      select: { id: true, latitude: true, longitude: true },
+    });
+    const typed = sameName.find(
+      (p) =>
+        p.latitude === null ||
+        p.longitude === null ||
+        distanceM(p.latitude, p.longitude, choice.latitude, choice.longitude) <= OSM_MATCH_M
+    );
+    if (typed) {
+      await prisma.pub.update({
+        where: { id: typed.id },
+        data: { osmId: choice.osmId, ...(typed.latitude === null && position) },
+      });
+      return typed.id;
+    }
+    try {
+      const pub = await prisma.pub.create({ data: { name: choice.name, osmId: choice.osmId, ...position }, select: { id: true } });
+      return pub.id;
+    } catch (e) {
+      // Another save created it at the same moment.
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+        const pub = await prisma.pub.findUnique({ where: { osmId: choice.osmId }, select: { id: true } });
+        if (pub) return pub.id;
+      }
+      throw e;
+    }
+  }
+
+  const existing = await prisma.pub.findFirst({
+    where: { name: { equals: choice.name, mode: "insensitive" } },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, latitude: true },
+  });
+  if (existing) {
+    if (existing.latitude === null && position) await prisma.pub.update({ where: { id: existing.id }, data: position });
+    return existing.id;
+  }
+  const pub = await prisma.pub.create({ data: { name: choice.name, ...position }, select: { id: true } });
+  return pub.id;
+}
+
+type BeerFields = { pubId: string | null; pints: number | null };
+
+/**
+ * Pub and pints for an expense in `category`: only a beer category (one with a
+ * pint price) keeps them; anything else gets neither.
+ */
+async function beerFields(
+  category: { pintPrice: unknown },
+  pub: PubChoice | null | undefined,
+  pints: number | null | undefined
+): Promise<BeerFields> {
+  if (category.pintPrice === null) return { pubId: null, pints: null };
+  return { pubId: pub ? await resolvePub(pub) : null, pints: parsePints(pints) };
 }
 
 // Date-only values are stored as UTC midnight (@db.Date), so "2026-10-24"
@@ -82,6 +182,10 @@ export type CreateExpenseInput = {
    * queue, or a reply lost on a bad connection) can never create it twice.
    */
   clientId?: string;
+  /** beer only: where it was bought */
+  pub?: PubChoice | null;
+  /** beer only: how many pints (null = guessed from the category's pint price) */
+  pints?: number | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -113,11 +217,13 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
   const date = utcDate(dateKey);
 
   const [category, target] = await Promise.all([
-    prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true } }),
+    prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true, pintPrice: true } }),
     resolveTarget(input.period, date, todayKey),
   ]);
   if (!category) return { ok: false, error: "That category no longer exists." };
   if (!target.ok) return target;
+  if (category.pintPrice === null && input.pub) return { ok: false, error: "Only beer can have a pub." };
+  const beer = await beerFields(category, input.pub, input.pints);
 
   let expense: { id: string };
   try {
@@ -130,6 +236,8 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
         amount: toCents(input.amount),
         date,
         note: input.note?.trim().slice(0, 500) || null,
+        pubId: beer.pubId,
+        pints: beer.pints,
       },
       select: { id: true },
     });
@@ -173,6 +281,17 @@ export async function createExpenseFromForm(
     return { ok: false, error: "Enter a valid amount, e.g. 6,80 or 6,8+7,4." };
   }
 
+  // The pub picker sends its choice as JSON (src/components/beer/PubPicker.tsx).
+  let pub: PubChoice | null = null;
+  const pubRaw = String(formData.get("pub") ?? "");
+  if (pubRaw) {
+    try {
+      pub = parsePubChoice(JSON.parse(pubRaw));
+    } catch {
+      pub = null;
+    }
+  }
+
   return createExpense({
     period: { type: periodType, id: periodId },
     categoryId,
@@ -180,6 +299,8 @@ export async function createExpenseFromForm(
     date: typeof date === "string" ? date : undefined,
     note: typeof note === "string" ? note : null,
     clientId: String(formData.get("clientId") ?? "") || undefined,
+    pub,
+    pints: parsePints(formData.get("pints")),
   });
 }
 
@@ -189,6 +310,9 @@ export type UpdateExpenseInput = {
   amount: number;
   date: string;
   note?: string | null;
+  /** beer only; null clears it, undefined leaves the stored pub (and, if also undefined, the pints) */
+  pub?: PubChoice | null;
+  pints?: number | null;
 };
 
 export type ExpenseMutationResult = { ok: true } | { ok: false; error: string };
@@ -210,11 +334,19 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
   if (!dateKey) return { ok: false, error: "Pick a valid date." };
 
   const [existing, category] = await Promise.all([
-    prisma.expense.findUnique({ where: { id: input.id }, select: { cycleId: true, tripId: true } }),
-    prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true } }),
+    prisma.expense.findUnique({
+      where: { id: input.id },
+      select: { cycleId: true, tripId: true, pubId: true, pints: true },
+    }),
+    prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true, pintPrice: true } }),
   ]);
   if (!existing) return { ok: false, error: "That expense no longer exists." };
   if (!category) return { ok: false, error: "That category no longer exists." };
+  // Left out = unchanged; moving it out of beer drops the pub and pints.
+  const beer: BeerFields =
+    input.pub === undefined && category.pintPrice !== null
+      ? { pubId: existing.pubId, pints: input.pints === undefined ? existing.pints : parsePints(input.pints) }
+      : await beerFields(category, input.pub, input.pints === undefined ? existing.pints : input.pints);
 
   // A new date can move the expense to another month (trips must contain it).
   const date = utcDate(dateKey);
@@ -234,6 +366,8 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
         amount: toCents(input.amount),
         date,
         note: input.note?.trim().slice(0, 500) || null,
+        pubId: beer.pubId,
+        pints: beer.pints,
         ...(target?.ok && target.period.type === "cycle" ? { cycleId: target.period.id } : {}),
       },
     });

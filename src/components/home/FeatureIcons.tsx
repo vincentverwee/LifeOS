@@ -67,3 +67,14 @@ export function RemindersIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Beer: a pint glass with a head of foam. */
+export function BeerIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 15h20l-2.5 26h-15z" />
+      <path d="M12 15c-2.5 0-4-2-4-4.2C8 8 10.5 6.5 13 7.3 14 5 16.5 4 19 5c1.5-1.5 5-1.5 6.5 0 2.5-1 5.5.3 6 3 2.4.2 4 2 3.6 4.3-.3 1.6-1.7 2.7-3.1 2.7" />
+      <path d="M32 20h3.5a4.5 4.5 0 0 1 4.5 4.5v4a4.5 4.5 0 0 1-4.5 4.5H31" />
+    </svg>
+  );
+}

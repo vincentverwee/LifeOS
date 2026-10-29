@@ -6,13 +6,22 @@ import type { ListExpense } from "@/lib/data/expenses";
 import { deleteExpense, updateExpense } from "@/lib/actions/expenses";
 import { formatCurrency, parseAmount } from "@/lib/format";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
+import { PubPicker, suggestedPints } from "@/components/beer/PubPicker";
+import type { PubChoice, PubOption } from "@/lib/beer/types";
 
-type CategoryOption = { id: string; name: string; isArchived?: boolean };
+type CategoryOption = { id: string; name: string; isArchived?: boolean; pintPrice: number | null };
 
 type ExpenseListProps = {
   expenses: ListExpense[];
   categories: CategoryOption[];
+  pubs: PubOption[];
 };
+
+/** "Sult · 2 pints" under a beer. */
+function beerLine(expense: ListExpense): string | null {
+  const parts = [expense.pubName, expense.pints ? `${expense.pints} ${expense.pints === 1 ? "pint" : "pints"}` : null];
+  return parts.filter(Boolean).join(" · ") || null;
+}
 
 const dayFormatter = new Intl.DateTimeFormat("nl-BE", {
   weekday: "short",
@@ -41,7 +50,7 @@ function TrashIcon() {
   );
 }
 
-export function ExpenseList({ expenses, categories }: ExpenseListProps) {
+export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -104,6 +113,7 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                     <EditRow
                       expense={expense}
                       categories={categories}
+                      pubs={pubs}
                       onDone={(movedTo) => {
                         setEditingId(null);
                         setNotice(movedTo ? `Moved to ${movedTo}.` : null);
@@ -137,8 +147,10 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
                               </span>
                             )}
                           </span>
-                          {expense.note && (
-                            <span className="truncate text-xs text-ink-muted">{expense.note}</span>
+                          {(expense.note || beerLine(expense)) && (
+                            <span className="truncate text-xs text-ink-muted">
+                              {[beerLine(expense), expense.note].filter(Boolean).join(" · ")}
+                            </span>
                           )}
                         </span>
                       </span>
@@ -177,11 +189,13 @@ export function ExpenseList({ expenses, categories }: ExpenseListProps) {
 function EditRow({
   expense,
   categories,
+  pubs,
   onDone,
   onDelete,
 }: {
   expense: ListExpense;
   categories: CategoryOption[];
+  pubs: PubOption[];
   onDone: (movedTo?: string | null) => void;
   onDelete: () => void;
 }) {
@@ -189,11 +203,22 @@ function EditRow({
   const [date, setDate] = useState(expense.date);
   const [categoryId, setCategoryId] = useState(expense.categoryId);
   const [note, setNote] = useState(expense.note ?? "");
+  // Beer: sent only when changed here, so the stored pub and pints stay otherwise.
+  const [pubName, setPubName] = useState(expense.pubName ?? "");
+  const [pub, setPub] = useState<PubChoice | null | undefined>(undefined);
+  const [pintsPicked, setPintsPicked] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // Archived categories stay selectable only for the expense that already uses one.
   const options = categories.filter((c) => !c.isArchived || c.id === expense.categoryId);
+  const pintPrice = categories.find((c) => c.id === categoryId)?.pintPrice ?? null;
+  const pickedPub = pub === undefined ? (expense.pubId ? pubs.find((p) => p.id === expense.pubId) : undefined) : pub?.kind === "known" ? pubs.find((p) => p.id === pub.id) : undefined;
+  // A new amount re-guesses the pints (the stored number may have been the old guess); a tap wins.
+  const parsedAmount = parseAmount(amount);
+  const amountChanged = parsedAmount !== null && parsedAmount !== expense.amount;
+  const guess = pintPrice !== null ? suggestedPints(parsedAmount, pintPrice, pickedPub) : null;
+  const pints = pintsPicked ?? (amountChanged ? guess : (expense.pints ?? guess));
 
   function save() {
     const parsed = parseAmount(amount);
@@ -209,6 +234,8 @@ function EditRow({
         amount: parsed,
         date,
         note,
+        pub,
+        pints: pintsPicked ?? (amountChanged ? guess : undefined),
       });
       if (result.ok) {
         onDone(result.movedTo);
@@ -257,6 +284,18 @@ function EditRow({
           ))}
         </select>
       </label>
+      {pintPrice !== null && (
+        <PubPicker
+          pubs={pubs}
+          name={pubName}
+          onPick={(name, choice) => {
+            setPubName(name);
+            setPub(choice);
+          }}
+          pints={pints}
+          onPints={setPintsPicked}
+        />
+      )}
       <label className="flex flex-col gap-1">
         <span className="text-xs text-ink-muted">Note</span>
         <input

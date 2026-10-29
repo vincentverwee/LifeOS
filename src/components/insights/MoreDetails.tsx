@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { MonthStats } from "@/lib/monthStats";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
 import { WeekdayChart } from "@/components/insights/WeekdayChart";
@@ -42,12 +43,15 @@ export function MoreDetails({ stats }: { stats: MonthStats }) {
           <dl className="grid grid-cols-2 gap-3">
             <Stat label="Spent on beer" value={formatCurrency(stats.beer.spend)} />
             <Stat label="Share of spending" value={formatPercent(stats.beer.percentOfSpend)} />
-            <Stat label="Estimated pints" value={`${stats.beer.pints}`} />
+            <Stat label="Pints" value={`${stats.beer.pints}`} />
             <Stat
               label="Per pint"
               value={stats.beer.avgPricePerPint !== null ? formatCurrency(stats.beer.avgPricePerPint) : "—"}
             />
           </dl>
+          <Link href="/beer/insights" className="btn btn-ghost -mx-3 mt-2 inline-flex min-h-11 px-3 text-sm">
+            More in Beer ›
+          </Link>
         </div>
       )}
     </Disclosure>

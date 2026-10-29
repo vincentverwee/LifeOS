@@ -14,6 +14,10 @@ export type MonthExpense = {
   categoryColor: string;
   /** price of one pint if the expense's category counts as beer */
   pintPrice: number | null;
+  /** pints counted when it was logged (null = guessed from pintPrice, see pintsOf) */
+  pints: number | null;
+  /** the pub it was bought at (beer only) */
+  pubName: string | null;
 };
 
 export type Month = {
@@ -38,6 +42,18 @@ export type Month = {
 
 /** Beer purchases below this are treated as food, not pints (as in the sheet). */
 export const MIN_PINT_AMOUNT = 5;
+
+/** The guess for a beer without a counted number: amount ÷ the pint price, at least 1. */
+export function guessPints(amount: number, pintPrice: number): number {
+  return Math.max(1, Math.round(amount / pintPrice));
+}
+
+/** Pints in a beer expense: the counted number, else the guess (0 = not beer, or food). */
+export function pintsOf(e: Pick<MonthExpense, "amount" | "pintPrice" | "pints">): number {
+  if (!e.pintPrice || e.pintPrice <= 0) return 0;
+  if (e.pints) return e.pints;
+  return e.amount < MIN_PINT_AMOUNT ? 0 : guessPints(e.amount, e.pintPrice);
+}
 
 const MS_PER_DAY = 86_400_000;
 
@@ -250,10 +266,10 @@ export function computeMonthStats(month: Month, todayKey: string): MonthStats {
   let beerSpend = 0;
   let pints = 0;
   for (const e of month.expenses) {
-    const price = e.pintPrice;
-    if (!price || price <= 0 || e.amount < MIN_PINT_AMOUNT) continue;
+    const count = pintsOf(e);
+    if (count === 0) continue;
     beerSpend += e.amount;
-    pints += Math.max(1, Math.round(e.amount / price));
+    pints += count;
   }
   const beer: BeerStats = {
     spend: beerSpend,

@@ -11,6 +11,8 @@ import { CategoryGrid } from "@/components/expenses/CategoryGrid";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { MAX_AMOUNT, formatCurrency, formatDate, hasOperator, parseAmount, toDateInputValue } from "@/lib/format";
 import { addToOutbox, newClientId, onlineStore, setSyncFailed } from "@/lib/offline/outbox";
+import { PubPicker, suggestedPints } from "@/components/beer/PubPicker";
+import type { PubChoice, PubOption } from "@/lib/beer/types";
 
 const OPERATORS = [
   { op: "+", label: "Plus" },
@@ -28,6 +30,8 @@ type ExpenseEntryFormProps = {
   period: Period;
   categories: Category[];
   defaultCategoryId: string | null;
+  /** your pubs, for the pub picker on beer categories */
+  pubs: PubOption[];
 };
 
 type DateChoice = "today" | "yesterday" | "other";
@@ -61,6 +65,7 @@ export function ExpenseEntryForm({
   period,
   categories: initialCategories,
   defaultCategoryId,
+  pubs,
 }: ExpenseEntryFormProps) {
   const [categories, setCategories] = useState(initialCategories);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(defaultCategoryId);
@@ -71,6 +76,10 @@ export function ExpenseEntryForm({
   const [otherDate, setOtherDate] = useState<string | null>(null);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
   const [opsOpen, setOpsOpen] = useState(false);
+  // Beer only. The pub stays after a save (the next round is usually at the same one).
+  const [pubName, setPubName] = useState("");
+  const [pub, setPub] = useState<PubChoice | null>(null);
+  const [pintsPicked, setPintsPicked] = useState<number | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const opsRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +104,7 @@ export function ExpenseEntryForm({
     setAmount("");
     setNote("");
     setShowNote(false);
+    setPintsPicked(null);
     amountRef.current?.focus();
   }
 
@@ -106,7 +116,10 @@ export function ExpenseEntryForm({
       formData.set("clientId", clientId);
       const category = categories.find((c) => c.id === selectedCategoryId);
       const parsed = parseAmount(amount);
-      const label = `${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}`;
+      const beerPub = category?.pintPrice != null ? pub : null;
+      const label =
+        `${parsed !== null ? formatCurrency(parsed) : ""}${category ? ` · ${category.name}` : ""}` +
+        (beerPub && pubName.trim() ? ` at ${pubName.trim()}` : "");
 
       let result: CreateExpenseFormState | undefined;
       let failedOnline = false;
@@ -132,6 +145,8 @@ export function ExpenseEntryForm({
           date: date || toDateInputValue(),
           period: { type: period.type, id: period.id },
           note: note.trim() || null,
+          pub: beerPub,
+          pints: category.pintPrice != null ? pints : null,
           createdAt: new Date().toISOString(),
         });
         if (failedOnline) setSyncFailed(true);
@@ -158,6 +173,17 @@ export function ExpenseEntryForm({
   useEffect(() => {
     if (window.matchMedia("(min-width: 640px)").matches) amountRef.current?.focus();
   }, []);
+
+  // "Log a beer" from /beer links to /budget/add#beer: start on the (first) beer category.
+  // A hash, not a query, so the offline copy of /budget/add still serves it.
+  const beerHashApplied = useRef(false);
+  useEffect(() => {
+    if (beerHashApplied.current) return;
+    beerHashApplied.current = true;
+    if (window.location.hash !== "#beer") return;
+    const beer = initialCategories.find((c) => c.pintPrice !== null);
+    if (beer) setSelectedCategoryId(beer.id);
+  }, [initialCategories]);
 
   // Close the operator picker on a tap outside it or Escape.
   useEffect(() => {
@@ -204,6 +230,13 @@ export function ExpenseEntryForm({
   const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
   const parsedAmount = parseAmount(amount);
   const isCalculation = hasOperator(amount);
+  const pintPrice = selectedCategory?.pintPrice ?? null;
+  // Shown and saved: the tapped number, else the guess from the pub's or the category's price.
+  const pints =
+    pintPrice === null
+      ? null
+      : (pintsPicked ??
+        suggestedPints(parsedAmount, pintPrice, pub?.kind === "known" ? pubs.find((p) => p.id === pub.id) : undefined));
 
   const segment = (choice: DateChoice, label: string) => (
     <button
@@ -224,6 +257,12 @@ export function ExpenseEntryForm({
       <input type="hidden" name="periodType" value={period.type} />
       <input type="hidden" name="periodId" value={period.id} />
       <input type="hidden" name="date" value={date} />
+      {pintPrice !== null && (
+        <>
+          <input type="hidden" name="pub" value={pub ? JSON.stringify(pub) : ""} />
+          <input type="hidden" name="pints" value={pints ?? ""} />
+        </>
+      )}
 
       <div className="flex flex-col gap-1">
         <label htmlFor="amount" className="text-sm text-ink-muted">
@@ -342,6 +381,19 @@ export function ExpenseEntryForm({
           onCreated={handleCreatedCategory}
         />
       </div>
+
+      {pintPrice !== null && (
+        <PubPicker
+          pubs={pubs}
+          name={pubName}
+          onPick={(name, choice) => {
+            setPubName(name);
+            setPub(choice);
+          }}
+          pints={pints}
+          onPints={setPintsPicked}
+        />
+      )}
 
       <div className="flex flex-col gap-2">
         <span className="text-sm text-ink-muted">Date</span>

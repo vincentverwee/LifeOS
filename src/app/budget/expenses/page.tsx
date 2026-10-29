@@ -11,6 +11,7 @@ import { getTodayKey } from "@/lib/today";
 import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { EmptyState } from "@/components/dashboard/EmptyState";
 import { ExpenseList } from "@/components/expenses/ExpenseList";
+import { getPubOptions } from "@/lib/data/beer";
 import { SpendingCalendar } from "@/components/expenses/SpendingCalendar";
 import { CategoryFilter, type FilterChip } from "@/components/expenses/CategoryFilter";
 
@@ -31,10 +32,11 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
     );
   }
 
-  const [categories, expenses] = await Promise.all([
+  const [categories, expenses, pubs] = await Promise.all([
     getAllCategories(),
     // Every expense of the period, so anything can be corrected.
     getRecentExpenses(activePeriod, null),
+    getPubOptions(),
   ]);
   // Category chips, biggest first; ?category= narrows the list.
   const chipMap = new Map<string, FilterChip>();
@@ -79,7 +81,8 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
 
       <ExpenseList
         expenses={shown}
-        categories={categories.map(({ id, name, isArchived }) => ({ id, name, isArchived }))}
+        categories={categories.map(({ id, name, isArchived, pintPrice }) => ({ id, name, isArchived, pintPrice }))}
+        pubs={pubs}
       />
 
       <Link

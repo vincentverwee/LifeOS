@@ -11,7 +11,8 @@ import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BeerIcon, BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { getBeerGlance } from "@/lib/data/beer";
 import { SheepMark } from "@/components/icons/SheepMark";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { HomeWeather } from "@/components/home/HomeWeather";
@@ -114,6 +115,14 @@ export default async function HomePage() {
           <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <RecipesTileBody />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <BeerTileBody todayKey={todayKey} />
             </Suspense>
           </FeatureTile>
         </li>
@@ -331,6 +340,31 @@ async function RecipesTileBody() {
         <p className="mt-4 truncate text-sm text-foreground">
           <span className="text-ink-muted">Last made · </span>
           {recipes.lastMade}
+        </p>
+      )}
+    </>
+  );
+}
+
+async function BeerTileBody({ todayKey }: { todayKey: string }) {
+  const beer = await getBeerGlance(todayKey);
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {beer.pints} <span className="text-lg text-ink-muted">{beer.pints === 1 ? "pint" : "pints"}</span>
+      </p>
+      <p className="text-sm text-ink-muted">This month</p>
+      {beer.lastVisit && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Last beer · </span>
+          {beer.lastPub ? (
+            <>
+              {beer.lastPub}
+              <span className="text-ink-muted"> · {describeSince(beer.lastVisit, todayKey).toLowerCase()}</span>
+            </>
+          ) : (
+            describeSince(beer.lastVisit, todayKey)
+          )}
         </p>
       )}
     </>
