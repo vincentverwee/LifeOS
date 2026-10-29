@@ -83,6 +83,15 @@ export const CHECKS: Check[] = [
     label: "Expenses with an invalid pint count",
     fix: "Fix those pint counts first.",
   },
+  // A beer's size is 50–2000 ml.
+  {
+    name: "expense_size",
+    table: "Expense",
+    check: `("sizeMl" IS NULL OR "sizeMl" BETWEEN 50 AND 2000)`,
+    columns: "id, \"sizeMl\"",
+    label: "Expenses with an invalid beer size",
+    fix: "Fix those beer sizes first.",
+  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */

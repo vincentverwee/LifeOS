@@ -80,6 +80,7 @@ export function ExpenseEntryForm({
   const [pubName, setPubName] = useState("");
   const [pub, setPub] = useState<PubChoice | null>(null);
   const [pintsPicked, setPintsPicked] = useState<number | null>(null);
+  const [sizeMl, setSizeMl] = useState<number | null>(null);
   const amountRef = useRef<HTMLInputElement>(null);
   const opsRef = useRef<HTMLDivElement>(null);
 
@@ -135,7 +136,9 @@ export function ExpenseEntryForm({
 
       if (result === undefined) {
         if (!category) return { ok: false, error: "Pick a category first." };
-        if (parsed === null || parsed <= 0) return { ok: false, error: "Enter a valid amount, e.g. 6,80 or 6,8+7,4." };
+        if (parsed === null || parsed < 0 || (parsed === 0 && (category.pintPrice == null || !pints))) {
+          return { ok: false, error: "Enter a valid amount, e.g. 6,80 or 6,8+7,4." };
+        }
         if (parsed > MAX_AMOUNT) return { ok: false, error: "That amount is too large." };
         addToOutbox({
           id: clientId,
@@ -147,6 +150,7 @@ export function ExpenseEntryForm({
           note: note.trim() || null,
           pub: beerPub,
           pints: category.pintPrice != null ? pints : null,
+          sizeMl: category.pintPrice != null ? sizeMl : null,
           createdAt: new Date().toISOString(),
         });
         if (failedOnline) setSyncFailed(true);
@@ -236,7 +240,7 @@ export function ExpenseEntryForm({
     pintPrice === null
       ? null
       : (pintsPicked ??
-        suggestedPints(parsedAmount, pintPrice, pub?.kind === "known" ? pubs.find((p) => p.id === pub.id) : undefined));
+        suggestedPints(parsedAmount, pintPrice, pub?.kind === "known" ? pubs.find((p) => p.id === pub.id) : undefined, sizeMl));
 
   const segment = (choice: DateChoice, label: string) => (
     <button
@@ -261,6 +265,7 @@ export function ExpenseEntryForm({
         <>
           <input type="hidden" name="pub" value={pub ? JSON.stringify(pub) : ""} />
           <input type="hidden" name="pints" value={pints ?? ""} />
+          <input type="hidden" name="sizeMl" value={sizeMl ?? ""} />
         </>
       )}
 
@@ -392,6 +397,8 @@ export function ExpenseEntryForm({
           }}
           pints={pints}
           onPints={setPintsPicked}
+          sizeMl={sizeMl}
+          onSize={setSizeMl}
         />
       )}
 

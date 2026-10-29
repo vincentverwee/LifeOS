@@ -5,7 +5,7 @@ import { LocateFixed, Search, X } from "lucide-react";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { distanceM, findNearby, NEARBY_RADIUS_M } from "@/lib/beer/nearby";
 import { searchPubs } from "@/lib/beer/search";
-import { MAX_PINTS, MAX_PUB_NAME, type PubChoice, type PubOption } from "@/lib/beer/types";
+import { BEER_SIZES, MAX_PINTS, MAX_PUB_NAME, PINT_ML, type PubChoice, type PubOption } from "@/lib/beer/types";
 import { guessPints, MIN_PINT_AMOUNT } from "@/lib/monthStats";
 
 /** A fix older than this isn't attached to a typed pub. */
@@ -35,9 +35,16 @@ function formatDistance(m: number): string {
  * The pints the stepper shows before it's touched: amount ÷ the pub's own latest
  * price, else the category's. Null under MIN_PINT_AMOUNT (counted as food).
  */
-export function suggestedPints(amount: number | null, pintPrice: number, pub: PubOption | undefined): number | null {
+export function suggestedPints(
+  amount: number | null,
+  pintPrice: number,
+  pub: PubOption | undefined,
+  sizeMl: number | null = null
+): number | null {
+  if (amount === 0) return 1; // a free beer: start at one, it still counts
   if (amount === null || amount < MIN_PINT_AMOUNT) return null;
-  return guessPints(amount, pub?.pricePerPint ?? pintPrice);
+  // The prices are per pint; a smaller beer is guessed to cost proportionally less.
+  return guessPints(amount, ((pub?.pricePerPint ?? pintPrice) * (sizeMl ?? PINT_ML)) / PINT_ML);
 }
 
 /** The choice for a typed name: one of yours when it matches, else a new pub (with the fix, if fresh). */
@@ -71,12 +78,17 @@ export function PubPicker({
   onPick,
   pints,
   onPints,
+  sizeMl,
+  onSize,
 }: {
   pubs: PubOption[];
   name: string;
   onPick: (name: string, choice: PubChoice | null) => void;
   pints: number | null;
   onPints: (pints: number) => void;
+  /** ml per beer, null = a pint */
+  sizeMl: number | null;
+  onSize: (sizeMl: number | null) => void;
 }) {
   const [fix, setFix] = useState<Fix | null>(null);
   const [status, setStatus] = useState<"idle" | "locating" | "searching" | "looking-up" | "done">("idle");
@@ -291,8 +303,27 @@ export function PubPicker({
       </div>
 
       <div className="flex flex-col gap-2">
-        <span className="text-sm text-ink-muted">Pints</span>
-        <div className="flex gap-1 rounded-full bg-surface-muted p-1" role="group" aria-label="Pints">
+        <span className="text-sm text-ink-muted">Size</span>
+        <div className="flex gap-1 rounded-full bg-surface-muted p-1" role="group" aria-label="Size">
+          {BEER_SIZES.map((s) => {
+            const selected = (sizeMl ?? PINT_ML) === s.ml;
+            return (
+              <button
+                key={s.ml}
+                type="button"
+                onClick={() => onSize(s.ml === PINT_ML ? null : s.ml)}
+                aria-pressed={selected}
+                className={`btn flex min-h-11 flex-1 px-3 text-base font-semibold ${
+                  selected ? "bg-surface text-foreground shadow-sm" : "text-ink-muted hover:text-foreground"
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+        <span className="text-sm text-ink-muted">{sizeMl === null ? "Pints" : "Beers"}</span>
+        <div className="flex gap-1 rounded-full bg-surface-muted p-1" role="group" aria-label="How many">
           {[1, 2, 3].map((n) => (
             <button
               key={n}

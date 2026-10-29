@@ -13,11 +13,11 @@ function pub(id: string): PubRow {
 
 describe("totals", () => {
   it("is empty when nothing counts", () => {
-    expect(totals([])).toEqual({ pints: 0, spend: 0, pricePerPint: null, days: 0 });
+    expect(totals([])).toEqual({ pints: 0, liters: 0, spend: 0, pricePerPint: null, days: 0 });
   });
 
   it("skips cheap guessed beers (food)", () => {
-    expect(totals([visit("2026-10-01", 4, null)])).toEqual({ pints: 0, spend: 0, pricePerPint: null, days: 0 });
+    expect(totals([visit("2026-10-01", 4, null)])).toEqual({ pints: 0, liters: 0, spend: 0, pricePerPint: null, days: 0 });
   });
 
   it("adds guessed beers to pints and spend but not to the price per pint", () => {
@@ -78,6 +78,21 @@ describe("pricesByMonth", () => {
       { month: "2026-09", pricePerPint: 5, pints: 2 },
       { month: "2026-10", pricePerPint: 6.6, pints: 5 },
     ]);
+  });
+});
+
+describe("free and smaller beers", () => {
+  it("counts a free beer as pints but leaves the price per pint alone", () => {
+    const t = totals([visit("2026-10-01", 12, 2), visit("2026-10-02", 0, 3)]);
+    expect(t.pints).toBe(5);
+    expect(t.spend).toBe(12);
+    expect(t.pricePerPint).toBe(6);
+    expect(pricesByMonth([visit("2026-10-02", 0, 3)])).toEqual([]);
+  });
+
+  it("totals litres by size, a pint being 568 ml", () => {
+    const small: BeerVisit = { ...visit("2026-10-01", 9, 3), sizeMl: 330 };
+    expect(totals([visit("2026-10-01", 12, 2), small]).liters).toBeCloseTo(2 * 0.568 + 3 * 0.33, 5);
   });
 });
 

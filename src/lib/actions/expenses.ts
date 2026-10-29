@@ -8,7 +8,7 @@ import { getTodayKey } from "@/lib/today";
 import { monthFor } from "@/lib/data/ensureMonth";
 import { knownError } from "@/lib/prismaErrors";
 import { Prisma } from "@/generated/prisma/client";
-import { parsePints, parsePubChoice, type PubChoice } from "@/lib/beer/types";
+import { parsePints, parsePubChoice, parseSizeMl, type PubChoice } from "@/lib/beer/types";
 import { distanceM } from "@/lib/beer/nearby";
 
 /** A typed pub this close to an OpenStreetMap pick of the same name is taken to be that place. */
@@ -111,7 +111,7 @@ async function resolvePub(choice: PubChoice): Promise<string | null> {
   return pub.id;
 }
 
-type BeerFields = { pubId: string | null; pints: number | null };
+type BeerFields = { pubId: string | null; pints: number | null; sizeMl: number | null };
 
 /**
  * Pub and pints for an expense in `category`: only a beer category (one with a
@@ -120,10 +120,11 @@ type BeerFields = { pubId: string | null; pints: number | null };
 async function beerFields(
   category: { pintPrice: unknown },
   pub: PubChoice | null | undefined,
-  pints: number | null | undefined
+  pints: number | null | undefined,
+  sizeMl: number | null | undefined
 ): Promise<BeerFields> {
-  if (category.pintPrice === null) return { pubId: null, pints: null };
-  return { pubId: pub ? await resolvePub(pub) : null, pints: parsePints(pints) };
+  if (category.pintPrice === null) return { pubId: null, pints: null, sizeMl: null };
+  return { pubId: pub ? await resolvePub(pub) : null, pints: parsePints(pints), sizeMl: parseSizeMl(sizeMl) };
 }
 
 // Date-only values are stored as UTC midnight (@db.Date), so "2026-10-24"
@@ -132,9 +133,18 @@ function utcDate(key: string): Date {
   return new Date(`${key}T00:00:00Z`);
 }
 
+/** Zero is allowed here only so a free beer can pass; see checkFree. */
 function checkAmount(amount: number): string | null {
-  if (!Number.isFinite(amount) || amount <= 0) return "Enter an amount greater than zero.";
+  if (!Number.isFinite(amount) || amount < 0) return "Enter an amount greater than zero.";
   if (amount > MAX_AMOUNT) return "That amount is too large.";
+  return null;
+}
+
+/** A free (0 €) expense is only a beer with a pint count; anything else needs an amount. */
+function checkFree(amount: number, isBeer: boolean, pints: number | null): string | null {
+  if (amount > 0) return null;
+  if (!isBeer) return "Enter an amount greater than zero.";
+  if (!pints) return "A free beer needs a pint count.";
   return null;
 }
 
@@ -194,6 +204,8 @@ export type CreateExpenseInput = {
   pub?: PubChoice | null;
   /** beer only: how many pints (null = guessed from the category's pint price) */
   pints?: number | null;
+  /** beer only: ml per beer (null = a pint) */
+  sizeMl?: number | null;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -230,7 +242,9 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
   ]);
   if (!category) return { ok: false, error: "That category no longer exists." };
   if (!target.ok) return target;
-  const beer = await beerFields(category, input.pub, input.pints);
+  const beer = await beerFields(category, input.pub, input.pints, input.sizeMl);
+  const freeError = checkFree(input.amount, category.pintPrice !== null, beer.pints);
+  if (freeError) return { ok: false, error: freeError };
 
   let expense: { id: string };
   try {
@@ -245,6 +259,7 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
         note: input.note?.trim().slice(0, 500) || null,
         pubId: beer.pubId,
         pints: beer.pints,
+        sizeMl: beer.sizeMl,
       },
       select: { id: true },
     });
@@ -308,6 +323,7 @@ export async function createExpenseFromForm(
     clientId: String(formData.get("clientId") ?? "") || undefined,
     pub,
     pints: parsePints(formData.get("pints")),
+    sizeMl: parseSizeMl(formData.get("sizeMl")),
   });
 }
 
@@ -320,6 +336,8 @@ export type UpdateExpenseInput = {
   /** beer only; null clears it, undefined leaves the stored pub (and, if also undefined, the pints) */
   pub?: PubChoice | null;
   pints?: number | null;
+  /** beer only; undefined leaves the stored size, null = a pint */
+  sizeMl?: number | null;
 };
 
 export type ExpenseMutationResult = { ok: true } | { ok: false; error: string };
@@ -343,17 +361,24 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
   const [existing, category] = await Promise.all([
     prisma.expense.findUnique({
       where: { id: input.id },
-      select: { cycleId: true, tripId: true, pubId: true, pints: true },
+      select: { cycleId: true, tripId: true, pubId: true, pints: true, sizeMl: true },
     }),
     prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true, pintPrice: true } }),
   ]);
   if (!existing) return { ok: false, error: "That expense no longer exists." };
   if (!category) return { ok: false, error: "That category no longer exists." };
   // Left out = unchanged; moving it out of beer drops the pub and pints.
+  const sizeMl = input.sizeMl === undefined ? existing.sizeMl : input.sizeMl;
   const beer: BeerFields =
     input.pub === undefined && category.pintPrice !== null
-      ? { pubId: existing.pubId, pints: input.pints === undefined ? existing.pints : parsePints(input.pints) }
-      : await beerFields(category, input.pub, input.pints === undefined ? existing.pints : input.pints);
+      ? {
+          pubId: existing.pubId,
+          pints: input.pints === undefined ? existing.pints : parsePints(input.pints),
+          sizeMl: parseSizeMl(sizeMl),
+        }
+      : await beerFields(category, input.pub, input.pints === undefined ? existing.pints : input.pints, sizeMl);
+  const freeError = checkFree(input.amount, category.pintPrice !== null, beer.pints);
+  if (freeError) return { ok: false, error: freeError };
 
   // A new date can move the expense to another month (trips must contain it).
   const date = utcDate(dateKey);
@@ -375,6 +400,7 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
         note: input.note?.trim().slice(0, 500) || null,
         pubId: beer.pubId,
         pints: beer.pints,
+        sizeMl: beer.sizeMl,
         ...(target?.ok && target.period.type === "cycle" ? { cycleId: target.period.id } : {}),
       },
     });

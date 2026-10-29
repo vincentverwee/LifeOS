@@ -20,6 +20,11 @@ export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }
 
+/** "2,3 L" */
+export function formatLiters(liters: number): string {
+  return `${liters.toLocaleString("nl-BE", { maximumFractionDigits: 1 })} L`;
+}
+
 export function formatCurrency(value: number): string {
   return currencyFormatter.format(value);
 }

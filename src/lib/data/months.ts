@@ -17,6 +17,7 @@ type ExpenseRow = {
   categoryId: string;
   category: { name: string; color: string; pintPrice: { toNumber(): number } | null };
   pints: number | null;
+  sizeMl: number | null;
 };
 
 function toExpense(e: ExpenseRow): MonthExpense {
@@ -30,6 +31,7 @@ function toExpense(e: ExpenseRow): MonthExpense {
     categoryColor: e.category.color,
     pintPrice: e.category.pintPrice?.toNumber() ?? null,
     pints: e.pints,
+    sizeMl: e.sizeMl,
   };
 }
 

@@ -2,7 +2,7 @@
 // in monthStats.ts (counted, else guessed), so Budget and Beer always agree; prices
 // per pint only use counted beers, since a guess is just the category's price.
 
-import { pintsOf } from "@/lib/monthStats";
+import { litersOf, pintsOf } from "@/lib/monthStats";
 
 export type BeerVisit = {
   id: string;
@@ -11,6 +11,8 @@ export type BeerVisit = {
   amount: number;
   /** pints counted when logged, null = guessed */
   counted: number | null;
+  /** ml per beer, null/absent = a pint */
+  sizeMl?: number | null;
   pintPrice: number;
   pubId: string | null;
   pubName: string | null;
@@ -23,6 +25,7 @@ export type PubStats = PubRow & {
   /** days with a beer here */
   visits: number;
   pints: number;
+  liters: number;
   spend: number;
   /** counted beers only; null when none was counted */
   pricePerPint: number | null;
@@ -30,7 +33,7 @@ export type PubStats = PubRow & {
   lastVisit: string | null;
 };
 
-export type BeerTotals = { pints: number; spend: number; pricePerPint: number | null; days: number };
+export type BeerTotals = { pints: number; liters: number; spend: number; pricePerPint: number | null; days: number };
 
 export function pintsIn(v: BeerVisit): number {
   return pintsOf({ amount: v.amount, pintPrice: v.pintPrice, pints: v.counted });
@@ -39,6 +42,7 @@ export function pintsIn(v: BeerVisit): number {
 /** Spend and pints of the beers that count as pints (a cheap one is food, see MIN_PINT_AMOUNT). */
 export function totals(visits: BeerVisit[]): BeerTotals {
   let pints = 0;
+  let liters = 0;
   let spend = 0;
   let countedPints = 0;
   let countedSpend = 0;
@@ -47,14 +51,16 @@ export function totals(visits: BeerVisit[]): BeerTotals {
     const n = pintsIn(v);
     if (n === 0) continue;
     pints += n;
+    liters += litersOf(n, v.sizeMl);
     spend += v.amount;
     days.add(v.date);
-    if (v.counted) {
+    // A free beer is a pint but says nothing about the price.
+    if (v.counted && v.amount > 0) {
       countedPints += v.counted;
       countedSpend += v.amount;
     }
   }
-  return { pints, spend, pricePerPint: countedPints > 0 ? countedSpend / countedPints : null, days: days.size };
+  return { pints, liters, spend, pricePerPint: countedPints > 0 ? countedSpend / countedPints : null, days: days.size };
 }
 
 /** One row per pub, most visited first. Pubs without beers are kept (0 visits). */
@@ -75,6 +81,7 @@ export function pubStats(pubs: PubRow[], visits: BeerVisit[]): PubStats[] {
         ...pub,
         visits: new Set(dates).size,
         pints: t.pints,
+        liters: t.liters,
         spend: t.spend,
         pricePerPint: t.pricePerPint,
         firstVisit: dates[0] ?? null,
@@ -95,7 +102,7 @@ export type MonthPrice = { month: string; pricePerPint: number; pints: number };
 export function pricesByMonth(visits: BeerVisit[]): MonthPrice[] {
   const months = new Map<string, { spend: number; pints: number }>();
   for (const v of visits) {
-    if (!v.counted) continue;
+    if (!v.counted || v.amount <= 0) continue;
     const key = v.date.slice(0, 7);
     const m = months.get(key) ?? { spend: 0, pints: 0 };
     m.spend += v.amount;

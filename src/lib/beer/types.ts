@@ -1,5 +1,22 @@
 // Client-safe shapes shared by the pub picker, the offline outbox and the expense actions.
 
+/** A pint, the size of a beer with no stored size (all of Galway so far). */
+export const PINT_ML = 568;
+
+/** The sizes offered next to the pints stepper; anything else is saved as typed. */
+export const BEER_SIZES = [
+  { ml: PINT_ML, label: "Pint" },
+  { ml: 330, label: "33 cl" },
+  { ml: 250, label: "25 cl" },
+] as const;
+
+/** A size in ml from untrusted input: a whole number 50–2000, else null (= a pint). */
+export function parseSizeMl(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(n) || n < 50 || n > 2000 || n === PINT_ML) return null;
+  return n;
+}
+
 /** How a beer's pub was picked: one of yours, a nearby OpenStreetMap place, or a typed name. */
 export type PubChoice =
   /** `place`: an OpenStreetMap spot found for one of yours that isn't on the map yet */

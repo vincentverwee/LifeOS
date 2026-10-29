@@ -5,6 +5,7 @@ import {
   cumulativeAtDay,
   guessPints,
   pintsOf,
+  litersOf,
   type Month,
   type MonthExpense,
 } from "@/lib/monthStats";
@@ -45,6 +46,17 @@ function month(extra: Partial<Month> = {}): Month {
     ...extra,
   };
 }
+
+describe("free beers and litres", () => {
+  it("counts a free beer's pints", () => {
+    expect(pintsOf({ amount: 0, pintPrice: 6, pints: 2 })).toBe(2);
+  });
+
+  it("converts beers to litres, a pint being 568 ml", () => {
+    expect(litersOf(2, null)).toBeCloseTo(1.136, 5);
+    expect(litersOf(3, 330)).toBeCloseTo(0.99, 5);
+  });
+});
 
 describe("guessPints / pintsOf", () => {
   it("guesses amount ÷ price, at least 1", () => {

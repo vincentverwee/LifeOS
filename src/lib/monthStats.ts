@@ -1,3 +1,5 @@
+import { PINT_ML } from "@/lib/beer/types";
+
 // Pure month math (no server-only imports) so server components, client
 // charts and the import script can all share it. Mirrors the formulas of the
 // BudgetGalway.xlsx month sheets.
@@ -16,6 +18,8 @@ export type MonthExpense = {
   pintPrice: number | null;
   /** pints counted when it was logged (null = guessed from pintPrice, see pintsOf) */
   pints: number | null;
+  /** ml per beer (null/absent = a pint, PINT_ML) */
+  sizeMl?: number | null;
 };
 
 export type Month = {
@@ -51,6 +55,11 @@ export function pintsOf(e: Pick<MonthExpense, "amount" | "pintPrice" | "pints">)
   if (!e.pintPrice || e.pintPrice <= 0) return 0;
   if (e.pints) return e.pints;
   return e.amount < MIN_PINT_AMOUNT ? 0 : guessPints(e.amount, e.pintPrice);
+}
+
+/** Litres in `count` beers of `sizeMl` each (null = a pint). */
+export function litersOf(count: number, sizeMl: number | null | undefined): number {
+  return (count * (sizeMl ?? PINT_ML)) / 1000;
 }
 
 const MS_PER_DAY = 86_400_000;
@@ -104,6 +113,8 @@ export type TopDay = { date: string; total: number; topCategory: string };
 export type BeerStats = {
   spend: number;
   pints: number;
+  /** litres drunk (beers × their size, a pint = 568 ml) */
+  liters: number;
   avgPricePerPint: number | null;
   pintsPerDay: number;
   percentOfSpend: number;
@@ -263,16 +274,21 @@ export function computeMonthStats(month: Month, todayKey: string): MonthStats {
   // Beer: an expense counts as beer when its category has a pint price.
   let beerSpend = 0;
   let pints = 0;
+  let paidPints = 0; // free beers are pints but leave the average price alone
+  let liters = 0;
   for (const e of month.expenses) {
     const count = pintsOf(e);
     if (count === 0) continue;
+    liters += litersOf(count, e.sizeMl);
     beerSpend += e.amount;
     pints += count;
+    if (e.amount > 0) paidPints += count;
   }
   const beer: BeerStats = {
     spend: beerSpend,
     pints,
-    avgPricePerPint: pints > 0 ? beerSpend / pints : null,
+    liters,
+    avgPricePerPint: paidPints > 0 ? beerSpend / paidPints : null,
     pintsPerDay: daysElapsed > 0 ? pints / daysElapsed : 0,
     percentOfSpend: spent > 0 ? (beerSpend / spent) * 100 : 0,
   };

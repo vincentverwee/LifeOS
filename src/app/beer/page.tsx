@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getTodayKey } from "@/lib/today";
 import { getBeerVisits, getPubs } from "@/lib/data/beer";
 import { between, monthStarts, pintsIn, pubStats, totals } from "@/lib/beer/stats";
-import { formatCurrency, formatDate, plural } from "@/lib/format";
+import { formatCurrency, formatDate, formatLiters, plural } from "@/lib/format";
 import { describeSince } from "@/lib/reminders/routines";
 import { PubMapLoader } from "@/components/beer/PubMapLoader";
 import { LOG_BEER_HREF } from "@/components/beer/nav";
@@ -49,12 +49,12 @@ export default async function BeerPage() {
           {month.pints} <span className="text-lg text-ink-muted">{month.pints === 1 ? "pint" : "pints"}</span>
         </p>
         <p className="mt-1 text-sm text-ink-muted">
-          {formatCurrency(month.spend)} spent
+          {formatLiters(month.liters)} · {formatCurrency(month.spend)} spent
           {month.pricePerPint !== null && ` · ${formatCurrency(month.pricePerPint)} a pint`}
           {month.days > 0 && ` · ${plural(month.days, "day", "days")} out`}
         </p>
         <p className="mt-3 border-t border-border pt-3 text-sm text-ink-muted">
-          Last month: {plural(previous.pints, "pint", "pints")} · {formatCurrency(previous.spend)}
+          Last month: {plural(previous.pints, "pint", "pints")} · {formatLiters(previous.liters)} · {formatCurrency(previous.spend)}
           {previous.pricePerPint !== null && ` · ${formatCurrency(previous.pricePerPint)} a pint`}
         </p>
       </section>

@@ -19,7 +19,8 @@ type ExpenseListProps = {
 
 /** "Sult · 2 pints" under a beer. */
 function beerLine(expense: ListExpense): string | null {
-  const parts = [expense.pubName, expense.pints ? `${expense.pints} ${expense.pints === 1 ? "pint" : "pints"}` : null];
+  const unit = expense.sizeMl ? `× ${expense.sizeMl / 10} cl` : expense.pints === 1 ? "pint" : "pints";
+  const parts = [expense.pubName, expense.pints ? `${expense.pints} ${unit}` : null];
   return parts.filter(Boolean).join(" · ") || null;
 }
 
@@ -207,6 +208,7 @@ function EditRow({
   const [pubName, setPubName] = useState(expense.pubName ?? "");
   const [pub, setPub] = useState<PubChoice | null | undefined>(undefined);
   const [pintsPicked, setPintsPicked] = useState<number | null>(null);
+  const [sizePicked, setSizePicked] = useState<number | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -217,13 +219,14 @@ function EditRow({
   // A new amount re-guesses the pints (the stored number may have been the old guess); a tap wins.
   const parsedAmount = parseAmount(amount);
   const amountChanged = parsedAmount !== null && parsedAmount !== expense.amount;
-  const guess = pintPrice !== null ? suggestedPints(parsedAmount, pintPrice, pickedPub) : null;
+  const sizeMl = sizePicked === undefined ? expense.sizeMl : sizePicked;
+  const guess = pintPrice !== null ? suggestedPints(parsedAmount, pintPrice, pickedPub, sizeMl) : null;
   const pints = pintsPicked ?? (amountChanged ? guess : (expense.pints ?? guess));
 
   function save() {
     const parsed = parseAmount(amount);
-    if (parsed === null || parsed <= 0) {
-      setError("Enter a valid amount.");
+    if (parsed === null || parsed < 0 || (parsed === 0 && (pintPrice === null || !pints))) {
+      setError(parsed === 0 ? "A free beer needs a beer category." : "Enter a valid amount.");
       return;
     }
     setError(null);
@@ -236,6 +239,7 @@ function EditRow({
         note,
         pub,
         pints: pintsPicked ?? (amountChanged ? guess : undefined),
+        sizeMl: sizePicked,
       });
       if (result.ok) {
         onDone(result.movedTo);
@@ -294,6 +298,8 @@ function EditRow({
           }}
           pints={pints}
           onPints={setPintsPicked}
+          sizeMl={sizeMl}
+          onSize={setSizePicked}
         />
       )}
       <label className="flex flex-col gap-1">

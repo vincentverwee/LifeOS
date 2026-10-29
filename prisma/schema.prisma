@@ -127,6 +127,9 @@ model Expense {
   pubId          String?
   pub            Pub?          @relation(fields: [pubId], references: [id], onDelete: SetNull)
   pints          Int?
+  // Beer only: ml per beer (330, 250 …); null = a pint (PINT_ML, src/lib/beer/types.ts).
+  // CHECK expense_size in prisma/checks.ts.
+  sizeMl         Int?
   createdAt      DateTime      @default(now())
 
   @@index([categoryId, date])

@@ -19,6 +19,8 @@ export type ListExpense = {
   pubId: string | null;
   pubName: string | null;
   pints: number | null;
+  /** beer only: ml per beer, null = a pint */
+  sizeMl: number | null;
 };
 
 /** Newest expenses of a period first; `limit: null` returns all of them. */
@@ -42,5 +44,6 @@ export async function getRecentExpenses(period: Period, limit: number | null = 5
     pubId: row.pubId,
     pubName: row.pub?.name ?? null,
     pints: row.pints,
+    sizeMl: row.sizeMl,
   }));
 }

@@ -17,7 +17,7 @@ import {
   usualMonth,
   weekdays,
 } from "@/lib/beer/insights";
-import { formatCurrency, formatDate, plural } from "@/lib/format";
+import { formatCurrency, formatDate, formatLiters, plural } from "@/lib/format";
 import { Disclosure } from "@/components/Disclosure";
 import { PintsBarChart, PintsCompareChart, PriceChart, type PintsPoint } from "@/components/beer/BeerCharts";
 import { LOG_BEER_HREF } from "@/components/beer/nav";
@@ -111,7 +111,7 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
           {sum.pints} <span className="text-base text-ink-muted">{sum.pints === 1 ? "pint" : "pints"}</span>
         </p>
         <p className="mt-1 text-sm text-ink-muted">
-          {formatCurrency(sum.spend)}
+          {formatLiters(sum.liters)} · {formatCurrency(sum.spend)}
           {sum.pricePerPint !== null && ` · ${formatCurrency(sum.pricePerPint)} a pint`}
           {sum.days > 0 && ` · ${plural(sum.days, "night", "nights")} out`}
         </p>
@@ -234,7 +234,7 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
                     {monthTitle.format(toDate(m.month))}
                   </span>
                   <span className="font-mono tabular-nums text-ink-muted">
-                    {plural(m.totals.pints, "pint", "pints")} · {formatCurrency(m.totals.spend)}
+                    {plural(m.totals.pints, "pint", "pints")} · {formatLiters(m.totals.liters)} · {formatCurrency(m.totals.spend)}
                   </span>
                 </Link>
               </li>

@@ -22,6 +22,7 @@ export async function getBeerVisits(filter: { pubId?: string; from?: string } = 
       date: true,
       amount: true,
       pints: true,
+      sizeMl: true,
       note: true,
       pubId: true,
       pub: { select: { name: true } },
@@ -33,6 +34,7 @@ export async function getBeerVisits(filter: { pubId?: string; from?: string } = 
     date: dayKey(r.date),
     amount: r.amount.toNumber(),
     counted: r.pints,
+    sizeMl: r.sizeMl,
     pintPrice: r.category.pintPrice?.toNumber() ?? 0,
     pubId: r.pubId,
     pubName: r.pub?.name ?? null,
@@ -60,7 +62,7 @@ export async function getPubOptions(): Promise<PubOption[]> {
     // The newest counted beer per pub.
     prisma.$queryRaw<{ pubId: string; amount: { toNumber(): number }; pints: number }[]>`
       SELECT DISTINCT ON ("pubId") "pubId", "amount", "pints" FROM "Expense"
-      WHERE "pubId" IS NOT NULL AND "pints" IS NOT NULL
+      WHERE "pubId" IS NOT NULL AND "pints" IS NOT NULL AND "amount" > 0
       ORDER BY "pubId", "date" DESC, "createdAt" DESC`,
   ]);
   const lastVisit = new Map(lastVisits.map((g) => [g.pubId, g._max.date ? dayKey(g._max.date) : null]));

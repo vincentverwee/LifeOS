@@ -1,7 +1,7 @@
 "use client";
 
 import { createExpense, type ExpensePeriod } from "@/lib/actions/expenses";
-import { parsePints, parsePubChoice, type PubChoice } from "@/lib/beer/types";
+import { parsePints, parsePubChoice, parseSizeMl, type PubChoice } from "@/lib/beer/types";
 
 /**
  * Expenses saved while offline, kept on the phone until they reach the server.
@@ -19,6 +19,7 @@ export type PendingExpense = {
   /** beer only (absent in entries from older builds) */
   pub?: PubChoice | null;
   pints?: number | null;
+  sizeMl?: number | null;
   createdAt: string;
   /** set when the server refused it (category deleted, date outside the trip…) */
   error?: string;
@@ -146,6 +147,7 @@ export async function flushOutbox(): Promise<number> {
           clientId: item.id,
           pub: parsePubChoice(item.pub),
           pints: parsePints(item.pints),
+          sizeMl: parseSizeMl(item.sizeMl),
         });
       } catch {
         if (navigator.onLine) setSyncFailed(true);
