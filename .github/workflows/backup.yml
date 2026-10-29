@@ -62,7 +62,8 @@ jobs:
           for name in own cat; do
             url_var="${name^^}_URL"; url="${!url_var}"
             if [ -z "$url" ]; then echo "$name: not configured, skipped"; continue; fi
-            pg_dump "$url" --schema=public --no-owner --no-privileges | gzip > "$name.sql.gz"
+            # Every database (and a fresh Supabase project) already has schema public; creating it again fails the restore.
+            pg_dump "$url" --schema=public --no-owner --no-privileges | sed '/^CREATE SCHEMA public;$/d' | gzip > "$name.sql.gz"
             # Restore into a fresh database; any error fails the run.
             psql -q "$TEST_DB/postgres" -c "CREATE DATABASE $name"
             gunzip -c "$name.sql.gz" | psql -q -v ON_ERROR_STOP=1 "$TEST_DB/$name" > /dev/null
