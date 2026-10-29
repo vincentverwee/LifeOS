@@ -54,7 +54,7 @@ const PERIODS: PeriodDef[] = [
   {
     // Only the blok was logged (hours, no subjects); courses from Lessen.xlsx.
     name: "Semester 1.2",
-    startDate: "2025-05-22",
+    startDate: "2025-02-10",
     blokStart: "2025-05-22",
     endDate: "2025-06-27",
     courses: [

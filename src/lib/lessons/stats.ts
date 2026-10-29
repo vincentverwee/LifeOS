@@ -231,7 +231,7 @@ export function computePeriodStats(period: StudyPeriod, todayKey: string): Perio
 // only exist here; totals and KPIs elsewhere stay real.
 
 /** Semesters starting on or after this were logged in the app from the start (3.1 on). */
-const LOGGED_IN_APP_FROM = "2026-09-06";
+const LOGGED_IN_APP_FROM = "2026-09-07";
 
 /** x = days before the last exam, negated: 0 is the last exam, -7 a week before. */
 function xOf(period: StudyPeriod, date: string): number {
