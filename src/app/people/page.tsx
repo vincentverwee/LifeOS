@@ -58,7 +58,7 @@ export default async function PeoplePage() {
 
       {web.edges.length > 0 && (
         <Disclosure title="Who knows who">
-          <PeopleWeb nodes={web.nodes} edges={web.edges} />
+          <PeopleWeb nodes={web.nodes} edges={web.edges} groups={groups} />
         </Disclosure>
       )}
     </div>

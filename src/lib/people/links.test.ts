@@ -31,3 +31,20 @@ describe("layoutWeb", () => {
     expect(dist(0, 1)).toBeLessThan(dist(0, 2));
   });
 });
+
+describe("layoutWeb with a pinned centre", () => {
+  it("keeps you at (0, 0) with parents above and siblings level", () => {
+    const nodes = [
+      { id: "me", name: "You" },
+      { id: "m", name: "Mama", level: -1 },
+      { id: "p", name: "Papa", level: -1 },
+      { id: "s", name: "Simon", level: 0 },
+    ];
+    const edges = ["m", "p", "s"].map((id) => ({ a: "me", b: id }));
+    const [me, m, p, s] = layoutWeb(nodes, edges, "me");
+    expect([me.x, me.y]).toEqual([0, 0]);
+    expect(m.y).toBeLessThan(-50);
+    expect(p.y).toBeLessThan(-50);
+    expect(Math.abs(s.y)).toBeLessThan(50);
+  });
+});

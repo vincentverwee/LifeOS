@@ -117,6 +117,7 @@ function FactItem({ fact }: { fact: FactRow }) {
 /** "Things to remember": label → value lines. Tap one to edit it. */
 export function FactList({ personId, facts }: { personId: string; facts: FactRow[] }) {
   const [key, setKey] = useState(0);
+  const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
     const result = await addFact(prev, formData);
     if (result?.ok) setKey((k) => k + 1); // fresh, empty fields
@@ -130,23 +131,29 @@ export function FactList({ personId, facts }: { personId: string; facts: FactRow
           <option key={l} value={l} />
         ))}
       </datalist>
-      {facts.length > 0 ? (
+      {facts.length > 0 && (
         <ul className="-mx-3 flex flex-col">
           {facts.map((fact) => (
             <FactItem key={fact.id} fact={fact} />
           ))}
         </ul>
-      ) : (
-        <p className="text-sm text-ink-muted">Favourite drink, sizes, allergies, what they study…</p>
       )}
-      <form key={key} action={formAction} className="flex flex-col gap-2">
-        <input type="hidden" name="personId" value={personId} />
-        <FactFields />
-        <div>
-          <SaveButton label="Add" />
-        </div>
-        {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
-      </form>
+      {/* Empty: one calm link until there's something to add. */}
+      {facts.length > 0 || open ? (
+        <form key={key} action={formAction} className="flex flex-col gap-2">
+          <input type="hidden" name="personId" value={personId} />
+          <FactFields />
+          <div>
+            <SaveButton label="Add" />
+          </div>
+          {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
+        </form>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} className="tap -mx-3 flex min-h-11 flex-col rounded-xl px-3 py-2 text-left">
+          <span className="text-sm font-medium text-primary">+ Add something</span>
+          <span className="text-sm text-ink-muted">Favourite drink, sizes, allergies, what they study…</span>
+        </button>
+      )}
     </div>
   );
 }

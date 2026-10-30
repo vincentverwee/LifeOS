@@ -5,6 +5,8 @@ import { useState } from "react";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { describeSince } from "@/lib/reminders/routines";
 import type { PersonSummary } from "@/lib/data/people";
+import { groupColor } from "@/lib/people/family";
+import { GroupDot } from "./GroupDot";
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
@@ -71,9 +73,12 @@ export function PeopleList({ people, groups, todayKey }: { people: PersonSummary
                   className="tap flex min-h-14 items-center gap-3 rounded-2xl border border-border bg-surface p-3 pl-4 hover:border-primary"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-foreground">{p.name}</p>
+                    <p className="flex items-center gap-2">
+                      <GroupDot color={groupColor(p.groupName, groups)} />
+                      <span className="truncate font-medium text-foreground">{p.name}</span>
+                    </p>
                     {(meta.length > 0 || p.catchUp) && (
-                      <p className="truncate text-sm text-ink-muted">
+                      <p className="truncate pl-4 text-sm text-ink-muted">
                         {p.catchUp ? <span className="text-critical">{meta.join(" · ")} · catch up</span> : meta.join(" · ")}
                       </p>
                     )}

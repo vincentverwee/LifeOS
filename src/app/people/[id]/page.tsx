@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPeopleNames, getPerson } from "@/lib/data/people";
+import { getGroups, getPeopleNames, getPerson } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
 import { describeCountdown, formatBirthday } from "@/lib/people/birthdays";
 import { Disclosure } from "@/components/Disclosure";
@@ -35,7 +35,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function PersonPage({ params }: PageProps<"/people/[id]">) {
   const { id } = await params;
   const todayKey = await getTodayKey();
-  const [person, people] = await Promise.all([getPerson(id, todayKey), getPeopleNames()]);
+  const [person, people, groups] = await Promise.all([getPerson(id, todayKey), getPeopleNames(), getGroups()]);
   if (!person) notFound();
 
   const open = person.gifts.filter((g) => g.status !== "given");
@@ -115,8 +115,15 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
         <FactList personId={person.id} facts={person.facts} />
       </Section>
 
-      <Section title="People">
-        <LinkList personId={person.id} name={person.name} links={person.links} people={people} />
+      <Section title="Family & friends">
+        <LinkList
+          personId={person.id}
+          name={person.name}
+          relationToMe={person.relationToMe}
+          links={person.links}
+          people={people}
+          groups={groups}
+        />
       </Section>
 
       <Section title="Notes">

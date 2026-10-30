@@ -5,6 +5,7 @@ import { birthdayOf, isGiftStatus, SOON_DAYS, upcoming, type Birthday, type Gift
 import { isDue } from "@/lib/reminders/routines";
 import { viewLink, type LinkView } from "@/lib/people/links";
 import type { WebEdge, WebNode } from "@/lib/people/web";
+import { familyLevel } from "@/lib/people/family";
 
 export type PersonSummary = {
   id: string;
@@ -50,7 +51,7 @@ export type PersonDetail = PersonSummary & {
   /** Latest contact days first, a handful. */
   recentContacts: Contact[];
   /** People they're linked to, A–Z. */
-  links: (LinkView & { otherName: string })[];
+  links: (LinkView & { otherName: string; otherGroup: string | null })[];
 };
 
 const RECENT_CONTACTS = 8;
@@ -144,10 +145,21 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
   if (!row) return null;
   const linkRows = await prisma.personLink.findMany({
     where: { OR: [{ aId: id }, { bId: id }] },
-    select: { id: true, aId: true, bId: true, aLabel: true, bLabel: true, a: { select: { name: true } }, b: { select: { name: true } } },
+    select: {
+      id: true,
+      aId: true,
+      bId: true,
+      aLabel: true,
+      bLabel: true,
+      a: { select: { name: true, groupName: true } },
+      b: { select: { name: true, groupName: true } },
+    },
   });
   const links = linkRows
-    .map((l) => ({ ...viewLink(l, id), otherName: l.aId === id ? l.b.name : l.a.name }))
+    .map((l) => {
+      const other = l.aId === id ? l.b : l.a;
+      return { ...viewLink(l, id), otherName: other.name, otherGroup: other.groupName };
+    })
     .sort((x, y) => x.otherName.localeCompare(y.otherName));
   const gifts: GiftRow[] = row.gifts.map((g) => ({
     id: g.id,
@@ -208,37 +220,46 @@ export async function getCatchUps(todayKey: string): Promise<PersonSummary[]> {
 }
 
 /** Everyone to pick from when linking, A–Z (names aren't unique, so the picker shows the group too). */
-export async function getPeopleNames(): Promise<{ id: string; name: string; groupName: string | null }[]> {
-  return prisma.person.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, groupName: true } });
+export async function getPeopleNames(): Promise<
+  { id: string; name: string; groupName: string | null; relationToMe: string | null }[]
+> {
+  return prisma.person.findMany({
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, groupName: true, relationToMe: true },
+  });
 }
 
 /** The web's node for you; everyone with a `relationToMe` links to it. */
 export const ME_NODE = "me";
 
+/** A line in the web; `aIs` = what A is to B, `bIs` = what B is to A (for the tap-to-show labels). */
+export type WebLine = WebEdge & { aIs: string | null; bIs: string | null };
+
 /** The "who knows who" web: you, everyone with a link or a relation to you, and the links. */
-export async function getPeopleWeb(): Promise<{ nodes: WebNode[]; edges: (WebEdge & { label: string | null })[] }> {
+export async function getPeopleWeb(): Promise<{ nodes: WebNode[]; edges: WebLine[] }> {
+  const PERSON = { select: { name: true, groupName: true, relationToMe: true } } as const;
   const [links, related] = await Promise.all([
-    prisma.personLink.findMany({
-      select: { aId: true, bId: true, aLabel: true, bLabel: true, a: { select: { name: true } }, b: { select: { name: true } } },
+    prisma.personLink.findMany({ select: { aId: true, bId: true, aLabel: true, bLabel: true, a: PERSON, b: PERSON } }),
+    prisma.person.findMany({
+      where: { relationToMe: { not: null } },
+      select: { id: true, name: true, groupName: true, relationToMe: true },
     }),
-    prisma.person.findMany({ where: { relationToMe: { not: null } }, select: { id: true, name: true, relationToMe: true } }),
   ]);
   const nodes = new Map<string, WebNode>();
-  if (related.length) nodes.set(ME_NODE, { id: ME_NODE, name: "You" });
-  for (const p of related) nodes.set(p.id, { id: p.id, name: p.name });
+  const node = (id: string, p: { name: string; groupName: string | null; relationToMe: string | null }) =>
+    nodes.set(id, { id, name: p.name, group: p.groupName, level: familyLevel(p.relationToMe) });
+  if (related.length) nodes.set(ME_NODE, { id: ME_NODE, name: "You", group: null, level: 0 });
+  for (const p of related) node(p.id, p);
   for (const l of links) {
-    nodes.set(l.aId, { id: l.aId, name: l.a.name });
-    nodes.set(l.bId, { id: l.bId, name: l.b.name });
+    node(l.aId, l.a);
+    node(l.bId, l.b);
   }
   return {
     nodes: [...nodes.values()].sort((x, y) => x.id.localeCompare(y.id)),
     edges: [
-      ...related.map((p) => ({ a: ME_NODE, b: p.id, label: `${p.name} is your ${p.relationToMe}` })),
-      ...links.map((l) => ({
-        a: l.aId,
-        b: l.bId,
-        label: l.aLabel || l.bLabel ? `${l.a.name} is ${l.b.name}'s ${l.aLabel ?? "…"}` : null,
-      })),
+      // You → them: they are your `relationToMe`; what you are to them isn't stored.
+      ...related.map((p) => ({ a: ME_NODE, b: p.id, aIs: null, bIs: p.relationToMe })),
+      ...links.map((l) => ({ a: l.aId, b: l.bId, aIs: l.aLabel, bIs: l.bLabel })),
     ],
   };
 }
