@@ -213,20 +213,21 @@ model Debt {
 // Waypoint components use.
 
 model WaypointTrip {
-  id              String             @id @default(uuid()) @db.Uuid
+  id              String               @id @default(uuid()) @db.Uuid
   title           String
   description     String?
-  startDate       DateTime?          @db.Date
-  endDate         DateTime?          @db.Date
+  startDate       DateTime?            @db.Date
+  endDate         DateTime?            @db.Date
   coverImage      String?
-  totalKm         Decimal?           @db.Decimal(10, 2)
+  totalKm         Decimal?             @db.Decimal(10, 2)
   // "allow_tolls" | "avoid_tolls" — stored but ignored by the public OSRM server.
-  routePreference String             @default("allow_tolls")
+  routePreference String               @default("allow_tolls")
   // Whole-trip OSRM route as a GeoJSON LineString.
   routeGeometry   Json?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   locations       WaypointLocation[]
+  people          WaypointTripPerson[]
 
   @@index([startDate])
 }
@@ -456,7 +457,7 @@ model RoutineLog {
 // "Uni") used as a filter. `seeEveryDays` nudges like a Last done item, counted
 // from the newest PersonSeen; the contact card shows with it or with `trackContact`. Checked by person_birthday / person_see_every.
 model Person {
-  id           String       @id @default(cuid())
+  id           String               @id @default(cuid())
   name         String
   groupName    String?
   // What they are to you ("mum", "brother"); the web view links them to "You".
@@ -466,14 +467,28 @@ model Person {
   birthYear    Int?
   seeEveryDays Int?
   // Show the Saw them / Messaged card even without a `seeEveryDays` nudge.
-  trackContact Boolean      @default(false)
-  createdAt    DateTime     @default(now())
+  trackContact Boolean              @default(false)
+  createdAt    DateTime             @default(now())
   gifts        Gift[]
   facts        PersonFact[]
   notes        PersonNote[]
   seen         PersonSeen[]
-  linksAsA     PersonLink[] @relation("LinkA")
-  linksAsB     PersonLink[] @relation("LinkB")
+  linksAsA     PersonLink[]         @relation("LinkA")
+  linksAsB     PersonLink[]         @relation("LinkB")
+  trips        WaypointTripPerson[]
+}
+
+// Who came along on a Waypoint trip. Shown as "Trips together" on their page; a
+// trip's last day (once past) counts as being in touch for the catch-up math.
+model WaypointTripPerson {
+  tripId    String       @db.Uuid
+  trip      WaypointTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  personId  String
+  person    Person       @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@id([tripId, personId])
+  @@index([personId])
 }
 
 // Two people who know each other, stored once per pair with `aId` < `bId`

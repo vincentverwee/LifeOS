@@ -12,6 +12,7 @@ import { SeenCard } from "@/components/people/SeenCard";
 import { LinkList } from "@/components/people/LinkList";
 import { TrackToggle } from "@/components/people/TrackToggle";
 import type { GiftRow } from "@/lib/data/people";
+import { formatDay } from "@/lib/reminders/schedule";
 
 /** Given gifts by the year they were given, newest year first (they arrive newest first). */
 function byYear(gifts: GiftRow[]): [string, GiftRow[]][] {
@@ -125,6 +126,29 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
           groups={groups}
         />
       </Section>
+
+      {person.trips.length > 0 && (
+        <Section title="Trips together">
+          <ul className="flex flex-col gap-2">
+            {person.trips.map((trip) => (
+              <li key={trip.id}>
+                <Link
+                  href={`/waypoint/trips/${trip.id}`}
+                  className="tap flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-2.5 hover:border-primary"
+                >
+                  <span className="min-w-0 truncate font-medium text-foreground">{trip.title}</span>
+                  {trip.startDate && (
+                    <span className="shrink-0 text-sm text-ink-muted">
+                      {formatDay(trip.startDate)}
+                      {trip.endDate && trip.endDate !== trip.startDate && ` – ${formatDay(trip.endDate)}`}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section title="Notes">
         <NoteList personId={person.id} notes={person.notes} todayKey={todayKey} />

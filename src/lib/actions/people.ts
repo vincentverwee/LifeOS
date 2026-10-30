@@ -370,3 +370,33 @@ export async function setTracking(personId: string, on: boolean): Promise<void> 
   await prisma.person.updateMany({ where: { id: personId }, data: { trackContact: on === true } });
   revalidate();
 }
+
+// --- Waypoint trips ---
+
+/** Tags someone (picked, or new by `newName`) as having come along on a trip. */
+export async function addTripPerson(tripId: string, pick: { personId: string } | { newName: string }): Promise<PeopleFormState> {
+  await requireAuth();
+  if (!(await prisma.waypointTrip.findUnique({ where: { id: tripId }, select: { id: true } }))) {
+    return { ok: false, error: "That trip no longer exists." };
+  }
+  let personId: string;
+  if ("newName" in pick) {
+    const name = pick.newName.trim().slice(0, 100);
+    if (!name) return { ok: false, error: "Type their name." };
+    personId = (await prisma.person.create({ data: { name }, select: { id: true } })).id;
+  } else {
+    personId = pick.personId;
+    if (!(await personExists(personId))) return { ok: false, error: "That person no longer exists." };
+  }
+  await prisma.waypointTripPerson.createMany({ data: [{ tripId, personId }], skipDuplicates: true });
+  revalidate();
+  revalidatePath("/waypoint", "layout");
+  return { ok: true };
+}
+
+export async function removeTripPerson(tripId: string, personId: string): Promise<void> {
+  await requireAuth();
+  await prisma.waypointTripPerson.deleteMany({ where: { tripId, personId } });
+  revalidate();
+  revalidatePath("/waypoint", "layout");
+}

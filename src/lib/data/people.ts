@@ -44,6 +44,26 @@ export type GiftRow = {
 export type FactRow = { id: string; label: string; value: string };
 export type NoteRow = { id: string; /** "YYYY-MM-DD" */ date: string; text: string };
 
+export type TripTogether = { id: string; title: string; startDate: string | null; endDate: string | null };
+
+/** What a shared trip counts as: its last day (or first, without an end), once it's past. */
+const TRIP_SELECT = { select: { trip: { select: { startDate: true, endDate: true } } } } as const;
+
+/** The newest seen/message day or past trip day, whichever is later (a trip counts as "seen"). */
+function lastContact(
+  seen: { seenOn: Date; kind: string } | undefined,
+  trips: { trip: { startDate: Date | null; endDate: Date | null } }[],
+  todayKey: string
+): { seenOn: Date; kind: string } | undefined {
+  let best = seen;
+  for (const { trip } of trips) {
+    const day = trip.endDate ?? trip.startDate;
+    if (!day || dayKey(day) > todayKey) continue;
+    if (!best || day > best.seenOn) best = { seenOn: day, kind: "seen" };
+  }
+  return best;
+}
+
 export type PersonDetail = PersonSummary & {
   facts: FactRow[];
   notes: NoteRow[];
@@ -52,6 +72,8 @@ export type PersonDetail = PersonSummary & {
   recentContacts: Contact[];
   /** People they're linked to, A–Z. */
   links: (LinkView & { otherName: string; otherGroup: string | null })[];
+  /** Waypoint trips they came on, newest first. */
+  trips: TripTogether[];
 };
 
 const RECENT_CONTACTS = 8;
@@ -116,11 +138,12 @@ export async function getPeople(todayKey: string): Promise<PersonSummary[]> {
     select: {
       ...SUMMARY_SELECT,
       seen: { orderBy: [{ seenOn: "desc" }, { createdAt: "desc" }], take: 1, select: { seenOn: true, kind: true } },
+      trips: TRIP_SELECT,
       _count: { select: { gifts: { where: { status: { not: "given" } } } } },
     },
   });
   return rows
-    .map((row) => toSummary(row, row.seen[0], row._count.gifts, todayKey))
+    .map((row) => toSummary(row, lastContact(row.seen[0], row.trips, todayKey), row._count.gifts, todayKey))
     .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
 }
 
@@ -140,6 +163,7 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
       notes: { orderBy: [{ date: "desc" }, { createdAt: "desc" }], select: { id: true, date: true, text: true } },
       gifts: { orderBy: [{ givenOn: { sort: "desc", nulls: "first" } }, { createdAt: "asc" }] },
       seen: { orderBy: [{ seenOn: "desc" }, { createdAt: "desc" }], take: RECENT_CONTACTS, select: { seenOn: true, kind: true } },
+      trips: { select: { trip: { select: { id: true, title: true, startDate: true, endDate: true } } } },
     },
   });
   if (!row) return null;
@@ -171,12 +195,20 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
     givenOn: g.givenOn ? dayKey(g.givenOn) : null,
   }));
   return {
-    ...toSummary(row, row.seen[0], gifts.filter((g) => g.status !== "given").length, todayKey),
+    ...toSummary(row, lastContact(row.seen[0], row.trips, todayKey), gifts.filter((g) => g.status !== "given").length, todayKey),
     facts: row.facts,
     notes: row.notes.map((n) => ({ id: n.id, date: dayKey(n.date), text: n.text })),
     gifts,
     recentContacts: row.seen.map((s) => ({ day: dayKey(s.seenOn), kind: toKind(s.kind) })),
     links,
+    trips: row.trips
+      .map(({ trip }) => ({
+        id: trip.id,
+        title: trip.title,
+        startDate: trip.startDate ? dayKey(trip.startDate) : null,
+        endDate: trip.endDate ? dayKey(trip.endDate) : null,
+      }))
+      .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
   };
 }
 
@@ -268,4 +300,13 @@ export async function getPeopleWeb(): Promise<{ nodes: WebNode[]; edges: WebLine
 export async function getTrackDefault(): Promise<boolean> {
   const last = await prisma.person.findFirst({ orderBy: { createdAt: "desc" }, select: { trackContact: true } });
   return last?.trackContact ?? false;
+}
+
+/** Who came along on a Waypoint trip, A–Z. */
+export async function getTripPeople(tripId: string): Promise<{ id: string; name: string; groupName: string | null }[]> {
+  const rows = await prisma.waypointTripPerson.findMany({
+    where: { tripId },
+    select: { person: { select: { id: true, name: true, groupName: true } } },
+  });
+  return rows.map((r) => r.person).sort((a, b) => a.name.localeCompare(b.name));
 }

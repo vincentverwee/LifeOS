@@ -43,7 +43,16 @@ const routeKeyOf = (locations: Location[]) =>
   locations.map((l, i) => (i > 0 && l.arrived_by_plane ? `${l.id}:plane` : l.id)).join('|');
 
 /** Interactive trip page. The server page loads the trip, so the first paint has data. */
-export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Trip; initialLocations: Location[] }) {
+export function TripDetail({
+  initialTrip,
+  initialLocations,
+  people,
+}: {
+  initialTrip: Trip;
+  initialLocations: Location[];
+  /** "Who came along" (People), rendered by the server page. */
+  people?: React.ReactNode;
+}) {
   const id = initialTrip.id;
   const [trip, setTrip] = useState<Trip>(initialTrip);
   const [locations, setLocations] = useState<Location[]>(initialLocations);
@@ -221,6 +230,8 @@ export function TripDetail({ initialTrip, initialLocations }: { initialTrip: Tri
         </div>
 
         <Separator />
+
+        {people}
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: locations */}
