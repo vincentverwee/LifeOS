@@ -37,6 +37,22 @@ const PUB_LOCATION_CHECK = `(
       AND "latitude" BETWEEN -90 AND 90 AND "longitude" BETWEEN -180 AND 180)
 )`;
 
+// No birthday at all, or month + day that exist together (29 Feb always may: the
+// year is optional). Spelled out with IS NOT NULL, like PUB_LOCATION_CHECK.
+const PERSON_BIRTHDAY_CHECK = `(
+  ("birthMonth" IS NULL AND "birthDay" IS NULL AND "birthYear" IS NULL)
+  OR ("birthMonth" IS NOT NULL AND "birthDay" IS NOT NULL
+      AND "birthMonth" BETWEEN 1 AND 12
+      AND "birthDay" BETWEEN 1 AND (CASE WHEN "birthMonth" = 2 THEN 29 WHEN "birthMonth" IN (4, 6, 9, 11) THEN 30 ELSE 31 END)
+      AND ("birthYear" IS NULL OR "birthYear" BETWEEN 1900 AND 2100))
+)`;
+
+const GIFT_CHECK = `(
+  "status" IN ('idea', 'bought', 'given')
+  AND ("status" = 'given') = ("givenOn" IS NOT NULL)
+  AND ("price" IS NULL OR "price" >= 0)
+)`;
+
 export const CHECKS: Check[] = [
   // Every expense belongs to exactly one month or one trip.
   {
@@ -91,6 +107,42 @@ export const CHECKS: Check[] = [
     columns: "id, \"sizeMl\"",
     label: "Expenses with an invalid beer size",
     fix: "Fix those beer sizes first.",
+  },
+  // A birthday is a real day of the year.
+  {
+    name: "person_birthday",
+    table: "Person",
+    check: PERSON_BIRTHDAY_CHECK,
+    columns: `id, name, "birthMonth", "birthDay", "birthYear"`,
+    label: "People with an impossible birthday",
+    fix: "Fix those birthdays first.",
+  },
+  // The "see them every" nudge is 1 day to 10 years.
+  {
+    name: "person_see_every",
+    table: "Person",
+    check: `("seeEveryDays" IS NULL OR "seeEveryDays" BETWEEN 1 AND 3650)`,
+    columns: `id, name, "seeEveryDays"`,
+    label: "People with an invalid catch-up nudge",
+    fix: "Fix those nudges first.",
+  },
+  // A contact day is a visit or a message.
+  {
+    name: "person_contact_kind",
+    table: "PersonSeen",
+    check: `("kind" IN ('seen', 'message'))`,
+    columns: `id, "personId", kind`,
+    label: "Contact days of an unknown kind",
+    fix: "Fix those contact days first.",
+  },
+  // A gift has a known status, a date exactly when given, and no negative price.
+  {
+    name: "gift_valid",
+    table: "Gift",
+    check: GIFT_CHECK,
+    columns: "id, title, status",
+    label: "Gifts with an invalid status, date or price",
+    fix: "Fix those gifts first.",
   },
 ];
 

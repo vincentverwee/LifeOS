@@ -1,5 +1,6 @@
 import { getReminders } from "@/lib/data/reminders";
 import { getRoutines } from "@/lib/data/routines";
+import { getCatchUps } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
 import { isDue } from "@/lib/reminders/routines";
 import { ReminderList } from "@/components/reminders/ReminderList";
@@ -7,9 +8,13 @@ import { MASCOT } from "@/lib/theme";
 
 export default async function RemindersPage() {
   const todayKey = await getTodayKey();
-  const [{ open }, routines] = await Promise.all([getReminders(todayKey), getRoutines(todayKey)]);
+  const [{ open }, routines, catchUps] = await Promise.all([
+    getReminders(todayKey),
+    getRoutines(todayKey),
+    getCatchUps(todayKey),
+  ]);
   const dueRoutines = routines.filter((r) => isDue(r, todayKey));
-  const count = open.length + dueRoutines.length;
+  const count = open.length + dueRoutines.length + catchUps.length;
 
   return (
     <section>
@@ -17,7 +22,7 @@ export default async function RemindersPage() {
       <p className="mt-1 mb-4 text-sm text-ink-muted">
         {count === 0 ? "All done" : `${count} to do`} · tap the {MASCOT} when it&apos;s done
       </p>
-      <ReminderList reminders={open} routines={dueRoutines} todayKey={todayKey} />
+      <ReminderList reminders={open} routines={dueRoutines} catchUps={catchUps} todayKey={todayKey} />
     </section>
   );
 }

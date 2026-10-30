@@ -16,6 +16,8 @@ import { sendPush } from "@/lib/push/send";
 import { weatherLine } from "@/lib/push/weather";
 import { getDueSubscriptions, getSubscriptions } from "@/lib/data/subscriptions";
 import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
+import { byNextBirthday, getPeople } from "@/lib/data/people";
+import { BIRTHDAY_HEADS_UP_DAYS } from "@/lib/people/birthdays";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
 // a window in the device's local time, from its chosen time (PushSubscription.times,
@@ -36,12 +38,13 @@ function inDays(days: number): string {
 }
 
 async function digest(todayKey: string): Promise<PushPayload | null> {
-  const [{ open }, routines, subscriptions, { period }, running] = await Promise.all([
+  const [{ open }, routines, subscriptions, { period }, running, people] = await Promise.all([
     getReminders(todayKey),
     getRoutines(todayKey),
     getSubscriptions(),
     loadStudyPeriods(undefined, todayKey),
     getAllPeriods().then((all) => getRunningPeriods(all, todayKey).find((p) => p.type === "cycle")),
+    getPeople(todayKey),
   ]);
 
   const dueSubscriptions = subscriptions.filter((s) => isSubscriptionDue(s, todayKey));
@@ -49,6 +52,9 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
     ...open.map((r) => r.title),
     ...routines.filter((r) => isDue(r, todayKey)).map((r) => `${r.name} · ${describeSince(r.lastDoneOn, todayKey).toLowerCase()}`),
     ...dueSubscriptions.map((s) => `Log ${s.name} ${formatCurrency(s.amount)}`),
+    ...people
+      .filter((p) => p.catchUp)
+      .map((p) => `Message ${p.name} · last in touch ${describeSince(p.lastContactOn, todayKey).toLowerCase()}`),
   ];
   const lines = todo.slice(0, DIGEST_MAX_ITEMS);
   if (todo.length > DIGEST_MAX_ITEMS) lines.push(`+${todo.length - DIGEST_MAX_ITEMS} more`);
@@ -68,12 +74,32 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
     if (s.isActive && s.nextDueOn === tomorrow) lines.push(`${s.name} ${formatCurrency(s.amount)} renews tomorrow`);
   }
 
+  // Birthdays a week ahead, the day before and on the day; a nudge while there's no gift yet.
+  // (People to catch up with are in the to-do lines above, like on Reminders.)
+  const peopleLines: string[] = [];
+  for (const p of byNextBirthday(people)) {
+    if (!BIRTHDAY_HEADS_UP_DAYS.includes(p.next.daysUntil)) continue;
+    const age = p.next.turning !== null ? ` (${p.next.turning})` : "";
+    const gift = p.next.daysUntil > 0 && p.openGifts === 0 ? " · no gift idea yet" : "";
+    peopleLines.push(`${p.name}'s birthday ${inDays(p.next.daysUntil)}${age}${gift}`);
+  }
+  lines.push(...peopleLines);
+
   // Sent every morning, also with nothing on: the runner adds the weather or a quiet line.
   return {
     title: todo.length ? `${todo.length} to do today` : "Good morning",
     body: lines.join("\n"),
     // Renewals to log are confirmed on Budget Today; everything else to do is in Reminders.
-    url: todo.length === 0 ? (lines.length ? "/lessons" : "/") : todo.length === dueSubscriptions.length ? "/budget" : "/reminders",
+    url:
+      todo.length === 0
+        ? peopleLines.length && lines.length === peopleLines.length
+          ? "/people"
+          : lines.length
+            ? "/lessons"
+            : "/"
+        : todo.length === dueSubscriptions.length
+          ? "/budget"
+          : "/reminders",
     tag: "digest",
   };
 }

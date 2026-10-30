@@ -68,6 +68,18 @@ export function RemindersIcon({ className }: IconProps) {
   );
 }
 
+/** People: a wrapped present with a bow. */
+export function PeopleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="7" y="17" width="34" height="8" rx="2" />
+      <path d="M10 25v15a2 2 0 0 0 2 2h24a2 2 0 0 0 2-2V25" />
+      <path d="M24 17v25" />
+      <path d="M24 17c-2-5-9-9-11-5s4 5 11 5c7 0 13-1 11-5s-9 0-11 5z" />
+    </svg>
+  );
+}
+
 /** Beer: a pint glass with a head of foam. */
 export function BeerIcon({ className }: IconProps) {
   return (

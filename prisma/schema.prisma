@@ -450,6 +450,83 @@ model RoutineLog {
   @@index([doneOn])
 }
 
+// Someone in the /people contact book. The birthday is optional: month + day
+// together, the year only when known (for the age); 29 Feb falls on the 28th in
+// other years (src/lib/people/birthdays.ts). `groupName` is free text ("Family",
+// "Uni") used as a filter. `seeEveryDays` nudges like a Last done item, counted
+// from the newest PersonSeen. Checked by person_birthday / person_see_every.
+model Person {
+  id           String       @id @default(cuid())
+  name         String
+  groupName    String?
+  birthMonth   Int?
+  birthDay     Int?
+  birthYear    Int?
+  seeEveryDays Int?
+  createdAt    DateTime     @default(now())
+  gifts        Gift[]
+  facts        PersonFact[]
+  notes        PersonNote[]
+  seen         PersonSeen[]
+}
+
+// A "thing to remember" about someone: "Favourite drink" → "Aperol".
+model PersonFact {
+  id        String   @id @default(cuid())
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  label     String
+  value     String
+  createdAt DateTime @default(now())
+
+  @@index([personId])
+}
+
+// A dated note about someone, shown newest first.
+model PersonNote {
+  id        String   @id @default(cuid())
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  date      DateTime @db.Date
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([personId, date])
+}
+
+// A day you were in touch with someone: `kind` "seen" (Saw them) or "message"
+// (Messaged them, also ticked from Reminders when they're due a catch-up).
+// Last contact = the newest of either. Checked by person_contact_kind.
+model PersonSeen {
+  id        String   @id @default(cuid())
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  seenOn    DateTime @db.Date
+  kind      String   @default("seen")
+  createdAt DateTime @default(now())
+
+  // Once per day and kind, so double taps can't duplicate.
+  @@unique([personId, seenOn, kind])
+  @@index([seenOn])
+}
+
+// A gift for a Person: "idea" → "bought" → "given" (`givenOn` set exactly when
+// given; the history is grouped by its year). Checked by gift_valid.
+model Gift {
+  id        String    @id @default(cuid())
+  personId  String
+  person    Person    @relation(fields: [personId], references: [id], onDelete: Cascade)
+  title     String
+  status    String    @default("idea")
+  price     Decimal?  @db.Decimal(12, 2)
+  link      String?
+  occasion  String?
+  givenOn   DateTime? @db.Date
+  createdAt DateTime  @default(now())
+
+  @@index([personId])
+}
+
 // A phone/browser that gets push notifications (Web Push). `kinds` are the
 // notifications it wants (src/lib/push/kinds.ts); `timeZone` decides when
 // "morning" and "evening" are. Removed when the push service says it's gone.

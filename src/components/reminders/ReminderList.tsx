@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { completeReminder, undoCompleteReminder } from "@/lib/actions/reminders";
 import { logRoutineToday, unlogRoutineToday } from "@/lib/actions/routines";
+import { logMessageToday, unlogContact } from "@/lib/actions/people";
+import type { PersonSummary } from "@/lib/data/people";
 import { describeDue, describeRepeat, type Reminder } from "@/lib/reminders/schedule";
 import { describeSince, isOverdue, type Routine } from "@/lib/reminders/routines";
 import { SheepCheckbox } from "./SheepCheckbox";
@@ -41,16 +43,19 @@ function TodoRow({
 }
 
 /**
- * To do: open reminders plus Last done items past their "every N days", each with a sheep box.
+ * To do: open reminders, Last done items past their "every N days" and people to
+ * catch up with ("Message Louise": ticking logs a message today), each with a sheep box.
  * Ticked rows slide off to the right; "Undo" stays for a few seconds.
  */
 export function ReminderList({
   reminders,
   routines,
+  catchUps,
   todayKey,
 }: {
   reminders: Reminder[];
   routines: Routine[];
+  catchUps: PersonSummary[];
   todayKey: string;
 }) {
   // Ticked rows stay ticked until the action's re-render drops them from the list.
@@ -97,13 +102,27 @@ export function ReminderList({
     });
   }
 
+  function tickCatchUp(person: PersonSummary) {
+    const key = `p-${person.id}`;
+    setError(null);
+    startTransition(async () => {
+      addTicked(key);
+      const [result] = await Promise.all([logMessageToday(person.id), wait(SLIDE_OUT_MS)]);
+      if (result.ok) {
+        setUndo({ key, title: person.name, label: "Messaged", run: () => unlogContact(person.id, result.day, "message") });
+      } else {
+        setError(result.error);
+      }
+    });
+  }
+
   function undoTick(target: Undo) {
     setUndo(null);
     setReturning(target.key);
     startTransition(target.run);
   }
 
-  const empty = reminders.length === 0 && routines.length === 0;
+  const empty = reminders.length === 0 && routines.length === 0 && catchUps.length === 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -157,6 +176,28 @@ export function ReminderList({
                       Last: {describeSince(routine.lastDoneOn, todayKey).toLowerCase()}
                     </span>
                     {` · every ${routine.everyDays} d`}
+                  </>
+                }
+              />
+            );
+          })}
+          {catchUps.map((person) => {
+            const key = `p-${person.id}`;
+            const nudge = { everyDays: person.seeEveryDays, lastDoneOn: person.lastContactOn };
+            return (
+              <TodoRow
+                key={key}
+                done={ticked.has(key)}
+                returning={returning === key}
+                title={`Message ${person.name}`}
+                href={`/people/${person.id}`}
+                onTick={() => tickCatchUp(person)}
+                meta={
+                  <>
+                    <span className={isOverdue(nudge, todayKey) ? "text-critical" : undefined}>
+                      Last in touch: {describeSince(person.lastContactOn, todayKey).toLowerCase()}
+                    </span>
+                    {` · every ${person.seeEveryDays} d`}
                   </>
                 }
               />

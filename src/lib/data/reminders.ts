@@ -5,6 +5,7 @@ import { dayKeyIn } from "@/lib/today";
 import { FINISHED_DAYS, isOpen, isRepeat, type Reminder } from "@/lib/reminders/schedule";
 import { isDue, isOverdue as isRoutineOverdue, type Routine } from "@/lib/reminders/routines";
 import { getRoutines } from "./routines";
+import { getCatchUps } from "./people";
 
 const SELECT = { id: true, title: true, repeat: true, dueOn: true, anchorDay: true, weekdays: true } as const;
 
@@ -66,15 +67,20 @@ export type RemindersGlance = {
   longest: Routine | null;
 };
 
-/** For the home tile: open reminders plus Last done items past their "every N days". */
+/** For the home tile: open reminders, Last done items past their "every N days" and people to catch up with. */
 export async function getRemindersGlance(todayKey: string): Promise<RemindersGlance> {
-  const [{ open, upcoming }, routines] = await Promise.all([getReminders(todayKey), getRoutines(todayKey)]);
+  const [{ open, upcoming }, routines, catchUps] = await Promise.all([
+    getReminders(todayKey),
+    getRoutines(todayKey),
+    getCatchUps(todayKey),
+  ]);
   const due = routines.filter((r) => isDue(r, todayKey));
   return {
-    open: open.length + due.length,
+    open: open.length + due.length + catchUps.length,
     overdue:
       open.filter((r) => r.dueOn !== null && r.dueOn < todayKey).length +
-      due.filter((r) => isRoutineOverdue(r, todayKey)).length,
+      due.filter((r) => isRoutineOverdue(r, todayKey)).length +
+      catchUps.filter((p) => isRoutineOverdue({ everyDays: p.seeEveryDays, lastDoneOn: p.lastContactOn }, todayKey)).length,
     next: upcoming[0] ?? null,
     // Oldest last date wins ("YYYY-MM-DD" keys sort as dates).
     longest:

@@ -11,8 +11,10 @@ import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BeerIcon, BudgetIcon, LessonsIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BeerIcon, BudgetIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { getBeerGlance } from "@/lib/data/beer";
+import { getPeopleGlance } from "@/lib/data/people";
+import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { SheepMark } from "@/components/icons/SheepMark";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { HomeWeather } from "@/components/home/HomeWeather";
@@ -104,6 +106,22 @@ export default async function HomePage() {
         </li>
 
         <li>
+          <FeatureTile href="/people" name="People" icon={PeopleIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <PeopleTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <BeerTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
           <FeatureTile href="/waypoint" name="Waypoint" icon={WaypointIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <WaypointTileBody />
@@ -118,15 +136,6 @@ export default async function HomePage() {
             </Suspense>
           </FeatureTile>
         </li>
-
-        <li>
-          <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
-            <Suspense fallback={<TileSkeleton />}>
-              <BeerTileBody todayKey={todayKey} />
-            </Suspense>
-          </FeatureTile>
-        </li>
-
       </ul>
 
       <div className="flex justify-center gap-2">
@@ -340,6 +349,42 @@ async function RecipesTileBody() {
         <p className="mt-4 truncate text-sm text-foreground">
           <span className="text-ink-muted">Last made · </span>
           {recipes.lastMade}
+        </p>
+      )}
+    </>
+  );
+}
+
+async function PeopleTileBody({ todayKey }: { todayKey: string }) {
+  const { total, nextBirthday, soon, catchUp } = await getPeopleGlance(todayKey);
+  if (total === 0) return <p className="text-sm text-ink-muted">Birthdays, notes and gift ideas</p>;
+  const next = nextBirthday?.next;
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {total} <span className="text-lg text-ink-muted">{total === 1 ? "person" : "people"}</span>
+      </p>
+      {catchUp.length > 0 ? (
+        <p className="truncate text-sm text-critical">
+          Catch up with {catchUp.length === 1 ? catchUp[0].name : `${catchUp.length} people`}
+        </p>
+      ) : (
+        <p className="text-sm text-ink-muted">
+          {soon} {soon === 1 ? "birthday" : "birthdays"} in the next {SOON_DAYS} days
+        </p>
+      )}
+      {nextBirthday && next && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Next birthday · </span>
+          {next.daysUntil === 0 ? "🎂 " : ""}
+          {nextBirthday.name}
+          <span className="text-ink-muted">
+            {" · "}
+            {next.daysUntil < 14
+              ? describeCountdown(next.daysUntil, next.nextOn).toLowerCase()
+              : describeCountdown(next.daysUntil, next.nextOn)}
+            {next.turning !== null && ` · turns ${next.turning}`}
+          </span>
         </p>
       )}
     </>
