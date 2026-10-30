@@ -14,6 +14,7 @@ import { Button } from '@/components/waypoint/ui/button';
 import { Input } from '@/components/waypoint/ui/input';
 import { Textarea } from '@/components/waypoint/ui/textarea';
 import { Label } from '@/components/waypoint/ui/label';
+import { Caravan } from 'lucide-react';
 
 interface TripDialogProps {
   open: boolean;
@@ -27,6 +28,7 @@ const EMPTY: CreateTripInput = {
   description: '',
   start_date: '',
   end_date: '',
+  with_van: false,
 };
 
 export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps) {
@@ -45,6 +47,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
             description: trip.description ?? '',
             start_date: trip.start_date ?? '',
             end_date: trip.end_date ?? '',
+            with_van: trip.with_van,
           }
         : EMPTY
     );
@@ -112,6 +115,31 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
               />
             </div>
           </div>
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={!!form.with_van}
+            onClick={() => setForm({ ...form, with_van: !form.with_van })}
+            className="tap -mx-2 flex min-h-11 w-[calc(100%+1rem)] items-center gap-3 rounded-xl px-2 text-left"
+          >
+            <span
+              aria-hidden="true"
+              className={`relative h-6 w-10 shrink-0 rounded-full transition-colors motion-reduce:transition-none ${
+                form.with_van ? 'bg-primary' : 'bg-surface-muted ring-1 ring-border'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-surface shadow transition-[left] motion-reduce:transition-none ${
+                  form.with_van ? 'left-[1.125rem]' : 'left-0.5'
+                }`}
+              />
+            </span>
+            <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Caravan size={16} className="text-primary" />
+              With the van
+            </span>
+          </button>
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

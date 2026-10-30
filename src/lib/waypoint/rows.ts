@@ -22,6 +22,7 @@ export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry'>): TripSum
     end_date: optionalDay(row.endDate),
     cover_image: row.coverImage,
     total_km: row.totalKm === null ? null : Number(row.totalKm),
+    with_van: row.withVan,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };

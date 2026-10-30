@@ -23,6 +23,7 @@ export type CreateTripInput = {
   description?: string;
   start_date?: string;
   end_date?: string;
+  with_van?: boolean;
 };
 
 export type UpdateTripInput = Partial<CreateTripInput>;
@@ -77,6 +78,7 @@ export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
       description: optionalText(input.description, 2000),
       startDate,
       endDate,
+      withVan: input.with_van === true,
     },
     omit: WITHOUT_GEOMETRY,
   });
@@ -102,6 +104,7 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
       ...(input.description !== undefined && { description: optionalText(input.description, 2000) }),
       startDate,
       endDate,
+      ...(input.with_van !== undefined && { withVan: input.with_van === true }),
     },
     omit: WITHOUT_GEOMETRY,
   });

@@ -5,13 +5,29 @@ interface YearlyKmChartProps {
   data: YearlyStats[];
 }
 
+/** Km per year; each bar is split into van (solid) and other (lighter) once any trip is in the van. */
 export function YearlyKmChart({ data }: YearlyKmChartProps) {
   const maxKm = Math.max(...data.map((d) => d.totalKm), 1);
+  const anyVan = data.some((d) => d.vanKm > 0);
 
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Km per Year</CardTitle>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="text-base font-semibold">Km per Year</CardTitle>
+          {anyVan && (
+            <span className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="h-2 w-2 rounded-full bg-primary" />
+                Van
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span aria-hidden="true" className="h-2 w-2 rounded-full bg-primary/35" />
+                Other
+              </span>
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         {data.length === 0 ? (
@@ -30,12 +46,24 @@ export function YearlyKmChart({ data }: YearlyKmChartProps) {
                       · {entry.tripsCount} trip{entry.tripsCount === 1 ? '' : 's'}
                     </span>
                   </span>
-                  <span className="font-mono tabular-nums">{entry.totalKm.toLocaleString()} km</span>
+                  <span className="text-right font-mono tabular-nums">
+                    {entry.totalKm.toLocaleString()} km
+                    {entry.vanKm > 0 && (
+                      <span className="block text-xs font-sans text-muted-foreground">
+                        {entry.vanKm.toLocaleString()} by van
+                      </span>
+                    )}
+                  </span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted/40">
+                <div
+                  className="flex h-2 w-full overflow-hidden rounded-full bg-muted/40"
+                  role="img"
+                  aria-label={`${entry.totalKm} km, ${entry.vanKm} km by van`}
+                >
+                  <div className="h-full bg-primary" style={{ width: `${(entry.vanKm / maxKm) * 100}%` }} />
                   <div
-                    className="h-full rounded-full bg-primary"
-                    style={{ width: `${(entry.totalKm / maxKm) * 100}%` }}
+                    className={anyVan ? 'h-full bg-primary/35' : 'h-full bg-primary'}
+                    style={{ width: `${((entry.totalKm - entry.vanKm) / maxKm) * 100}%` }}
                   />
                 </div>
               </li>

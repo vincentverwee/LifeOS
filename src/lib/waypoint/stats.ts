@@ -5,6 +5,9 @@ export interface YearlyStats {
   year: number;
   totalKm: number;
   tripsCount: number;
+  /** The part of totalKm driven in the van. */
+  vanKm: number;
+  vanTrips: number;
 }
 
 export function getYearlyStats(trips: TripSummary[]): YearlyStats[] {
@@ -13,13 +16,28 @@ export function getYearlyStats(trips: TripSummary[]): YearlyStats[] {
   for (const trip of trips) {
     if (!trip.start_date) continue;
     const year = new Date(trip.start_date).getUTCFullYear(); // date-only = UTC midnight
-    const entry = byYear.get(year) ?? { year, totalKm: 0, tripsCount: 0 };
+    const entry = byYear.get(year) ?? { year, totalKm: 0, tripsCount: 0, vanKm: 0, vanTrips: 0 };
     entry.totalKm += trip.total_km ?? 0;
     entry.tripsCount += 1;
+    if (trip.with_van) {
+      entry.vanKm += trip.total_km ?? 0;
+      entry.vanTrips += 1;
+    }
     byYear.set(year, entry);
   }
 
   return [...byYear.values()].sort((a, b) => a.year - b.year);
+}
+
+export interface VanStats {
+  km: number;
+  trips: number;
+}
+
+/** Everything driven in the van, dated or not. */
+export function getVanStats(trips: Pick<TripSummary, 'with_van' | 'total_km'>[]): VanStats {
+  const van = trips.filter((t) => t.with_van);
+  return { km: van.reduce((sum, t) => sum + (t.total_km ?? 0), 0), trips: van.length };
 }
 
 export interface CountryStats {

@@ -8,6 +8,8 @@ export interface Trip {
   end_date: string | null;
   cover_image: string | null;
   total_km: number | null;
+  /** Driven in the van. */
+  with_van: boolean;
   /** The driving parts; a MultiLineString when a flight splits them (see routing/lines.ts). */
   route_geometry: RouteGeometry | null;
   created_at: string;

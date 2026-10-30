@@ -22,7 +22,7 @@ import {
   setLegByPlane,
 } from '@/lib/actions/waypoint';
 import { flownKm } from '@/lib/waypoint/routing/lines';
-import { CalendarDays, Navigation, Pencil, ArrowLeft, MapPin, ImageDown, Plane } from 'lucide-react';
+import { CalendarDays, Caravan, Navigation, Pencil, ArrowLeft, MapPin, ImageDown, Plane } from 'lucide-react';
 
 const dayFormatter = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -196,6 +196,12 @@ export function TripDetail({
                     <Badge variant="secondary" className="gap-1 text-xs">
                       <Navigation size={10} />
                       {trip.total_km.toLocaleString()} km
+                    </Badge>
+                  )}
+                  {trip.with_van && (
+                    <Badge variant="secondary" className="gap-1 text-xs">
+                      <Caravan size={10} />
+                      Van
                     </Badge>
                   )}
                   {flown > 0 && (

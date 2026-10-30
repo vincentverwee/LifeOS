@@ -220,6 +220,8 @@ model WaypointTrip {
   endDate         DateTime?            @db.Date
   coverImage      String?
   totalKm         Decimal?             @db.Decimal(10, 2)
+  // Driven in the van; stats split km by it, the map and trips list filter on it.
+  withVan         Boolean              @default(false)
   // Whole-trip OSRM route as a GeoJSON LineString.
   routeGeometry   Json?
   createdAt       DateTime             @default(now())

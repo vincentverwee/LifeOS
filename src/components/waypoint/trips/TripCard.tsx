@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/waypoint/ui/alert-dialog';
-import { CalendarDays, Navigation, Pencil, Trash2, MapPin, ChevronRight } from 'lucide-react';
+import { CalendarDays, Caravan, Navigation, Pencil, Trash2, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 interface TripCardProps {
@@ -67,6 +67,12 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                       <Badge variant="secondary" className="gap-1 text-xs">
                         <Navigation size={10} />
                         {trip.total_km.toLocaleString()} km
+                      </Badge>
+                    )}
+                    {trip.with_van && (
+                      <Badge variant="secondary" className="gap-1 text-xs">
+                        <Caravan size={10} />
+                        Van
                       </Badge>
                     )}
                   </div>

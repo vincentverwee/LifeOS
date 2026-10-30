@@ -8,9 +8,22 @@ import { TripSummary } from '@/lib/waypoint/types';
 import { CreateTripInput, createTrip, updateTrip, deleteTrip } from '@/lib/actions/waypoint';
 import { Plus, Route } from 'lucide-react';
 
+type VanFilter = 'all' | 'van' | 'novan';
+
+const VAN_FILTERS: { value: VanFilter; label: string }[] = [
+  { value: 'all', label: 'All' },
+  { value: 'van', label: 'Van' },
+  { value: 'novan', label: 'Without van' },
+];
+
 /** The interactive trips list. The server page passes the trips in, so the first paint has data. */
 export function TripsList({ initialTrips }: { initialTrips: TripSummary[] }) {
   const [trips, setTrips] = useState<TripSummary[]>(initialTrips);
+  const [vanFilter, setVanFilter] = useState<VanFilter>('all');
+  const anyVan = trips.some((t) => t.with_van);
+  const filter = anyVan ? vanFilter : 'all';
+  const shown = filter === 'all' ? trips : trips.filter((t) => t.with_van === (filter === 'van'));
+  const noun = filter === 'van' ? 'van trip' : filter === 'novan' ? 'trip without the van' : 'trip';
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<TripSummary | null>(null);
 
@@ -46,7 +59,7 @@ export function TripsList({ initialTrips }: { initialTrips: TripSummary[] }) {
           <div>
             <h2 className="text-2xl font-semibold text-foreground">Trips</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              {`${trips.length} trip${trips.length !== 1 ? 's' : ''} recorded`}
+              {`${shown.length} ${shown.length === 1 ? noun : noun.replace('trip', 'trips')}${filter === 'all' ? ' recorded' : ''}`}
             </p>
           </div>
           <Button onClick={openCreate} className="gap-2">
@@ -54,6 +67,24 @@ export function TripsList({ initialTrips }: { initialTrips: TripSummary[] }) {
             New trip
           </Button>
         </div>
+
+        {anyVan && (
+          <div role="group" aria-label="Show" className="flex gap-1 rounded-full bg-surface-muted p-1">
+            {VAN_FILTERS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setVanFilter(option.value)}
+                aria-pressed={filter === option.value}
+                className={`btn flex min-h-11 flex-1 px-3 text-sm ${
+                  filter === option.value ? 'bg-surface text-foreground shadow-sm' : 'text-ink-muted hover:text-foreground'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {trips.length === 0 ? (
           <div className="animate-fade-in flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
@@ -69,7 +100,7 @@ export function TripsList({ initialTrips }: { initialTrips: TripSummary[] }) {
           </div>
         ) : (
           <div className="space-y-3">
-            {trips.map((trip, i) => (
+            {shown.map((trip, i) => (
               <TripCard
                 key={trip.id}
                 trip={trip}
