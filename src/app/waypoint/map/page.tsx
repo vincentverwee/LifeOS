@@ -18,15 +18,17 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
     getAllTrips({ simplify: 0.0005 }),
     getTripCompanions(),
   ]);
-  // ?trip=van|novan or ?person= narrows everything to those trips.
-  const filter = readTripFilter(params, companions);
+  // ?trip=all|van|novan or ?person= narrows everything to those trips; with no choice
+  // the map opens on the van trips (when there are any).
+  const anyVan = allTrips.some((t) => t.with_van);
+  const filter = readTripFilter(params, companions, anyVan ? 'van' : 'all');
   const trips = allTrips.filter((t) => keepTrip(filter, t));
   const shownIds = new Set(trips.map((t) => t.id));
   const locations = allLocations.filter((l) => shownIds.has(l.trip_id));
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
   const routes = trips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
-  const hasFilter = companions.length > 0 || allTrips.some((t) => t.with_van);
+  const hasFilter = companions.length > 0 || anyVan;
   const count = `${trips.length} ${trips.length === 1 ? 'trip' : 'trips'}`;
   const subtitle =
     filter.kind === 'person'
@@ -49,7 +51,7 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
             <TripFilter
               companions={companions}
               value={tripFilterValue(filter)}
-              showVan={allTrips.some((t) => t.with_van)}
+              showVan={anyVan}
               basePath="/waypoint/map"
             />
             {/* Icon-only on phones when the dropdown needs the room. */}
@@ -63,7 +65,7 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
         </div>
         <MapWrapper
           // A fresh map per filter, so it zooms to the trips shown.
-          key={tripFilterValue(filter) || 'all'}
+          key={tripFilterValue(filter)}
           // Phones: exactly the space between the header and the tab bar, so the page itself
           // doesn't scroll and every swipe goes to the map.
           className="h-[calc(100svh-14rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[360px] sm:h-[70dvh] sm:min-h-[420px]"

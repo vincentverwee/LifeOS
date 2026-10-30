@@ -7,7 +7,7 @@ type Companion = { id: string; name: string };
 
 /**
  * The map's "show" dropdown: all trips, van / without the van, or the trips with one
- * person. Sets ?trip=van|novan or ?person=<id> (one at a time); "All trips" clears both.
+ * person. Always sets ?trip=all|van|novan or ?person=<id> (the map's default is van trips).
  */
 export function TripFilter({
   companions,
@@ -16,7 +16,7 @@ export function TripFilter({
   basePath,
 }: {
   companions: Companion[];
-  /** "", "van", "novan" or "person:<id>". */
+  /** "all", "van", "novan" or "person:<id>". */
   value: string;
   /** Offer the van options (some trip is in the van). */
   showVan: boolean;
@@ -29,9 +29,7 @@ export function TripFilter({
   function go(next: string) {
     const query = next.startsWith('person:')
       ? `?person=${encodeURIComponent(next.slice('person:'.length))}`
-      : next
-        ? `?trip=${next}`
-        : '';
+      : `?trip=${next}`;
     startTransition(() => router.push(`${basePath}${query}`));
   }
 
@@ -43,7 +41,7 @@ export function TripFilter({
       onChange={(e) => go(e.target.value)}
       className="min-h-11 max-w-[11rem] min-w-0 truncate rounded-full border border-border bg-surface px-4 text-sm text-foreground disabled:opacity-60 sm:max-w-[16rem]"
     >
-      <option value="">All trips</option>
+      <option value="all">All trips</option>
       {showVan && (
         <>
           <option value="van">Van trips</option>

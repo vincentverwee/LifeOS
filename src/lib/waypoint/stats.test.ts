@@ -48,5 +48,9 @@ describe('trip filter', () => {
     expect(trips.filter((t) => keepTrip(louise, t)).map((t) => t.id)).toEqual(['b']);
     expect(tripFilterQuery(louise)).toBe('?person=p1');
     expect(readTripFilter({ trip: 'nonsense', person: 'gone' }, companions)).toEqual({ kind: 'all' });
+    // The map opens on van trips; "All trips" is explicit.
+    expect(readTripFilter({}, companions, 'van')).toEqual({ kind: 'van' });
+    expect(readTripFilter({ trip: 'all' }, companions, 'van')).toEqual({ kind: 'all' });
+    expect(tripFilterQuery({ kind: 'all' })).toBe('?trip=all');
   });
 });
