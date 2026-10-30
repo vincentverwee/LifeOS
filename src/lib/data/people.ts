@@ -3,15 +3,23 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { birthdayOf, isGiftStatus, SOON_DAYS, upcoming, type Birthday, type GiftStatus, type Upcoming } from "@/lib/people/birthdays";
 import { isDue } from "@/lib/reminders/routines";
+import { viewLink, type LinkView } from "@/lib/people/links";
+import type { WebEdge, WebNode } from "@/lib/people/web";
 
 export type PersonSummary = {
   id: string;
   name: string;
   groupName: string | null;
+  /** What they are to you ("mum"). */
+  relationToMe: string | null;
   birthday: Birthday | null;
   /** Next birthday; null without one. */
   next: Upcoming | null;
   seeEveryDays: number | null;
+  /** Saw them / Messaged is shown: ticked "Track", or a keep-in-touch interval. */
+  tracked: boolean;
+  /** The "Track" tick itself. */
+  trackContact: boolean;
   /** Newest day seen or messaged ("YYYY-MM-DD"), null = never logged. */
   lastContactOn: string | null;
   lastContactKind: ContactKind | null;
@@ -41,6 +49,8 @@ export type PersonDetail = PersonSummary & {
   gifts: GiftRow[];
   /** Latest contact days first, a handful. */
   recentContacts: Contact[];
+  /** People they're linked to, A–Z. */
+  links: (LinkView & { otherName: string })[];
 };
 
 const RECENT_CONTACTS = 8;
@@ -54,20 +64,24 @@ const SUMMARY_SELECT = {
   id: true,
   name: true,
   groupName: true,
+  relationToMe: true,
   birthMonth: true,
   birthDay: true,
   birthYear: true,
   seeEveryDays: true,
+  trackContact: true,
 } as const;
 
 type SummaryRow = {
   id: string;
   name: string;
   groupName: string | null;
+  relationToMe: string | null;
   birthMonth: number | null;
   birthDay: number | null;
   birthYear: number | null;
   seeEveryDays: number | null;
+  trackContact: boolean;
 };
 
 function toSummary(
@@ -82,9 +96,12 @@ function toSummary(
     id: row.id,
     name: row.name,
     groupName: row.groupName,
+    relationToMe: row.relationToMe,
     birthday,
     next: birthday ? upcoming(birthday, todayKey) : null,
     seeEveryDays: row.seeEveryDays,
+    tracked: row.trackContact || row.seeEveryDays !== null,
+    trackContact: row.trackContact,
     lastContactOn,
     lastContactKind: last ? toKind(last.kind) : null,
     catchUp: isDue({ everyDays: row.seeEveryDays, lastDoneOn: lastContactOn }, todayKey),
@@ -125,6 +142,13 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
     },
   });
   if (!row) return null;
+  const linkRows = await prisma.personLink.findMany({
+    where: { OR: [{ aId: id }, { bId: id }] },
+    select: { id: true, aId: true, bId: true, aLabel: true, bLabel: true, a: { select: { name: true } }, b: { select: { name: true } } },
+  });
+  const links = linkRows
+    .map((l) => ({ ...viewLink(l, id), otherName: l.aId === id ? l.b.name : l.a.name }))
+    .sort((x, y) => x.otherName.localeCompare(y.otherName));
   const gifts: GiftRow[] = row.gifts.map((g) => ({
     id: g.id,
     title: g.title,
@@ -140,6 +164,7 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
     notes: row.notes.map((n) => ({ id: n.id, date: dayKey(n.date), text: n.text })),
     gifts,
     recentContacts: row.seen.map((s) => ({ day: dayKey(s.seenOn), kind: toKind(s.kind) })),
+    links,
   };
 }
 
@@ -180,4 +205,46 @@ export async function getCatchUps(todayKey: string): Promise<PersonSummary[]> {
   return people
     .filter((p) => p.catchUp)
     .sort((a, b) => (a.lastContactOn ?? "").localeCompare(b.lastContactOn ?? "") || a.name.localeCompare(b.name));
+}
+
+/** Everyone to pick from when linking, A–Z (names aren't unique, so the picker shows the group too). */
+export async function getPeopleNames(): Promise<{ id: string; name: string; groupName: string | null }[]> {
+  return prisma.person.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, groupName: true } });
+}
+
+/** The web's node for you; everyone with a `relationToMe` links to it. */
+export const ME_NODE = "me";
+
+/** The "who knows who" web: you, everyone with a link or a relation to you, and the links. */
+export async function getPeopleWeb(): Promise<{ nodes: WebNode[]; edges: (WebEdge & { label: string | null })[] }> {
+  const [links, related] = await Promise.all([
+    prisma.personLink.findMany({
+      select: { aId: true, bId: true, aLabel: true, bLabel: true, a: { select: { name: true } }, b: { select: { name: true } } },
+    }),
+    prisma.person.findMany({ where: { relationToMe: { not: null } }, select: { id: true, name: true, relationToMe: true } }),
+  ]);
+  const nodes = new Map<string, WebNode>();
+  if (related.length) nodes.set(ME_NODE, { id: ME_NODE, name: "You" });
+  for (const p of related) nodes.set(p.id, { id: p.id, name: p.name });
+  for (const l of links) {
+    nodes.set(l.aId, { id: l.aId, name: l.a.name });
+    nodes.set(l.bId, { id: l.bId, name: l.b.name });
+  }
+  return {
+    nodes: [...nodes.values()].sort((x, y) => x.id.localeCompare(y.id)),
+    edges: [
+      ...related.map((p) => ({ a: ME_NODE, b: p.id, label: `${p.name} is your ${p.relationToMe}` })),
+      ...links.map((l) => ({
+        a: l.aId,
+        b: l.bId,
+        label: l.aLabel || l.bLabel ? `${l.a.name} is ${l.b.name}'s ${l.aLabel ?? "…"}` : null,
+      })),
+    ],
+  };
+}
+
+/** The add form's "Track" default: whatever the last person added got (on Erasmus, everyone new). */
+export async function getTrackDefault(): Promise<boolean> {
+  const last = await prisma.person.findFirst({ orderBy: { createdAt: "desc" }, select: { trackContact: true } });
+  return last?.trackContact ?? false;
 }

@@ -135,6 +135,15 @@ export const CHECKS: Check[] = [
     label: "Contact days of an unknown kind",
     fix: "Fix those contact days first.",
   },
+  // A link joins two different people, stored once (smaller id first).
+  {
+    name: "person_link_pair",
+    table: "PersonLink",
+    check: `("aId" < "bId")`,
+    columns: `id, "aId", "bId"`,
+    label: "Person links stored the wrong way round or to themselves",
+    fix: "Fix those links first.",
+  },
   // A gift has a known status, a date exactly when given, and no negative price.
   {
     name: "gift_valid",

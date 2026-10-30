@@ -26,6 +26,7 @@ export function SeenCard({
   seeEveryDays,
   catchUp,
   todayKey,
+  footer,
 }: {
   personId: string;
   name: string;
@@ -33,6 +34,8 @@ export function SeenCard({
   seeEveryDays: number | null;
   catchUp: boolean;
   todayKey: string;
+  /** e.g. "Stop tracking", under the recent days. */
+  footer?: React.ReactNode;
 }) {
   const [, startTransition] = useTransition();
   const today = (kind: ContactKind) => recentContacts.some((c) => c.day === todayKey && c.kind === kind);
@@ -118,6 +121,7 @@ export function SeenCard({
           ))}
         </ul>
       )}
+      {footer && <div className="-mx-3 -mb-2">{footer}</div>}
     </div>
   );
 }

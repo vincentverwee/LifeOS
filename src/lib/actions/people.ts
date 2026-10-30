@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { parseAmount, parseDateKey } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
 import { isGiftStatus, isValidBirthday, type GiftStatus } from "@/lib/people/birthdays";
+import { orientLink } from "@/lib/people/links";
 
 export type PeopleFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -27,10 +28,12 @@ function optional(formData: FormData, name: string, max: number): string | null 
 type PersonFields = {
   name: string;
   groupName: string | null;
+  relationToMe: string | null;
   birthMonth: number | null;
   birthDay: number | null;
   birthYear: number | null;
   seeEveryDays: number | null;
+  trackContact: boolean;
 };
 
 /** A picked "YYYY-MM-DD" that isn't in the future. */
@@ -49,7 +52,13 @@ function readPerson(formData: FormData): PersonFields | string {
   if (seeEveryDays !== null && (!Number.isInteger(seeEveryDays) || seeEveryDays < 1 || seeEveryDays > 3650)) {
     return "Catch up every … days should be a whole number from 1 to 3650.";
   }
-  const base = { name, groupName: optional(formData, "groupName", 50), seeEveryDays };
+  const base = {
+    name,
+    groupName: optional(formData, "groupName", 50),
+    relationToMe: readLabel(formData, "relationToMe"),
+    seeEveryDays,
+    trackContact: formData.get("trackContact") === "on",
+  };
 
   // The birthday is optional, but day and month go together; the year needs both.
   const rawDay = String(formData.get("birthDay") ?? "");
@@ -288,5 +297,76 @@ export async function unlogContact(personId: string, day: string, kind: ContactK
   const date = parseDateKey(day);
   if (!date || !isContactKind(kind)) return;
   await prisma.personSeen.deleteMany({ where: { personId, seenOn: utc(date), kind } });
+  revalidate();
+}
+
+// --- Links between people ---
+
+/** A label as typed (lower-case reads best mid-sentence: "Anna · mum"); empty = none. */
+function readLabel(formData: FormData, name: string): string | null {
+  return optional(formData, name, 40)?.toLowerCase() ?? null;
+}
+
+/**
+ * Links `personId` to someone picked (`otherId`) or typed (`newName`, created on the spot).
+ * `otherIs` = what the other person is to this one, `selfIs` = the other way round.
+ */
+export async function addLink(_prev: PeopleFormState, formData: FormData): Promise<PeopleFormState> {
+  await requireAuth();
+  const personId = String(formData.get("personId") ?? "");
+  const pickedId = String(formData.get("otherId") ?? "");
+  const newName = String(formData.get("newName") ?? "").trim().slice(0, 100);
+  if (pickedId === "new" ? !newName : !pickedId) return { ok: false, error: "Pick someone, or type a new name." };
+  if (pickedId === personId) return { ok: false, error: "That's the same person." };
+  if (!(await personExists(personId))) return { ok: false, error: "That person no longer exists." };
+
+  const otherIs = readLabel(formData, "otherIs");
+  const selfIs = readLabel(formData, "selfIs");
+  const result = await prisma.$transaction(async (tx) => {
+    let otherId = pickedId;
+    if (pickedId === "new") {
+      otherId = (await tx.person.create({ data: { name: newName }, select: { id: true } })).id;
+    } else if (!(await tx.person.findUnique({ where: { id: otherId }, select: { id: true } }))) {
+      return "That person no longer exists.";
+    }
+    const row = orientLink(personId, otherId, selfIs, otherIs);
+    const existing = await tx.personLink.findUnique({ where: { aId_bId: { aId: row.aId, bId: row.bId } }, select: { id: true } });
+    if (existing) return "They're already linked; edit that link instead.";
+    await tx.personLink.create({ data: row });
+    return null;
+  });
+  if (result) return { ok: false, error: result };
+  revalidate();
+  return { ok: true };
+}
+
+/** New labels for a link, seen from `personId`'s page. */
+export async function updateLink(_prev: PeopleFormState, formData: FormData): Promise<PeopleFormState> {
+  await requireAuth();
+  const id = String(formData.get("id") ?? "");
+  const personId = String(formData.get("personId") ?? "");
+  const link = await prisma.personLink.findUnique({ where: { id }, select: { aId: true, bId: true } });
+  if (!link || (link.aId !== personId && link.bId !== personId)) return { ok: false, error: "That link no longer exists." };
+  const otherIs = readLabel(formData, "otherIs");
+  const selfIs = readLabel(formData, "selfIs");
+  const selfIsA = link.aId === personId;
+  await prisma.personLink.update({
+    where: { id },
+    data: { aLabel: selfIsA ? selfIs : otherIs, bLabel: selfIsA ? otherIs : selfIs },
+  });
+  revalidate();
+  return { ok: true };
+}
+
+export async function deleteLink(id: string): Promise<void> {
+  await requireAuth();
+  await prisma.personLink.deleteMany({ where: { id } });
+  revalidate();
+}
+
+/** The "Track" tick on someone's page: show Saw them / Messaged for them (history is kept either way). */
+export async function setTracking(personId: string, on: boolean): Promise<void> {
+  await requireAuth();
+  await prisma.person.updateMany({ where: { id: personId }, data: { trackContact: on === true } });
   revalidate();
 }

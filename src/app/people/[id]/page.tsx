@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPerson } from "@/lib/data/people";
+import { getPeopleNames, getPerson } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
 import { describeCountdown, formatBirthday } from "@/lib/people/birthdays";
 import { Disclosure } from "@/components/Disclosure";
@@ -9,6 +9,8 @@ import { GiftItem } from "@/components/people/GiftItem";
 import { FactList } from "@/components/people/FactList";
 import { NoteList } from "@/components/people/NoteList";
 import { SeenCard } from "@/components/people/SeenCard";
+import { LinkList } from "@/components/people/LinkList";
+import { TrackToggle } from "@/components/people/TrackToggle";
 import type { GiftRow } from "@/lib/data/people";
 
 /** Given gifts by the year they were given, newest year first (they arrive newest first). */
@@ -33,7 +35,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 export default async function PersonPage({ params }: PageProps<"/people/[id]">) {
   const { id } = await params;
   const todayKey = await getTodayKey();
-  const person = await getPerson(id, todayKey);
+  const [person, people] = await Promise.all([getPerson(id, todayKey), getPeopleNames()]);
   if (!person) notFound();
 
   const open = person.gifts.filter((g) => g.status !== "given");
@@ -49,10 +51,17 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
         <div className="mt-1 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold break-words text-foreground">{person.name}</h1>
-            {person.groupName && (
-              <span className="mt-1 inline-block rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">
-                {person.groupName}
-              </span>
+            {(person.relationToMe || person.groupName) && (
+              <div className="mt-1 flex flex-wrap gap-1.5">
+                {person.relationToMe && (
+                  <span className="rounded-full bg-primary px-2.5 py-0.5 text-sm text-primary-foreground">
+                    Your {person.relationToMe}
+                  </span>
+                )}
+                {person.groupName && (
+                  <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{person.groupName}</span>
+                )}
+              </div>
             )}
           </div>
           <Link href={`/people/${person.id}/edit`} className="btn btn-outline inline-flex min-h-11 shrink-0 px-4 text-sm">
@@ -71,23 +80,43 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
             {next.turning !== null && <span className="text-lg font-normal opacity-80"> · turns {next.turning}</span>}
           </p>
         </div>
-      ) : (
-        <Link href={`/people/${person.id}/edit`} className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm">
-          + Add their birthday
-        </Link>
+      ) : null}
+
+      {/* Only for people you track or want to stay in touch with: you might message
+          the others every day anyway. */}
+      <TrackToggle personId={person.id} on={person.tracked} locked={person.seeEveryDays !== null} />
+      {person.tracked && (
+        <SeenCard
+          personId={person.id}
+          name={person.name}
+          recentContacts={person.recentContacts}
+          seeEveryDays={person.seeEveryDays}
+          catchUp={person.catchUp}
+          todayKey={todayKey}
+        />
       )}
 
-      <SeenCard
-        personId={person.id}
-        name={person.name}
-        recentContacts={person.recentContacts}
-        seeEveryDays={person.seeEveryDays}
-        catchUp={person.catchUp}
-        todayKey={todayKey}
-      />
+      {(!birthday || person.seeEveryDays === null) && (
+        <div className="-mx-3 -my-4 flex flex-wrap">
+          {!birthday && (
+            <Link href={`/people/${person.id}/edit`} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+              + Add their birthday
+            </Link>
+          )}
+          {person.seeEveryDays === null && (
+            <Link href={`/people/${person.id}/edit#keep-in-touch`} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+              + Keep in touch
+            </Link>
+          )}
+        </div>
+      )}
 
       <Section title="Things to remember">
         <FactList personId={person.id} facts={person.facts} />
+      </Section>
+
+      <Section title="People">
+        <LinkList personId={person.id} name={person.name} links={person.links} people={people} />
       </Section>
 
       <Section title="Notes">

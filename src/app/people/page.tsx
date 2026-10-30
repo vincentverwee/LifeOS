@@ -1,12 +1,14 @@
 import Link from "next/link";
-import { byNextBirthday, getGroups, getPeople } from "@/lib/data/people";
+import { byNextBirthday, getGroups, getPeople, getPeopleWeb } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { PeopleList } from "@/components/people/PeopleList";
+import { PeopleWeb } from "@/components/people/PeopleWeb";
+import { Disclosure } from "@/components/Disclosure";
 
 export default async function PeoplePage() {
   const todayKey = await getTodayKey();
-  const [people, groups] = await Promise.all([getPeople(todayKey), getGroups()]);
+  const [people, groups, web] = await Promise.all([getPeople(todayKey), getGroups(), getPeopleWeb()]);
   const birthdays = byNextBirthday(people).filter((p) => p.next.daysUntil < SOON_DAYS);
 
   return (
@@ -52,6 +54,12 @@ export default async function PeoplePage() {
         </p>
       ) : (
         <PeopleList people={people} groups={groups} todayKey={todayKey} />
+      )}
+
+      {web.edges.length > 0 && (
+        <Disclosure title="Who knows who">
+          <PeopleWeb nodes={web.nodes} edges={web.edges} />
+        </Disclosure>
       )}
     </div>
   );

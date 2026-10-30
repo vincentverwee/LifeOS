@@ -454,20 +454,43 @@ model RoutineLog {
 // together, the year only when known (for the age); 29 Feb falls on the 28th in
 // other years (src/lib/people/birthdays.ts). `groupName` is free text ("Family",
 // "Uni") used as a filter. `seeEveryDays` nudges like a Last done item, counted
-// from the newest PersonSeen. Checked by person_birthday / person_see_every.
+// from the newest PersonSeen; the contact card shows with it or with `trackContact`. Checked by person_birthday / person_see_every.
 model Person {
   id           String       @id @default(cuid())
   name         String
   groupName    String?
+  // What they are to you ("mum", "brother"); the web view links them to "You".
+  relationToMe String?
   birthMonth   Int?
   birthDay     Int?
   birthYear    Int?
   seeEveryDays Int?
+  // Show the Saw them / Messaged card even without a `seeEveryDays` nudge.
+  trackContact Boolean      @default(false)
   createdAt    DateTime     @default(now())
   gifts        Gift[]
   facts        PersonFact[]
   notes        PersonNote[]
   seen         PersonSeen[]
+  linksAsA     PersonLink[] @relation("LinkA")
+  linksAsB     PersonLink[] @relation("LinkB")
+}
+
+// Two people who know each other, stored once per pair with `aId` < `bId`
+// (CHECK person_link_pair). Each side has its own label: `aLabel` is what A is
+// to B ("mum"), `bLabel` what B is to A ("daughter"); empty = just linked.
+model PersonLink {
+  id        String   @id @default(cuid())
+  aId       String
+  a         Person   @relation("LinkA", fields: [aId], references: [id], onDelete: Cascade)
+  bId       String
+  b         Person   @relation("LinkB", fields: [bId], references: [id], onDelete: Cascade)
+  aLabel    String?
+  bLabel    String?
+  createdAt DateTime @default(now())
+
+  @@unique([aId, bId])
+  @@index([bId])
 }
 
 // A "thing to remember" about someone: "Favourite drink" → "Aperol".

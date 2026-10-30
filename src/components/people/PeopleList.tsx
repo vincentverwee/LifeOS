@@ -55,12 +55,14 @@ export function PeopleList({ people, groups, todayKey }: { people: PersonSummary
           {shown.map((p) => {
             const soon = p.next !== null && p.next.daysUntil < SOON_DAYS;
             const meta = [
+              p.relationToMe && `Your ${p.relationToMe}`,
               p.groupName,
-              p.lastContactOn
-                ? `${p.lastContactKind === "message" ? "Messaged" : "Seen"} ${describeSince(p.lastContactOn, todayKey).toLowerCase()}`
-                : p.seeEveryDays !== null
-                  ? "Never in touch"
-                  : null,
+              // Only for people you track or keep in touch with.
+              !p.tracked
+                ? null
+                : p.lastContactOn
+                  ? `${p.lastContactKind === "message" ? "Messaged" : "Seen"} ${describeSince(p.lastContactOn, todayKey).toLowerCase()}`
+                  : "Not logged yet",
             ].filter(Boolean);
             return (
               <li key={p.id}>
