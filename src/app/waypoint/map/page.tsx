@@ -72,6 +72,9 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
           routes={routes}
           tripLabels={tripLabels}
           tripColors={tripColors}
+          // Small trip-coloured dots, like the dashboard: numbered pins for every stop of every
+          // trip buried the routes. Numbers stay on a single trip's page.
+          markerStyle="dot"
           selectable
         />
       </div>
