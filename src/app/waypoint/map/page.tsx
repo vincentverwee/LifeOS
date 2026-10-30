@@ -21,7 +21,9 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
   // ?trip=all|van|novan or ?person= narrows everything to those trips; with no choice
   // the map opens on the van trips (when there are any).
   const anyVan = allTrips.some((t) => t.with_van);
-  const filter = readTripFilter(params, companions, anyVan ? 'van' : 'all');
+  const read = readTripFilter(params, companions, anyVan ? 'van' : 'all');
+  // An old ?trip=van link once no trip has the van: the dropdown hides those options, so show all.
+  const filter = !anyVan && (read.kind === 'van' || read.kind === 'novan') ? ({ kind: 'all' } as const) : read;
   const trips = allTrips.filter((t) => keepTrip(filter, t));
   const shownIds = new Set(trips.map((t) => t.id));
   const locations = allLocations.filter((l) => shownIds.has(l.trip_id));
