@@ -2,12 +2,14 @@
 
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
+import { TRIP_FILTER_COOKIE } from '@/lib/waypoint/tripFilter';
 
 type Companion = { id: string; name: string };
 
 /**
  * The map's "show" dropdown: all trips, van / without the van, or the trips with one
- * person. Always sets ?trip=all|van|novan or ?person=<id> (the map's default is van trips).
+ * person. Always sets ?trip=all|van|novan or ?person=<id> (without one the map shows the
+ * last trip choice made here, else van trips).
  */
 export function TripFilter({
   companions,
@@ -27,9 +29,10 @@ export function TripFilter({
   if (companions.length === 0 && !showVan) return null;
 
   function go(next: string) {
-    const query = next.startsWith('person:')
-      ? `?person=${encodeURIComponent(next.slice('person:'.length))}`
-      : `?trip=${next}`;
+    const person = next.startsWith('person:');
+    const query = person ? `?person=${encodeURIComponent(next.slice('person:'.length))}` : `?trip=${next}`;
+    // All / Van / Without van is remembered on this device, so the Map tab reopens on it.
+    if (!person) document.cookie = `${TRIP_FILTER_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
     startTransition(() => router.push(`${basePath}${query}`));
   }
 

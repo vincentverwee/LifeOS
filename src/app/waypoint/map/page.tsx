@@ -1,4 +1,5 @@
 import { connection } from 'next/server';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { TripFilter } from '@/components/waypoint/map/TripFilter';
@@ -7,7 +8,13 @@ import { getAllLocations, getAllTrips } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { routeLines } from '@/lib/waypoint/routing/lines';
-import { keepTrip, readTripFilter, tripFilterQuery, tripFilterValue } from '@/lib/waypoint/tripFilter';
+import {
+  keepTrip,
+  readTripFilter,
+  TRIP_FILTER_COOKIE,
+  tripFilterQuery,
+  tripFilterValue,
+} from '@/lib/waypoint/tripFilter';
 import { ImageDown } from 'lucide-react';
 
 export default async function MapPage({ searchParams }: PageProps<'/waypoint/map'>) {
@@ -18,12 +25,11 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
     getAllTrips({ simplify: 0.0005 }),
     getTripCompanions(),
   ]);
-  // ?trip=all|van|novan or ?person= narrows everything to those trips; with no choice
-  // the map opens on the van trips (when there are any).
+  // ?trip=all|van|novan or ?person= narrows everything to those trips; with no choice the
+  // map opens on the last one picked here, else on the van trips (when there are any).
   const anyVan = allTrips.some((t) => t.with_van);
-  const read = readTripFilter(params, companions, anyVan ? 'van' : 'all');
-  // An old ?trip=van link once no trip has the van: the dropdown hides those options, so show all.
-  const filter = !anyVan && (read.kind === 'van' || read.kind === 'novan') ? ({ kind: 'all' } as const) : read;
+  const saved = (await cookies()).get(TRIP_FILTER_COOKIE)?.value;
+  const filter = readTripFilter(params, companions, { anyVan, saved });
   const trips = allTrips.filter((t) => keepTrip(filter, t));
   const shownIds = new Set(trips.map((t) => t.id));
   const locations = allLocations.filter((l) => shownIds.has(l.trip_id));

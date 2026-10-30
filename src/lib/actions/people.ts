@@ -8,6 +8,9 @@ import { parseAmount, parseDateKey } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
 import { isGiftStatus, isValidBirthday, type GiftStatus } from "@/lib/people/birthdays";
 import { orientLink } from "@/lib/people/links";
+import { getTrackDefault } from "@/lib/data/people";
+import { isUuid } from "@/lib/waypoint/uuid";
+import { knownError } from "@/lib/prismaErrors";
 
 export type PeopleFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -44,7 +47,7 @@ async function readPastDate(raw: unknown): Promise<string | { error: string }> {
   return date;
 }
 
-function readPerson(formData: FormData): PersonFields | string {
+async function readPerson(formData: FormData): Promise<PersonFields | string> {
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   if (!name) return "Give them a name.";
   const rawEvery = String(formData.get("seeEveryDays") ?? "").trim();
@@ -70,6 +73,10 @@ function readPerson(formData: FormData): PersonFields | string {
   }
   if (!rawDay || !rawMonth) return "Pick both the day and the month (or neither).";
   const birthday = { birthMonth: Number(rawMonth), birthDay: Number(rawDay), birthYear: rawYear ? Number(rawYear) : null };
+  // The CHECK allows up to 2100; a typo like 2096 would show as "turning −70".
+  if (birthday.birthYear !== null && birthday.birthYear > Number((await getTodayKey()).slice(0, 4))) {
+    return "That birth year is in the future.";
+  }
   if (!isValidBirthday(birthday)) {
     return birthday.birthYear !== null && birthday.birthMonth === 2 && birthday.birthDay === 29
       ? `${birthday.birthYear} had no 29 February.`
@@ -80,7 +87,7 @@ function readPerson(formData: FormData): PersonFields | string {
 
 export async function createPerson(_prev: PeopleFormState, formData: FormData): Promise<PeopleFormState> {
   await requireAuth();
-  const fields = readPerson(formData);
+  const fields = await readPerson(formData);
   if (typeof fields === "string") return { ok: false, error: fields };
   const person = await prisma.person.create({ data: fields, select: { id: true } });
   revalidate();
@@ -90,7 +97,7 @@ export async function createPerson(_prev: PeopleFormState, formData: FormData): 
 export async function updatePerson(_prev: PeopleFormState, formData: FormData): Promise<PeopleFormState> {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const fields = readPerson(formData);
+  const fields = await readPerson(formData);
   if (typeof fields === "string") return { ok: false, error: fields };
   const { count } = await prisma.person.updateMany({ where: { id }, data: fields });
   if (count === 0) return { ok: false, error: "That person no longer exists." };
@@ -148,17 +155,23 @@ export async function updateGift(_prev: PeopleFormState, formData: FormData): Pr
   const { count } = givenOn
     ? await prisma.gift.updateMany({ where: { id, status: "given" }, data: { ...fields, givenOn } })
     : await prisma.gift.updateMany({ where: { id }, data: fields });
-  if (count === 0) return { ok: false, error: "That gift no longer exists." };
+  if (count === 0) {
+    const exists = givenOn && (await prisma.gift.findUnique({ where: { id }, select: { id: true } }));
+    return { ok: false, error: exists ? "That gift isn't marked given any more." : "That gift no longer exists." };
+  }
   revalidate();
   return { ok: true };
 }
 
-/** Idea → bought → given; "given" dates it today, moving back clears the date. */
+/**
+ * Idea → bought → given; "given" dates it today, moving back clears the date. Only when the
+ * status really changes: a stale "Given" button must not re-date a gift given months ago.
+ */
 export async function setGiftStatus(id: string, status: GiftStatus): Promise<void> {
   await requireAuth();
   if (!isGiftStatus(status)) return;
   const givenOn = status === "given" ? utc(await getTodayKey()) : null;
-  await prisma.gift.updateMany({ where: { id }, data: { status, givenOn } });
+  await prisma.gift.updateMany({ where: { id, status: { not: status } }, data: { status, givenOn } });
   revalidate();
 }
 
@@ -268,14 +281,22 @@ export async function toggleContactToday(personId: string, kind: ContactKind): P
   revalidate();
 }
 
-/** The sheep box on Reminders' To do: logs a message today (never takes one off). */
-export async function logMessageToday(personId: string): Promise<{ ok: true; day: string } | { ok: false; error: string }> {
+/**
+ * The sheep box on Reminders' To do: logs a message today (never takes one off). `created`
+ * is false when today's message was already logged (another device), so Undo leaves it be.
+ */
+export async function logMessageToday(
+  personId: string
+): Promise<{ ok: true; day: string; created: boolean } | { ok: false; error: string }> {
   await requireAuth();
   if (!(await personExists(personId))) return { ok: false, error: "That person no longer exists." };
   const day = await getTodayKey();
-  await prisma.personSeen.createMany({ data: [{ personId, seenOn: utc(day), kind: "message" }], skipDuplicates: true });
+  const { count } = await prisma.personSeen.createMany({
+    data: [{ personId, seenOn: utc(day), kind: "message" }],
+    skipDuplicates: true,
+  });
   revalidate();
-  return { ok: true, day };
+  return { ok: true, day, created: count > 0 };
 }
 
 /** "In touch on …": back-dates a visit or message you forgot to tap. */
@@ -322,19 +343,27 @@ export async function addLink(_prev: PeopleFormState, formData: FormData): Promi
 
   const otherIs = readLabel(formData, "otherIs");
   const selfIs = readLabel(formData, "selfIs");
-  const result = await prisma.$transaction(async (tx) => {
-    let otherId = pickedId;
-    if (pickedId === "new") {
-      otherId = (await tx.person.create({ data: { name: newName }, select: { id: true } })).id;
-    } else if (!(await tx.person.findUnique({ where: { id: otherId }, select: { id: true } }))) {
-      return "That person no longer exists.";
-    }
-    const row = orientLink(personId, otherId, selfIs, otherIs);
-    const existing = await tx.personLink.findUnique({ where: { aId_bId: { aId: row.aId, bId: row.bId } }, select: { id: true } });
-    if (existing) return "They're already linked; edit that link instead.";
-    await tx.personLink.create({ data: row });
-    return null;
-  });
+  const trackContact = pickedId === "new" && (await getTrackDefault());
+  const linked = "They're already linked; edit that link instead.";
+  let result: string | null;
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      let otherId = pickedId;
+      if (pickedId === "new") {
+        otherId = (await tx.person.create({ data: { name: newName, trackContact }, select: { id: true } })).id;
+      } else if (!(await tx.person.findUnique({ where: { id: otherId }, select: { id: true } }))) {
+        return "That person no longer exists.";
+      }
+      const row = orientLink(personId, otherId, selfIs, otherIs);
+      const existing = await tx.personLink.findUnique({ where: { aId_bId: { aId: row.aId, bId: row.bId } }, select: { id: true } });
+      if (existing) return linked;
+      await tx.personLink.create({ data: row });
+      return null;
+    });
+  } catch (e) {
+    // Two devices linking the same pair at once: the second hits the unique index.
+    return knownError(e, { P2002: linked });
+  }
   if (result) return { ok: false, error: result };
   revalidate();
   return { ok: true };
@@ -376,14 +405,15 @@ export async function setTracking(personId: string, on: boolean): Promise<void> 
 /** Tags someone (picked, or new by `newName`) as having come along on a trip. */
 export async function addTripPerson(tripId: string, pick: { personId: string } | { newName: string }): Promise<PeopleFormState> {
   await requireAuth();
-  if (!(await prisma.waypointTrip.findUnique({ where: { id: tripId }, select: { id: true } }))) {
+  if (!isUuid(tripId) || !(await prisma.waypointTrip.findUnique({ where: { id: tripId }, select: { id: true } }))) {
     return { ok: false, error: "That trip no longer exists." };
   }
   let personId: string;
   if ("newName" in pick) {
     const name = pick.newName.trim().slice(0, 100);
     if (!name) return { ok: false, error: "Type their name." };
-    personId = (await prisma.person.create({ data: { name }, select: { id: true } })).id;
+    const trackContact = await getTrackDefault();
+    personId = (await prisma.person.create({ data: { name, trackContact }, select: { id: true } })).id;
   } else {
     personId = pick.personId;
     if (!(await personExists(personId))) return { ok: false, error: "That person no longer exists." };
@@ -394,9 +424,11 @@ export async function addTripPerson(tripId: string, pick: { personId: string } |
   return { ok: true };
 }
 
-export async function removeTripPerson(tripId: string, personId: string): Promise<void> {
+export async function removeTripPerson(tripId: string, personId: string): Promise<PeopleFormState> {
   await requireAuth();
+  if (!isUuid(tripId)) return { ok: false, error: "That trip no longer exists." };
   await prisma.waypointTripPerson.deleteMany({ where: { tripId, personId } });
   revalidate();
   revalidatePath("/waypoint", "layout");
+  return { ok: true };
 }

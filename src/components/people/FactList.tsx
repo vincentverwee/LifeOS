@@ -1,9 +1,10 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useState } from "react";
 import { addFact, deleteFact, updateFact, type PeopleFormState } from "@/lib/actions/people";
 import type { FactRow } from "@/lib/data/people";
+import { keepInput } from "@/components/people/keepInput";
+import { useQuickAction } from "@/components/people/useQuickAction";
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
@@ -23,8 +24,7 @@ const LABELS = [
   "Hobbies",
 ];
 
-function SaveButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+function SaveButton({ label, pending }: { label: string; pending: boolean }) {
   return (
     <button type="submit" disabled={pending} className="btn btn-primary inline-flex min-h-11 shrink-0 px-5 text-sm font-semibold">
       {pending ? "Saving…" : label}
@@ -65,8 +65,8 @@ function FactFields({ fact }: { fact?: FactRow }) {
 
 function FactItem({ fact }: { fact: FactRow }) {
   const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [state, formAction] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
+  const { pending, run, error } = useQuickAction();
+  const [state, formAction, saving] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
     const result = await updateFact(prev, formData);
     if (result?.ok) setEditing(false);
     return result;
@@ -74,20 +74,22 @@ function FactItem({ fact }: { fact: FactRow }) {
 
   if (editing) {
     return (
-      <li className="rounded-xl border border-primary bg-surface p-3">
-        <form action={formAction} className="flex flex-col gap-2">
+      <li className={`rounded-xl border border-primary bg-surface p-3 ${pending ? "opacity-60" : ""}`}>
+        <form onSubmit={keepInput(formAction)} className="flex flex-col gap-2">
           <input type="hidden" name="id" value={fact.id} />
           <FactFields fact={fact} />
           {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
+          {error && <p className="text-sm text-critical">{error}</p>}
           <div className="flex gap-2">
-            <SaveButton label="Save" />
+            <SaveButton label="Save" pending={saving || pending} />
             <button type="button" onClick={() => setEditing(false)} className="btn btn-ghost inline-flex min-h-11 px-4 text-sm">
               Cancel
             </button>
             <button
               type="button"
+              disabled={saving || pending}
               onClick={() => {
-                if (window.confirm(`Delete "${fact.label}"?`)) startTransition(() => deleteFact(fact.id));
+                if (window.confirm(`Delete "${fact.label}"?`)) run(() => deleteFact(fact.id));
               }}
               className="btn btn-ghost ml-auto inline-flex min-h-11 px-3 text-sm"
             >
@@ -118,7 +120,7 @@ function FactItem({ fact }: { fact: FactRow }) {
 export function FactList({ personId, facts }: { personId: string; facts: FactRow[] }) {
   const [key, setKey] = useState(0);
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
+  const [state, formAction, pending] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
     const result = await addFact(prev, formData);
     if (result?.ok) setKey((k) => k + 1); // fresh, empty fields
     return result;
@@ -140,11 +142,11 @@ export function FactList({ personId, facts }: { personId: string; facts: FactRow
       )}
       {/* Empty: one calm link until there's something to add. */}
       {facts.length > 0 || open ? (
-        <form key={key} action={formAction} className="flex flex-col gap-2">
+        <form key={key} onSubmit={keepInput(formAction)} className="flex flex-col gap-2">
           <input type="hidden" name="personId" value={personId} />
           <FactFields />
           <div>
-            <SaveButton label="Add" />
+            <SaveButton label="Add" pending={pending} />
           </div>
           {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
         </form>

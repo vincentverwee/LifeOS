@@ -21,6 +21,9 @@ export function TripsList({ initialTrips }: { initialTrips: TripSummary[] }) {
   const [trips, setTrips] = useState<TripSummary[]>(initialTrips);
   const [vanFilter, setVanFilter] = useState<VanFilter>('all');
   const anyVan = trips.some((t) => t.with_van);
+  // The filter hides once no trip has the van; forget its choice, or ticking one later
+  // would silently jump back to it.
+  if (!anyVan && vanFilter !== 'all') setVanFilter('all');
   const filter = anyVan ? vanFilter : 'all';
   const shown = filter === 'all' ? trips : trips.filter((t) => t.with_van === (filter === 'van'));
   const noun = filter === 'van' ? 'van trip' : filter === 'novan' ? 'trip without the van' : 'trip';

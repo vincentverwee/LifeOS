@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useState } from "react";
 import { deleteGift, setGiftStatus, updateGift, type PeopleFormState } from "@/lib/actions/people";
+import { keepInput } from "@/components/people/keepInput";
+import { useQuickAction } from "@/components/people/useQuickAction";
 import { formatCurrency } from "@/lib/format";
 import { formatDay } from "@/lib/reminders/schedule";
 import type { GiftStatus } from "@/lib/people/birthdays";
@@ -22,8 +23,7 @@ const BACK: Record<GiftStatus, { status: GiftStatus; label: string } | null> = {
   given: { status: "bought", label: "Not given" },
 };
 
-function SaveButton() {
-  const { pending } = useFormStatus();
+function SaveButton({ pending }: { pending: boolean }) {
   return (
     <button type="submit" disabled={pending} className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
       {pending ? "Saving…" : "Save"}
@@ -33,14 +33,14 @@ function SaveButton() {
 
 /** Edit in place: title, price, occasion, link, and the date once given. */
 function GiftEditForm({ gift, todayKey, onDone }: { gift: GiftRow; todayKey: string; onDone: () => void }) {
-  const [state, formAction] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
+  const [state, formAction, pending] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
     const result = await updateGift(prev, formData);
     if (result?.ok) onDone();
     return result;
   }, null);
 
   return (
-    <form action={formAction} className="flex flex-col gap-2">
+    <form onSubmit={keepInput(formAction)} className="flex flex-col gap-2">
       <input type="hidden" name="id" value={gift.id} />
       <input
         name="title"
@@ -89,7 +89,7 @@ function GiftEditForm({ gift, todayKey, onDone }: { gift: GiftRow; todayKey: str
       )}
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
       <div className="flex gap-2">
-        <SaveButton />
+        <SaveButton pending={pending} />
         <button type="button" onClick={onDone} className="btn btn-ghost inline-flex min-h-11 px-4 text-sm">
           Cancel
         </button>
@@ -100,7 +100,7 @@ function GiftEditForm({ gift, todayKey, onDone }: { gift: GiftRow; todayKey: str
 
 /** A gift row: title, its details, and buttons to move it along (or back), edit or delete it. */
 export function GiftItem({ gift, todayKey }: { gift: GiftRow; todayKey: string }) {
-  const [pending, startTransition] = useTransition();
+  const { pending, run, error } = useQuickAction();
   const [editing, setEditing] = useState(false);
   const next = NEXT[gift.status];
   const back = BACK[gift.status];
@@ -111,12 +111,12 @@ export function GiftItem({ gift, todayKey }: { gift: GiftRow; todayKey: string }
   ].filter(Boolean);
 
   function move(status: GiftStatus) {
-    startTransition(() => setGiftStatus(gift.id, status));
+    run(() => setGiftStatus(gift.id, status));
   }
 
   function remove() {
     if (!window.confirm(`Delete "${gift.title}"?`)) return;
-    startTransition(() => deleteGift(gift.id));
+    run(() => deleteGift(gift.id));
   }
 
   if (editing) {
@@ -179,6 +179,7 @@ export function GiftItem({ gift, todayKey }: { gift: GiftRow; todayKey: string }
           </button>
         </span>
       </div>
+      {error && <p className="text-sm text-critical">{error}</p>}
     </li>
   );
 }

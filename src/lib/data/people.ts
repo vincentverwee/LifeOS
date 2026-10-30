@@ -1,5 +1,7 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
+import { isUuid } from "@/lib/waypoint/uuid";
 import { dayKey } from "@/lib/format";
 import { birthdayOf, isGiftStatus, SOON_DAYS, upcoming, type Birthday, type GiftStatus, type Upcoming } from "@/lib/people/birthdays";
 import { isDue } from "@/lib/reminders/routines";
@@ -46,22 +48,36 @@ export type NoteRow = { id: string; /** "YYYY-MM-DD" */ date: string; text: stri
 
 export type TripTogether = { id: string; title: string; startDate: string | null; endDate: string | null };
 
-/** What a shared trip counts as: its last day (or first, without an end), once it's past. */
 const TRIP_SELECT = { select: { trip: { select: { startDate: true, endDate: true } } } } as const;
 
-/** The newest seen/message day or past trip day, whichever is later (a trip counts as "seen"). */
-function lastContact(
-  seen: { seenOn: Date; kind: string } | undefined,
-  trips: { trip: { startDate: Date | null; endDate: Date | null } }[],
-  todayKey: string
-): { seenOn: Date; kind: string } | undefined {
-  let best = seen;
+type TripDates = { trip: { startDate: Date | null; endDate: Date | null } };
+
+/**
+ * What shared trips count as: the newest trip's last day (or first, without an end) once it
+ * has started; a trip still going counts as today. Null = no started trip.
+ */
+function lastTripDay(trips: TripDates[], todayKey: string): Date | null {
+  const today = new Date(`${todayKey}T00:00:00Z`);
+  let best: Date | null = null;
   for (const { trip } of trips) {
-    const day = trip.endDate ?? trip.startDate;
-    if (!day || dayKey(day) > todayKey) continue;
-    if (!best || day > best.seenOn) best = { seenOn: day, kind: "seen" };
+    const start = trip.startDate ?? trip.endDate;
+    if (!start || dayKey(start) > todayKey) continue;
+    const end = trip.endDate ?? start;
+    const day = dayKey(end) > todayKey ? today : end;
+    if (!best || day > best) best = day;
   }
   return best;
+}
+
+/** The newest seen/message day or trip day, whichever is later (a trip counts as "seen"). */
+function lastContact(
+  seen: { seenOn: Date; kind: string } | undefined,
+  trips: TripDates[],
+  todayKey: string
+): { seenOn: Date; kind: string } | undefined {
+  const tripDay = lastTripDay(trips, todayKey);
+  if (tripDay && (!seen || tripDay > seen.seenOn)) return { seenOn: tripDay, kind: "seen" };
+  return seen;
 }
 
 export type PersonDetail = PersonSummary & {
@@ -74,6 +90,8 @@ export type PersonDetail = PersonSummary & {
   links: (LinkView & { otherName: string; otherGroup: string | null })[];
   /** Waypoint trips they came on, newest first. */
   trips: TripTogether[];
+  /** The day shared trips count as "seen" ("YYYY-MM-DD"; a trip still going = today), null = none. */
+  tripContactOn: string | null;
 };
 
 const RECENT_CONTACTS = 8;
@@ -132,8 +150,8 @@ function toSummary(
   };
 }
 
-/** Everyone, A–Z. */
-export async function getPeople(todayKey: string): Promise<PersonSummary[]> {
+/** Everyone, A–Z. Cached per request: Home asks for it twice (Reminders and People tiles). */
+export const getPeople = cache(async (todayKey: string): Promise<PersonSummary[]> => {
   const rows = await prisma.person.findMany({
     select: {
       ...SUMMARY_SELECT,
@@ -145,7 +163,7 @@ export async function getPeople(todayKey: string): Promise<PersonSummary[]> {
   return rows
     .map((row) => toSummary(row, lastContact(row.seen[0], row.trips, todayKey), row._count.gifts, todayKey))
     .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
-}
+});
 
 /** People with a birthday, the next one first. */
 export function byNextBirthday(people: PersonSummary[]): (PersonSummary & { next: Upcoming })[] {
@@ -194,6 +212,7 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
     occasion: g.occasion,
     givenOn: g.givenOn ? dayKey(g.givenOn) : null,
   }));
+  const tripDay = lastTripDay(row.trips, todayKey);
   return {
     ...toSummary(row, lastContact(row.seen[0], row.trips, todayKey), gifts.filter((g) => g.status !== "given").length, todayKey),
     facts: row.facts,
@@ -209,6 +228,7 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
         endDate: trip.endDate ? dayKey(trip.endDate) : null,
       }))
       .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
+    tripContactOn: tripDay ? dayKey(tripDay) : null,
   };
 }
 
@@ -304,6 +324,7 @@ export async function getTrackDefault(): Promise<boolean> {
 
 /** Who came along on a Waypoint trip, A–Z. */
 export async function getTripPeople(tripId: string): Promise<{ id: string; name: string; groupName: string | null }[]> {
+  if (!isUuid(tripId)) return [];
   const rows = await prisma.waypointTripPerson.findMany({
     where: { tripId },
     select: { person: { select: { id: true, name: true, groupName: true } } },

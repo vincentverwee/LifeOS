@@ -1,18 +1,46 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { bounds, layoutWeb, type WebNode } from "@/lib/people/web";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { bounds, labelSpot, layoutWeb, type Box, type WebNode } from "@/lib/people/web";
 import { groupColor } from "@/lib/people/family";
 import type { WebLine } from "@/lib/data/people";
 
 const NODE_R = 8;
-/** Where along a line its label sits, from the person it's seen from. */
-const LABEL_AT = 0.62;
+const PAD = 56;
+/** The SVG's max-h-[30rem], in px. */
+const MAX_HEIGHT = 480;
+/** A label's centre keeps this far (in drawing units, before scaling) from other lines. */
+const LABEL_CLEARANCE = 9;
+
+/** About how wide a text is drawn (an average glyph is ~0.58 em), plus room for its halo. */
+function textWidth(text: string, fontSize: number): number {
+  return text.length * fontSize * 0.58 + fontSize * 0.4;
+}
 /** The "You" node (ME_NODE in data/people.ts, which is server-only). */
 const ME = "me";
-/** Text halo in the card's colour, so lines and labels never run through names. */
-const HALO = { paintOrder: "stroke", stroke: "var(--color-surface)", strokeWidth: 4, strokeLinejoin: "round" } as const;
+
+/**
+ * How much to enlarge dots, names and tap targets: a wide web shrinks to fit a phone, and
+ * 13-unit names would end up ~7 px. Keeps them at least their design size on screen (at
+ * most doubled). 1 until measured, so the server and the first render agree.
+ */
+function useGrow(ref: React.RefObject<HTMLElement | null>, box: { width: number; height: number }) {
+  const [grow, setGrow] = useState(1);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const scale = Math.min(el.clientWidth / box.width, MAX_HEIGHT / box.height);
+      setGrow(scale > 0 ? Math.min(2, Math.max(1, 1 / scale)) : 1);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, box.width, box.height]);
+  return grow;
+}
 
 /**
  * "Who knows who": you pinned in the middle, family in rows (parents above), dots in
@@ -21,9 +49,18 @@ const HALO = { paintOrder: "stroke", stroke: "var(--color-surface)", strokeWidth
  */
 export function PeopleWeb({ nodes, edges, groups }: { nodes: WebNode[]; edges: WebLine[]; groups: string[] }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const wrapper = useRef<HTMLDivElement>(null);
   const placed = useMemo(() => layoutWeb(nodes, edges, ME), [nodes, edges]);
   const at = new Map(placed.map((p) => [p.id, p]));
-  const box = bounds(placed, 56);
+  const k = useGrow(wrapper, useMemo(() => bounds(placed, PAD), [placed]));
+  const box = bounds(placed, PAD * k);
+  // Text halo in the card's colour, so lines and labels never run through names.
+  const halo = { paintOrder: "stroke", stroke: "var(--color-surface)", strokeWidth: 4 * k, strokeLinejoin: "round" } as const;
+  // Every dot and the name under it, roughly measured: labels keep off them.
+  const taken: Box[] = placed.flatMap((p) => [
+    { x: p.x, y: p.y, w: (NODE_R + 4) * 2 * k, h: (NODE_R + 4) * 2 * k },
+    { x: p.x, y: p.y + (NODE_R + (p.id === ME ? 20 : 16) - 4.5) * k, w: textWidth(p.name, 13 * k), h: 15 * k },
+  ]);
   const usedGroups = groups.filter((g) => nodes.some((n) => n.group === g));
   const chosen = selected ? at.get(selected) : undefined;
   const touches = (e: WebLine) => selected !== null && (e.a === selected || e.b === selected);
@@ -37,11 +74,12 @@ export function PeopleWeb({ nodes, edges, groups }: { nodes: WebNode[]; edges: W
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div ref={wrapper} className="flex flex-col gap-3">
       <svg
         viewBox={`${box.x} ${box.y} ${box.width} ${box.height}`}
         className="h-auto max-h-[30rem] w-full touch-manipulation select-none"
-        role="img"
+        // A group, not an image: an image hides the people (buttons) inside from VoiceOver.
+        role="group"
         aria-label={`${nodes.length} people and how they're linked`}
         onClick={() => setSelected(null)}
       >
@@ -59,7 +97,7 @@ export function PeopleWeb({ nodes, edges, groups }: { nodes: WebNode[]; edges: W
               y2={b.y}
               stroke={lit ? "var(--color-primary)" : "var(--color-ink-muted)"}
               strokeOpacity={selected === null ? 0.45 : lit ? 0.9 : 0.12}
-              strokeWidth={lit ? 3 : 2}
+              strokeWidth={(lit ? 3 : 2) * k}
             />
           );
         })}
@@ -69,17 +107,24 @@ export function PeopleWeb({ nodes, edges, groups }: { nodes: WebNode[]; edges: W
           const label = labelOf(e);
           if (!a || !b || !label) return null;
           // Closer to the person the label describes (away from you / the one tapped),
-          // so it clears the names in the middle and the crossings.
+          // so it clears the names in the middle, and slid along its line off any crossing.
           const [from, to] = e.a === (selected ?? ME) ? [a, b] : [b, a];
+          const others = edges.flatMap((o) => {
+            const oa = at.get(o.a);
+            const ob = at.get(o.b);
+            return o !== e && oa && ob ? [[oa, ob] as [typeof oa, typeof ob]] : [];
+          });
+          const size = { w: textWidth(label, 11 * k), h: 12 * k };
+          const spot = labelSpot(from, to, size, others, taken, LABEL_CLEARANCE * k);
           return (
             <text
               key={`label-${e.a}-${e.b}`}
-              x={from.x + (to.x - from.x) * LABEL_AT}
-              y={from.y + (to.y - from.y) * LABEL_AT + 4}
+              x={spot.x}
+              y={spot.y + 4 * k}
               textAnchor="middle"
-              fontSize={11}
+              fontSize={11 * k}
               className={touches(e) ? "fill-primary font-semibold" : "fill-ink-muted"}
-              style={HALO}
+              style={halo}
             >
               {label}
             </text>
@@ -102,31 +147,40 @@ export function PeopleWeb({ nodes, edges, groups }: { nodes: WebNode[]; edges: W
                 setSelected((s) => (s === p.id ? null : p.id));
               }}
               onKeyDown={(ev) => {
-                if (ev.key === "Enter" || ev.key === " ") setSelected((s) => (s === p.id ? null : p.id));
+                if (ev.key !== "Enter" && ev.key !== " ") return;
+                ev.preventDefault(); // Space would scroll the page too
+                setSelected((s) => (s === p.id ? null : p.id));
               }}
               className="cursor-pointer outline-none"
             >
               {/* A bigger invisible circle: a fingertip-sized target. */}
-              <circle cx={p.x} cy={p.y} r={24} fill="transparent" />
+              <circle cx={p.x} cy={p.y} r={24 * k} fill="transparent" />
               {me ? (
-                <circle cx={p.x} cy={p.y} r={NODE_R + 4} fill="var(--color-surface)" stroke="var(--color-primary)" strokeWidth={3} />
+                <circle
+                  cx={p.x}
+                  cy={p.y}
+                  r={(NODE_R + 4) * k}
+                  fill="var(--color-surface)"
+                  stroke="var(--color-primary)"
+                  strokeWidth={3 * k}
+                />
               ) : (
                 <circle
                   cx={p.x}
                   cy={p.y}
-                  r={selected === p.id ? NODE_R + 3 : NODE_R}
+                  r={(selected === p.id ? NODE_R + 3 : NODE_R) * k}
                   fill={groupColor(p.group ?? null, groups)}
                   stroke="var(--color-surface)"
-                  strokeWidth={2}
+                  strokeWidth={2 * k}
                 />
               )}
               <text
                 x={p.x}
-                y={p.y + NODE_R + (me ? 20 : 16)}
+                y={p.y + (NODE_R + (me ? 20 : 16)) * k}
                 textAnchor="middle"
-                fontSize={13}
+                fontSize={13 * k}
                 className={me ? "fill-primary font-semibold" : "fill-foreground font-medium"}
-                style={HALO}
+                style={halo}
               >
                 {p.name}
               </text>

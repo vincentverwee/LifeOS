@@ -93,6 +93,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
           recentContacts={person.recentContacts}
           seeEveryDays={person.seeEveryDays}
           catchUp={person.catchUp}
+          tripContactOn={person.tripContactOn}
           todayKey={todayKey}
         />
       )}

@@ -4,6 +4,7 @@ import { toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
 import { simplifyLine } from '@/lib/waypoint/simplify';
 import { joinLines, routeLines } from '@/lib/waypoint/routing/lines';
 import { Trip, TripSummary, Location } from '@/lib/waypoint/types';
+import { isUuid } from '@/lib/waypoint/uuid';
 
 /**
  * `route_geometry` is a full OSRM polyline (tens to hundreds of kB per trip), so loading it
@@ -50,8 +51,7 @@ export async function getAllLocations(): Promise<Location[]> {
 export async function getTripWithLocations(
   id: string
 ): Promise<{ trip: Trip; locations: Location[] } | null> {
-  // Ids are UUIDs; anything else would make Postgres throw instead of finding nothing.
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   const row = await prisma.waypointTrip.findUnique({
     where: { id },
     include: { locations: { orderBy: { visitOrder: 'asc' } } },

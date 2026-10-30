@@ -7,19 +7,27 @@ export type TripFilter =
 
 type Companion = { id: string; name: string; tripIds: string[] };
 
+/** The cookie that remembers the dropdown's All / Van / Without van choice on this device. */
+export const TRIP_FILTER_COOKIE = 'waypoint-map-filter';
+
+type Kind = 'all' | 'van' | 'novan';
+const isKind = (value: unknown): value is Kind => value === 'all' || value === 'van' || value === 'novan';
+
 /**
- * Reads the search params. Nothing (or anything unknown) means `fallback`: the map opens on
- * van trips when there are any, the export on all trips; "All trips" is an explicit ?trip=all.
+ * Reads the search params, shared by the map and its export so both show the same trips.
+ * Without a (known) choice in the URL: the last one picked on this device (`saved`, the
+ * cookie), else van trips when there are any. With no van trip, van / without van mean all
+ * (the dropdown hides them, and an old ?trip=van link would show nothing).
  */
 export function readTripFilter(
   params: { trip?: string | string[]; person?: string | string[] },
   companions: Companion[],
-  fallback: 'all' | 'van' = 'all'
+  { anyVan, saved }: { anyVan: boolean; saved?: string }
 ): TripFilter {
   const person = companions.find((c) => c.id === params.person);
   if (person) return { kind: 'person', personId: person.id, name: person.name, tripIds: new Set(person.tripIds) };
-  if (params.trip === 'all' || params.trip === 'van' || params.trip === 'novan') return { kind: params.trip };
-  return { kind: fallback };
+  const kind = isKind(params.trip) ? params.trip : isKind(saved) ? saved : anyVan ? 'van' : 'all';
+  return { kind: anyVan ? kind : 'all' };
 }
 
 export function keepTrip(filter: TripFilter, trip: { id: string; with_van: boolean }): boolean {

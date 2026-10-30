@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect, useRef } from "react";
-import { useFormStatus } from "react-dom";
 import {
   createPerson,
   updatePerson,
@@ -10,6 +9,7 @@ import {
 import { MONTH_NAMES, type Birthday } from "@/lib/people/birthdays";
 import { LINK_LABELS } from "@/lib/people/links";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
+import { keepInput } from "@/components/people/keepInput";
 
 type Person = {
   id: string;
@@ -24,8 +24,7 @@ type Person = {
 const FIELD =
   "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
     <button
       type="submit"
@@ -56,7 +55,7 @@ export function PersonForm({
   trackDefault?: boolean;
 }) {
   const nameRef = useRef<HTMLInputElement>(null);
-  const [state, formAction] = useActionState<PeopleFormState, FormData>(
+  const [state, formAction, pending] = useActionState<PeopleFormState, FormData>(
     person ? updatePerson : createPerson,
     null,
   );
@@ -68,7 +67,7 @@ export function PersonForm({
   }, [person]);
 
   return (
-    <form action={formAction} className="flex flex-col gap-4">
+    <form onSubmit={keepInput(formAction)} className="flex flex-col gap-4">
       {person && <input type="hidden" name="id" value={person.id} />}
 
       <label className="flex flex-col gap-1">
@@ -224,7 +223,7 @@ export function PersonForm({
         <p className="text-sm text-critical">{state.error}</p>
       )}
 
-      <SubmitButton label={person ? "Save changes" : "Add person"} />
+      <SubmitButton label={person ? "Save changes" : "Add person"} pending={pending} />
     </form>
   );
 }

@@ -39,18 +39,26 @@ describe('getVanStats', () => {
 });
 
 describe('trip filter', () => {
-  it('reads ?trip= and ?person=, falling back to all', async () => {
+  it('reads ?trip= and ?person=, then the saved choice, then van trips', async () => {
     const { readTripFilter, keepTrip, tripFilterQuery } = await import('./tripFilter');
     const companions = [{ id: 'p1', name: 'Louise', tripIds: ['b'] }];
-    const van = readTripFilter({ trip: 'van' }, companions);
+    const withVan = { anyVan: true };
+    const van = readTripFilter({ trip: 'van' }, companions, withVan);
     expect(trips.filter((t) => keepTrip(van, t)).map((t) => t.id)).toEqual(['a', 'c', 'd']);
-    const louise = readTripFilter({ person: 'p1' }, companions);
+    const louise = readTripFilter({ person: 'p1' }, companions, withVan);
     expect(trips.filter((t) => keepTrip(louise, t)).map((t) => t.id)).toEqual(['b']);
     expect(tripFilterQuery(louise)).toBe('?person=p1');
-    expect(readTripFilter({ trip: 'nonsense', person: 'gone' }, companions)).toEqual({ kind: 'all' });
-    // The map opens on van trips; "All trips" is explicit.
-    expect(readTripFilter({}, companions, 'van')).toEqual({ kind: 'van' });
-    expect(readTripFilter({ trip: 'all' }, companions, 'van')).toEqual({ kind: 'all' });
+    // Unknown values fall back like no value: van trips while there are any.
+    expect(readTripFilter({ trip: 'nonsense', person: 'gone' }, companions, withVan)).toEqual({ kind: 'van' });
+    expect(readTripFilter({}, companions, withVan)).toEqual({ kind: 'van' });
+    expect(readTripFilter({ trip: 'all' }, companions, withVan)).toEqual({ kind: 'all' });
+    // The last pick on this device wins over the default, the URL over both.
+    expect(readTripFilter({}, companions, { anyVan: true, saved: 'all' })).toEqual({ kind: 'all' });
+    expect(readTripFilter({ trip: 'novan' }, companions, { anyVan: true, saved: 'all' })).toEqual({ kind: 'novan' });
+    expect(readTripFilter({}, companions, { anyVan: true, saved: 'junk' })).toEqual({ kind: 'van' });
+    // No van trip at all: van / without van mean all.
+    expect(readTripFilter({ trip: 'van' }, companions, { anyVan: false })).toEqual({ kind: 'all' });
+    expect(readTripFilter({}, companions, { anyVan: false, saved: 'novan' })).toEqual({ kind: 'all' });
     expect(tripFilterQuery({ kind: 'all' })).toBe('?trip=all');
   });
 });

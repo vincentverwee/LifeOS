@@ -1,13 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { useFormStatus } from "react-dom";
 import { addGift, type PeopleFormState } from "@/lib/actions/people";
+import { keepInput } from "@/components/people/keepInput";
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ pending }: { pending: boolean }) {
   return (
     <button type="submit" disabled={pending} className="btn btn-primary inline-flex min-h-11 shrink-0 px-5 text-sm font-semibold">
       {pending ? "Adding…" : "Add"}
@@ -19,7 +18,7 @@ function SubmitButton() {
 export function AddGiftForm({ personId }: { personId: string }) {
   const [more, setMore] = useState(false);
   const [key, setKey] = useState(0);
-  const [state, formAction] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
+  const [state, formAction, pending] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
     const result = await addGift(prev, formData);
     if (result?.ok) {
       setKey((k) => k + 1); // fresh, empty fields
@@ -29,7 +28,7 @@ export function AddGiftForm({ personId }: { personId: string }) {
   }, null);
 
   return (
-    <form key={key} action={formAction} className="flex flex-col gap-2">
+    <form key={key} onSubmit={keepInput(formAction)} className="flex flex-col gap-2">
       <input type="hidden" name="personId" value={personId} />
       <div className="flex gap-2">
         <input
@@ -43,7 +42,7 @@ export function AddGiftForm({ personId }: { personId: string }) {
           placeholder="Gift idea"
           className={`${FIELD} min-w-0 flex-1`}
         />
-        <SubmitButton />
+        <SubmitButton pending={pending} />
       </div>
       {more ? (
         <div className="flex flex-col gap-2">

@@ -58,7 +58,7 @@ export function YearlyKmChart({ data }: YearlyKmChartProps) {
                 <div
                   className="flex h-2 w-full overflow-hidden rounded-full bg-muted/40"
                   role="img"
-                  aria-label={`${entry.totalKm} km, ${entry.vanKm} km by van`}
+                  aria-label={`${Math.round(entry.totalKm)} km, ${Math.round(entry.vanKm)} km by van`}
                 >
                   <div className="h-full bg-primary" style={{ width: `${(entry.vanKm / maxKm) * 100}%` }} />
                   <div

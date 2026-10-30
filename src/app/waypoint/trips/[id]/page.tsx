@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation';
 import { getTripWithLocations } from '@/lib/data/waypoint';
+import { isUuid } from '@/lib/waypoint/uuid';
 import { getGroups, getPeopleNames, getTripPeople } from '@/lib/data/people';
 import { TripDetail } from '@/components/waypoint/trips/TripDetail';
 import { TripPeople } from '@/components/waypoint/trips/TripPeople';
 
 export default async function TripDetailPage({ params }: PageProps<'/waypoint/trips/[id]'>) {
   const { id } = await params;
+  if (!isUuid(id)) notFound();
   const [data, people, everyone, groups] = await Promise.all([
     getTripWithLocations(id),
     getTripPeople(id),

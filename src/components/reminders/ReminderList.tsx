@@ -109,7 +109,10 @@ export function ReminderList({
       addTicked(key);
       const [result] = await Promise.all([logMessageToday(person.id), wait(SLIDE_OUT_MS)]);
       if (result.ok) {
-        setUndo({ key, title: person.name, label: "Messaged", run: () => unlogContact(person.id, result.day, "message") });
+        // Already logged elsewhere today: there's nothing of ours to undo.
+        if (result.created) {
+          setUndo({ key, title: person.name, label: "Messaged", run: () => unlogContact(person.id, result.day, "message") });
+        }
       } else {
         setError(result.error);
       }

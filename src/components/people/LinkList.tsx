@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useActionState,
-  useState,
-  useSyncExternalStore,
-  useTransition,
-} from "react";
-import { useFormStatus } from "react-dom";
+import { useActionState, useState, useSyncExternalStore } from "react";
 import {
   addLink,
   deleteLink,
@@ -21,6 +15,8 @@ import {
   type SuggestedLink,
 } from "@/lib/people/family";
 import { GroupDot } from "./GroupDot";
+import { keepInput } from "./keepInput";
+import { useQuickAction } from "./useQuickAction";
 
 const FIELD =
   "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
@@ -74,8 +70,7 @@ function PencilIcon() {
   );
 }
 
-function SaveButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+function SaveButton({ label, pending }: { label: string; pending: boolean }) {
   return (
     <button
       type="submit"
@@ -162,8 +157,8 @@ function LinkItem({
   groups: string[];
 }) {
   const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [state, formAction] = useActionState(
+  const { pending, run, error } = useQuickAction();
+  const [state, formAction, saving] = useActionState(
     async (prev: PeopleFormState, formData: FormData) => {
       const result = await updateLink(prev, formData);
       if (result?.ok) setEditing(false);
@@ -174,8 +169,10 @@ function LinkItem({
 
   if (editing) {
     return (
-      <li className="rounded-2xl border border-primary bg-surface p-3">
-        <form action={formAction} className="flex flex-col gap-3">
+      <li
+        className={`rounded-2xl border border-primary bg-surface p-3 ${pending ? "opacity-60" : ""}`}
+      >
+        <form onSubmit={keepInput(formAction)} className="flex flex-col gap-3">
           <input type="hidden" name="id" value={link.id} />
           <input type="hidden" name="personId" value={personId} />
           <p className="font-medium text-foreground">{link.otherName}</p>
@@ -183,8 +180,9 @@ function LinkItem({
           {state && !state.ok && (
             <p className="text-sm text-critical">{state.error}</p>
           )}
+          {error && <p className="text-sm text-critical">{error}</p>}
           <div className="flex gap-2">
-            <SaveButton label="Save" />
+            <SaveButton label="Save" pending={saving || pending} />
             <button
               type="button"
               onClick={() => setEditing(false)}
@@ -194,9 +192,10 @@ function LinkItem({
             </button>
             <button
               type="button"
+              disabled={saving || pending}
               onClick={() => {
                 if (window.confirm(`Unlink ${name} and ${link.otherName}?`))
-                  startTransition(() => deleteLink(link.id));
+                  run(() => deleteLink(link.id));
               }}
               className="btn btn-ghost ml-auto inline-flex min-h-11 px-3 text-sm"
             >
@@ -267,12 +266,16 @@ export function LinkList({
   );
   const [dismissedNow, setDismissedNow] = useState<string[]>([]);
   const dismissed = [...parseDismissed(stored), ...dismissedNow];
-  const [linking, startLinking] = useTransition();
+  const {
+    pending: linking,
+    run: runLink,
+    error: linkError,
+  } = useQuickAction();
   const [key, setKey] = useState(0);
   const [adding, setAdding] = useState(false);
   const [otherId, setOtherId] = useState("");
   const [newName, setNewName] = useState("");
-  const [state, formAction] = useActionState(
+  const [state, formAction, pending] = useActionState(
     async (prev: PeopleFormState, formData: FormData) => {
       const result = await addLink(prev, formData);
       if (result?.ok) {
@@ -307,9 +310,7 @@ export function LinkList({
     data.set("otherId", s.otherId);
     data.set("otherIs", s.otherIs);
     data.set("selfIs", s.selfIs);
-    startLinking(async () => {
-      await addLink(null, data);
-    });
+    runLink(() => addLink(null, data));
   }
 
   function dismissSuggestion(s: SuggestedLink) {
@@ -400,13 +401,14 @@ export function LinkList({
               </li>
             ))}
           </ul>
+          {linkError && <p className="text-sm text-critical">{linkError}</p>}
         </div>
       )}
 
       {adding ? (
         <form
           key={key}
-          action={formAction}
+          onSubmit={keepInput(formAction)}
           className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-3"
         >
           <input type="hidden" name="personId" value={personId} />
@@ -450,7 +452,7 @@ export function LinkList({
             <p className="text-sm text-critical">{state.error}</p>
           )}
           <div className="flex gap-2">
-            <SaveButton label="Link" />
+            <SaveButton label="Link" pending={pending} />
             <button
               type="button"
               onClick={() => setAdding(false)}

@@ -10,6 +10,7 @@ import { GroupDot } from '@/components/people/GroupDot';
 type Person = { id: string; name: string; groupName: string | null };
 
 const FIELD = 'rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground';
+const FAILED = "Couldn't save that. Check your connection and try again.";
 
 /** "Who came along": People tagged on this trip (they get it under Trips together), add or remove them. */
 export function TripPeople({
@@ -34,13 +35,29 @@ export function TripPeople({
   function add() {
     setError(null);
     startTransition(async () => {
-      const result = await addTripPerson(tripId, pick === 'new' ? { newName } : { personId: pick });
-      if (result?.ok) {
-        setPick('');
-        setNewName('');
-        setAdding(false);
-      } else if (result) {
-        setError(result.error);
+      try {
+        const result = await addTripPerson(tripId, pick === 'new' ? { newName } : { personId: pick });
+        if (result?.ok) {
+          setPick('');
+          setNewName('');
+          setAdding(false);
+        } else if (result) {
+          setError(result.error);
+        }
+      } catch {
+        setError(FAILED);
+      }
+    });
+  }
+
+  function remove(personId: string) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await removeTripPerson(tripId, personId);
+        if (result && !result.ok) setError(result.error);
+      } catch {
+        setError(FAILED);
       }
     });
   }
@@ -62,7 +79,7 @@ export function TripPeople({
               type="button"
               aria-label={`${p.name} didn't come`}
               disabled={pending}
-              onClick={() => startTransition(() => removeTripPerson(tripId, p.id))}
+              onClick={() => remove(p.id)}
               className="btn btn-ghost inline-flex h-11 w-11 items-center justify-center text-ink-muted"
             >
               ×

@@ -1,11 +1,13 @@
 "use client";
 
-import { useActionState, useOptimistic, useState, useTransition } from "react";
+import { useActionState, useOptimistic, useState } from "react";
 import { logContactOn, toggleContactToday, unlogContact, type PeopleFormState } from "@/lib/actions/people";
 import { describeSince } from "@/lib/reminders/routines";
 import { formatDay } from "@/lib/reminders/schedule";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
 import type { Contact, ContactKind } from "@/lib/data/people";
+import { keepInput } from "./keepInput";
+import { useQuickAction } from "./useQuickAction";
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
@@ -25,31 +27,45 @@ export function SeenCard({
   recentContacts,
   seeEveryDays,
   catchUp,
+  tripContactOn,
   todayKey,
   footer,
 }: {
   personId: string;
   name: string;
   recentContacts: Contact[];
+  /** The day shared Waypoint trips count as seen (a trip still going = today). */
+  tripContactOn: string | null;
   seeEveryDays: number | null;
   catchUp: boolean;
   todayKey: string;
   /** e.g. "Stop tracking", under the recent days. */
   footer?: React.ReactNode;
 }) {
-  const [, startTransition] = useTransition();
+  const { run, error } = useQuickAction();
   const today = (kind: ContactKind) => recentContacts.some((c) => c.day === todayKey && c.kind === kind);
   const [checked, toggle] = useOptimistic({ seen: today("seen"), message: today("message") }, (prev, kind: ContactKind) => ({
     ...prev,
     [kind]: !prev[kind],
   }));
   const [kind, setKind] = useState<ContactKind>("seen");
-  const [state, formAction, pending] = useActionState<PeopleFormState, FormData>(logContactOn, null);
+  const [formKey, setFormKey] = useState(0);
+  const [state, formAction, pending] = useActionState(async (prev: PeopleFormState, formData: FormData) => {
+    const result = await logContactOn(prev, formData);
+    if (result?.ok) setFormKey((k) => k + 1); // an empty date again
+    return result;
+  }, null);
 
-  // Before today, so taking today off shows the right answer before the server replies.
+  // Today's ticks, else the newest day before today (so taking today off shows the right
+  // answer before the server replies), or a shared trip when that's later; like the list.
+  const tick = checked.message ? "message" : checked.seen ? "seen" : null;
   const before = recentContacts.find((c) => c.day !== todayKey) ?? null;
-  const inTouchToday = checked.seen || checked.message;
-  const last = inTouchToday ? { day: todayKey, kind: (checked.message ? "message" : "seen") as ContactKind } : before;
+  const last: { day: string; past: string } | null = tick
+    ? { day: todayKey, past: CONTACT_LABEL[tick].past }
+    : tripContactOn && (!before || tripContactOn > before.day)
+      ? { day: tripContactOn, past: "trip" }
+      : before && { day: before.day, past: CONTACT_LABEL[before.kind].past };
+  const inTouchToday = last?.day === todayKey;
 
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
@@ -60,7 +76,7 @@ export function SeenCard({
               checked={checked[k]}
               label={`${k === "seen" ? "Saw" : "Messaged"} ${name} today`}
               onChange={() =>
-                startTransition(async () => {
+                run(async () => {
                   toggle(k);
                   await toggleContactToday(personId, k);
                 })
@@ -72,11 +88,12 @@ export function SeenCard({
       </div>
       <p className={`text-sm ${catchUp && !inTouchToday ? "text-critical" : "text-ink-muted"}`}>
         Last in touch: {describeSince(last?.day ?? null, todayKey).toLowerCase()}
-        {last && ` (${CONTACT_LABEL[last.kind].past})`}
+        {last && ` (${last.past})`}
         {seeEveryDays !== null && ` · catch up every ${seeEveryDays} d`}
       </p>
+      {error && <p className="text-sm text-critical">{error}</p>}
 
-      <form action={formAction} className="flex flex-col gap-1">
+      <form key={formKey} onSubmit={keepInput(formAction)} className="flex flex-col gap-1">
         <input type="hidden" name="personId" value={personId} />
         <input type="hidden" name="kind" value={kind} />
         <span className="text-sm text-ink-muted">Earlier…</span>
@@ -111,8 +128,8 @@ export function SeenCard({
               <span aria-label={c.kind === "seen" ? "Saw" : "Messaged"}>{CONTACT_LABEL[c.kind].icon}</span>&nbsp;{formatDay(c.day)}
               <button
                 type="button"
-                aria-label={`Remove ${formatDay(c.day)}`}
-                onClick={() => startTransition(() => unlogContact(personId, c.day, c.kind))}
+                aria-label={`Remove ${CONTACT_LABEL[c.kind].past} on ${formatDay(c.day)}`}
+                onClick={() => run(() => unlogContact(personId, c.day, c.kind))}
                 className="btn btn-ghost inline-flex h-11 w-11 items-center justify-center text-ink-muted"
               >
                 ×
