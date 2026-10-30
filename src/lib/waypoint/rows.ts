@@ -1,7 +1,7 @@
 import type { WaypointLocation, WaypointTrip } from '@/generated/prisma/client';
 import { dayKey } from '@/lib/format';
 import type { RouteGeometry } from './routing/lines';
-import type { Location, RoutePreference, Trip, TripSummary } from './types';
+import type { Location, Trip, TripSummary } from './types';
 
 /**
  * Prisma rows -> the snake_case shapes the Waypoint components were written against.
@@ -21,7 +21,6 @@ export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry'>): TripSum
     start_date: optionalDay(row.startDate),
     end_date: optionalDay(row.endDate),
     cover_image: row.coverImage,
-    route_preference: row.routePreference as RoutePreference,
     total_km: row.totalKm === null ? null : Number(row.totalKm),
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),

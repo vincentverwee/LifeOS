@@ -17,10 +17,7 @@ export interface RouteResult {
 
 /**
  * Calculates the real driving route through an ordered list of points using the
- * public OSRM demo server. Its default car profile has no toll/motorway class data
- * compiled in (exclude=toll and exclude=motorway both 400), so route_preference
- * cannot actually influence the path here — it's stored for display only until a
- * routing backend with toll data (GraphHopper/Valhalla) replaces this.
+ * public OSRM demo server (fastest car route; it can't avoid tolls, so trips don't offer it).
  *
  * Never throws: a timeout, network error or unexpected answer returns null.
  */

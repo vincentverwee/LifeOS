@@ -89,7 +89,6 @@ async function main() {
       endDate: day(t.end_date),
       coverImage: t.cover_image,
       totalKm: t.total_km === null ? null : new Prisma.Decimal(t.total_km),
-      routePreference: t.route_preference,
       routeGeometry:
         t.route_geometry == null ? Prisma.DbNull : (t.route_geometry as Prisma.InputJsonValue),
       createdAt: new Date(t.created_at),

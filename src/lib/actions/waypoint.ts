@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@/generated/prisma/client';
-import { Location, RoutePreference, TripSummary } from '@/lib/waypoint/types';
+import { Location, TripSummary } from '@/lib/waypoint/types';
 import { toLocation, toTripSummary } from '@/lib/waypoint/rows';
 import { calculateTripRoute } from '@/lib/waypoint/routing/osrm';
 import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
@@ -23,7 +23,6 @@ export type CreateTripInput = {
   description?: string;
   start_date?: string;
   end_date?: string;
-  route_preference: RoutePreference;
 };
 
 export type UpdateTripInput = Partial<CreateTripInput>;
@@ -40,13 +39,6 @@ function requireTitle(title: unknown): string {
   if (!trimmed) throw new Error('A trip needs a title.');
   if (trimmed.length > 120) throw new Error('Keep the title under 120 characters.');
   return trimmed;
-}
-
-function requirePreference(value: string): RoutePreference {
-  if (value !== 'allow_tolls' && value !== 'avoid_tolls') {
-    throw new Error(`Unknown route preference "${value}".`);
-  }
-  return value;
 }
 
 /** Cleared text fields arrive as "" — store those as null. Long text is cut off. */
@@ -85,7 +77,6 @@ export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
       description: optionalText(input.description, 2000),
       startDate,
       endDate,
-      routePreference: requirePreference(input.route_preference),
     },
     omit: WITHOUT_GEOMETRY,
   });
@@ -111,9 +102,6 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
       ...(input.description !== undefined && { description: optionalText(input.description, 2000) }),
       startDate,
       endDate,
-      ...(input.route_preference !== undefined && {
-        routePreference: requirePreference(input.route_preference),
-      }),
     },
     omit: WITHOUT_GEOMETRY,
   });

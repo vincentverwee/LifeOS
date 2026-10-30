@@ -310,3 +310,17 @@ export async function getTripPeople(tripId: string): Promise<{ id: string; name:
   });
   return rows.map((r) => r.person).sort((a, b) => a.name.localeCompare(b.name));
 }
+
+/** People tagged on at least one trip (the map's filter chips), A–Z, with the ids of their trips. */
+export async function getTripCompanions(): Promise<{ id: string; name: string; groupName: string | null; tripIds: string[] }[]> {
+  const rows = await prisma.waypointTripPerson.findMany({
+    select: { tripId: true, person: { select: { id: true, name: true, groupName: true } } },
+  });
+  const byPerson = new Map<string, { id: string; name: string; groupName: string | null; tripIds: string[] }>();
+  for (const { tripId, person } of rows) {
+    const entry = byPerson.get(person.id) ?? { ...person, tripIds: [] };
+    entry.tripIds.push(tripId);
+    byPerson.set(person.id, entry);
+  }
+  return [...byPerson.values()].sort((a, b) => a.name.localeCompare(b.name));
+}

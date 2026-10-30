@@ -220,8 +220,6 @@ model WaypointTrip {
   endDate         DateTime?            @db.Date
   coverImage      String?
   totalKm         Decimal?             @db.Decimal(10, 2)
-  // "allow_tolls" | "avoid_tolls" — stored but ignored by the public OSRM server.
-  routePreference String               @default("allow_tolls")
   // Whole-trip OSRM route as a GeoJSON LineString.
   routeGeometry   Json?
   createdAt       DateTime             @default(now())

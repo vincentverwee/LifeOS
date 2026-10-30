@@ -69,12 +69,6 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
                         {trip.total_km.toLocaleString()} km
                       </Badge>
                     )}
-                    <Badge
-                      variant="outline"
-                      className="text-xs"
-                    >
-                      {trip.route_preference === 'avoid_tolls' ? 'No tolls' : 'Allow tolls'}
-                    </Badge>
                   </div>
                 </div>
               </div>

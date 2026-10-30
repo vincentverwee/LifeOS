@@ -14,7 +14,6 @@ import { Button } from '@/components/waypoint/ui/button';
 import { Input } from '@/components/waypoint/ui/input';
 import { Textarea } from '@/components/waypoint/ui/textarea';
 import { Label } from '@/components/waypoint/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/waypoint/ui/select';
 
 interface TripDialogProps {
   open: boolean;
@@ -28,7 +27,6 @@ const EMPTY: CreateTripInput = {
   description: '',
   start_date: '',
   end_date: '',
-  route_preference: 'allow_tolls',
 };
 
 export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps) {
@@ -47,7 +45,6 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
             description: trip.description ?? '',
             start_date: trip.start_date ?? '',
             end_date: trip.end_date ?? '',
-            route_preference: trip.route_preference,
           }
         : EMPTY
     );
@@ -114,24 +111,6 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
                 onChange={(e) => setForm({ ...form, end_date: e.target.value })}
               />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Route preference</Label>
-            <Select
-              value={form.route_preference}
-              onValueChange={(v) =>
-                setForm({ ...form, route_preference: v as CreateTripInput['route_preference'] })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="allow_tolls">Allow toll roads (fastest)</SelectItem>
-                <SelectItem value="avoid_tolls">Avoid toll roads</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <DialogFooter className="pt-2">

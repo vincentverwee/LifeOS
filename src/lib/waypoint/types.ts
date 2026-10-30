@@ -1,7 +1,5 @@
 import type { RouteGeometry } from './routing/lines';
 
-export type RoutePreference = 'allow_tolls' | 'avoid_tolls';
-
 export interface Trip {
   id: string;
   title: string;
@@ -9,7 +7,6 @@ export interface Trip {
   start_date: string | null;
   end_date: string | null;
   cover_image: string | null;
-  route_preference: RoutePreference;
   total_km: number | null;
   /** The driving parts; a MultiLineString when a flight splits them (see routing/lines.ts). */
   route_geometry: RouteGeometry | null;
