@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getTodayKey } from "@/lib/today";
-import { getBeerVisits, getPubs } from "@/lib/data/beer";
-import { between, monthStarts, pintsIn, pubStats, totals } from "@/lib/beer/stats";
-import { formatCurrency, formatDate, formatLiters, plural } from "@/lib/format";
+import { getBeerVisits, getPubOptions, getPubs } from "@/lib/data/beer";
+import { getAllCategories, getLatestBeers } from "@/lib/data";
+import { between, monthStarts, pubStats, totals } from "@/lib/beer/stats";
+import { formatCurrency, formatLiters, plural } from "@/lib/format";
+import { LatestBeers } from "@/components/beer/LatestBeers";
 import { describeSince } from "@/lib/reminders/routines";
 import { PubMapLoader } from "@/components/beer/PubMapLoader";
 import { LOG_BEER_HREF } from "@/components/beer/nav";
@@ -12,7 +14,13 @@ const RECENT = 5;
 
 export default async function BeerPage() {
   const todayKey = await getTodayKey();
-  const [visits, pubs] = await Promise.all([getBeerVisits(), getPubs()]);
+  const [visits, pubs, latest, categories, pubOptions] = await Promise.all([
+    getBeerVisits(),
+    getPubs(),
+    getLatestBeers(RECENT),
+    getAllCategories(),
+    getPubOptions(),
+  ]);
 
   if (visits.length === 0) {
     return (
@@ -37,7 +45,6 @@ export default async function BeerPage() {
       ? [{ id: p.id, name: p.name, latitude: p.latitude, longitude: p.longitude, visits: p.visits }]
       : []
   );
-  const recent = visits.slice(-RECENT).reverse();
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,25 +109,11 @@ export default async function BeerPage() {
 
       <section className="flex flex-col gap-2">
         <h2 className="font-medium text-foreground">Latest beers</h2>
-        <ul className="overflow-hidden rounded-xl border border-border bg-surface">
-          {recent.map((v) => {
-            const pints = pintsIn(v);
-            return (
-              <li key={v.id} className="flex min-h-12 items-center justify-between gap-3 border-b border-border px-4 py-2 last:border-b-0">
-                <span className="flex min-w-0 flex-col">
-                  <span className="truncate text-sm text-foreground">{v.pubName ?? "No pub"}</span>
-                  <span className="text-xs text-ink-muted">
-                    {formatDate(v.date)}
-                    {pints > 0 && ` · ${plural(pints, "pint", "pints")}${v.counted ? "" : " (guessed)"}`}
-                  </span>
-                </span>
-                <span className="shrink-0 font-mono text-sm font-semibold tabular-nums text-foreground">
-                  {formatCurrency(v.amount)}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <LatestBeers
+          beers={latest}
+          categories={categories.map(({ id, name, isArchived, pintPrice }) => ({ id, name, isArchived, pintPrice }))}
+          pubs={pubOptions}
+        />
       </section>
     </div>
   );

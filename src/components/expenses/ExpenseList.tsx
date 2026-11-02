@@ -9,7 +9,7 @@ import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { PubPicker, suggestedPints } from "@/components/beer/PubPicker";
 import type { PubChoice, PubOption } from "@/lib/beer/types";
 
-type CategoryOption = { id: string; name: string; isArchived?: boolean; pintPrice: number | null };
+export type CategoryOption = { id: string; name: string; isArchived?: boolean; pintPrice: number | null };
 
 type ExpenseListProps = {
   expenses: ListExpense[];
@@ -187,7 +187,7 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
   );
 }
 
-function EditRow({
+export function EditRow({
   expense,
   categories,
   pubs,
