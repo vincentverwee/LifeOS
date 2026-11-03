@@ -356,7 +356,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
           <div className="space-y-4">
             <Card className="border-border/50">
               <CardContent className="space-y-5 p-5">

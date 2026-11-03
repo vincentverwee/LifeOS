@@ -239,7 +239,7 @@ export function TripDetail({
 
         {people}
 
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: locations */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
