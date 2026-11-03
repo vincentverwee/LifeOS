@@ -12,7 +12,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     // Was the Notifications page; old links and notification taps still land.
-    return [{ source: "/notifications", destination: "/settings", permanent: true }];
+    return [
+      { source: "/notifications", destination: "/settings", permanent: true },
+      // Wardrobe opens on Items (the Wash screen lives at /wardrobe/wash).
+      { source: "/wardrobe", destination: "/wardrobe/items", permanent: false },
+    ];
   },
   async headers() {
     return [

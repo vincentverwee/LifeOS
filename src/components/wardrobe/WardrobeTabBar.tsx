@@ -32,8 +32,8 @@ export function WardrobeTabBar() {
       className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur sm:hidden"
     >
       <div className="mx-auto flex max-w-md items-end px-2">
-        <TabLink tab={WASH} active={isTabActive(pathname, WASH.href)} />
         <TabLink tab={ITEMS} active={isTabActive(pathname, ITEMS.href) && !onAdd} />
+        <TabLink tab={WASH} active={isTabActive(pathname, WASH.href)} />
         <div className="flex flex-1 justify-center">
           <Link
             href="/wardrobe/items/add"

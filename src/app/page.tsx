@@ -123,7 +123,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/wardrobe" name="Wardrobe" icon={WardrobeIcon}>
+          <FeatureTile href="/wardrobe/items" name="Wardrobe" icon={WardrobeIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <WardrobeTileBody />
             </Suspense>

@@ -11,11 +11,16 @@ export default async function ItemsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Items</h1>
-        <Link href="/wardrobe/items/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
-          + Add
+      <div>
+        <Link href="/" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
+          ‹ Home
         </Link>
+        <div className="mt-1 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Items</h1>
+          <Link href="/wardrobe/items/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
+            + Add
+          </Link>
+        </div>
       </div>
 
       {items.length === 0 ? (
