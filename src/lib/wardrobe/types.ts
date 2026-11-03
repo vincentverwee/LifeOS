@@ -20,6 +20,17 @@ export function isStatus(value: unknown): value is ClothingStatus {
 /** A category as the pages use it. */
 export type Category = { id: string; name: string };
 
-/** The most a stored photo may weigh (the browser aims for ~100 KB). */
-export const MAX_PHOTO_BYTES = 400_000;
-export const PHOTO_MIME = "image/jpeg";
+/**
+ * The photo types the server stores, with the most each may weigh. The browser makes
+ * JPEGs of normal photos (~100 KB) and WebP/PNG of cut-outs (background removed).
+ */
+export const PHOTO_LIMITS: Record<string, number> = {
+  "image/jpeg": 400_000,
+  "image/webp": 400_000,
+  "image/png": 900_000,
+};
+
+/** Cut-outs (see-through background) are shown whole, on the app's own colour. */
+export function isCutout(mime: string | null | undefined): boolean {
+  return mime === "image/webp" || mime === "image/png";
+}

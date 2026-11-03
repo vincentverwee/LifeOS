@@ -1,7 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
-import { DEFAULT_CATEGORIES, NO_CATEGORY, isStatus, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
+import { DEFAULT_CATEGORIES, NO_CATEGORY, isCutout, isStatus, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
 
 export type Item = {
   id: string;
@@ -15,6 +15,8 @@ export type Item = {
   statusSince: string;
   isArchived: boolean;
   photoId: string | null;
+  /** The photo has its background removed: shown whole, on the app's colour. */
+  photoCutout: boolean;
 };
 
 const ITEM_SELECT = {
@@ -27,6 +29,7 @@ const ITEM_SELECT = {
   statusSince: true,
   isArchived: true,
   photoId: true,
+  photo: { select: { mime: true } },
 } as const;
 
 type ItemRow = {
@@ -39,11 +42,13 @@ type ItemRow = {
   statusSince: Date;
   isArchived: boolean;
   photoId: string | null;
+  photo: { mime: string } | null;
 };
 
-function toItem({ category, ...row }: ItemRow): Item {
+function toItem({ category, photo, ...row }: ItemRow): Item {
   return {
     ...row,
+    photoCutout: isCutout(photo?.mime),
     categoryName: category?.name ?? NO_CATEGORY,
     status: isStatus(row.status) ? row.status : "clean",
     statusSince: dayKey(row.statusSince),

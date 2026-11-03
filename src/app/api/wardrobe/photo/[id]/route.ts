@@ -11,6 +11,10 @@ export async function GET(_req: Request, ctx: RouteContext<"/api/wardrobe/photo/
   const photo = await prisma.clothingPhoto.findUnique({ where: { id }, select: { data: true, mime: true } });
   if (!photo) return new Response("Not found.", { status: 404 });
   return new Response(photo.data, {
-    headers: { "Content-Type": photo.mime, "Cache-Control": "private, max-age=31536000, immutable" },
+    headers: {
+      "Content-Type": photo.mime,
+      "Cache-Control": "private, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+    },
   });
 }

@@ -28,7 +28,7 @@ export default async function WardrobePage() {
           </Link>
         </p>
       ) : (
-        <WashBoard items={items.map(({ id, name, categoryName, status, photoId }) => ({ id, name, categoryName, status, photoId }))} />
+        <WashBoard items={items.map(({ id, name, categoryName, status, photoId, photoCutout }) => ({ id, name, categoryName, status, photoId, photoCutout }))} />
       )}
     </div>
   );

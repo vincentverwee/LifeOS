@@ -10,7 +10,7 @@ import { keepInput } from "@/components/people/keepInput";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; categoryId: string | null; photoId: string | null };
+type Item = { id: string; name: string; categoryId: string | null; photoId: string | null; photoCutout: boolean };
 type Outfit = { id: string; name: string; notes: string | null; itemIds: string[] };
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
@@ -84,7 +84,7 @@ export function OutfitForm({ outfit, items, categories }: { outfit?: Outfit; ite
                       onClick={() => toggle(item.id)}
                       className={`tap relative block w-full overflow-hidden rounded-xl border-2 text-left ${on ? "border-primary" : "border-border"}`}
                     >
-                      <ItemPhoto photoId={item.photoId} name={item.name} className="aspect-square w-full" />
+                      <ItemPhoto photoId={item.photoId} cutout={item.photoCutout} name={item.name} className="aspect-square w-full" />
                       {on && (
                         <span className="absolute top-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground">
                           <Check size={16} strokeWidth={3} aria-hidden="true" />

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTodayKey } from "@/lib/today";
 import { knownError } from "@/lib/prismaErrors";
-import { isStatus, MAX_PHOTO_BYTES, PHOTO_MIME, type ClothingStatus } from "@/lib/wardrobe/types";
+import { isStatus, PHOTO_LIMITS, type ClothingStatus } from "@/lib/wardrobe/types";
 
 export type WardrobeFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -25,9 +25,21 @@ function optional(formData: FormData, name: string, max: number): string | null 
 async function readPhoto(formData: FormData): Promise<{ data: Uint8Array<ArrayBuffer>; mime: string } | null | string> {
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) return null;
-  if (file.type !== PHOTO_MIME) return "That photo isn't a JPEG.";
-  if (file.size > MAX_PHOTO_BYTES) return "That photo is too big.";
-  return { data: new Uint8Array(await file.arrayBuffer()), mime: PHOTO_MIME };
+  const limit = PHOTO_LIMITS[file.type];
+  if (!limit) return "That photo's format isn't supported.";
+  if (file.size > limit) return "That photo is too big.";
+  const data = new Uint8Array(await file.arrayBuffer());
+  // The bytes must really be what the type says: the photo route serves it with that type.
+  if (!looksLike(data, file.type)) return "That photo's format isn't supported.";
+  return { data, mime: file.type };
+}
+
+function looksLike(data: Uint8Array, mime: string): boolean {
+  const at = (offset: number, bytes: number[]) => bytes.every((b, i) => data[offset + i] === b);
+  if (mime === "image/jpeg") return at(0, [0xff, 0xd8, 0xff]);
+  if (mime === "image/png") return at(0, [0x89, 0x50, 0x4e, 0x47]);
+  if (mime === "image/webp") return at(0, [0x52, 0x49, 0x46, 0x46]) && at(8, [0x57, 0x45, 0x42, 0x50]);
+  return false;
 }
 
 /** Drops a photo nothing points at any more (replaced, removed or its item deleted). */

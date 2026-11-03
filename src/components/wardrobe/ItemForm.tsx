@@ -8,7 +8,7 @@ import { resizeImage } from "@/lib/images/resize";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; categoryId: string | null; color: string | null; photoId: string | null };
+type Item = { id: string; name: string; categoryId: string | null; color: string | null; photoId: string | null; photoCutout: boolean };
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
@@ -63,7 +63,7 @@ export function ItemForm({
   function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const formData = new FormData(e.currentTarget, (e.nativeEvent as SubmitEvent).submitter);
-    if (photo) formData.set("photo", new File([photo], "photo.jpg", { type: "image/jpeg" }));
+    if (photo) formData.set("photo", new File([photo], "photo", { type: photo.type }));
     if (removePhoto) formData.set("removePhoto", "on");
     startTransition(() => formAction(formData));
   }
@@ -80,9 +80,13 @@ export function ItemForm({
           <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-border">
             {preview ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={preview} alt="New photo" className="h-full w-full object-cover" />
+              <img
+                src={preview}
+                alt="New photo"
+                className={`h-full w-full bg-surface-muted ${photo && photo.type !== "image/jpeg" ? "object-contain p-[8%]" : "object-cover"}`}
+              />
             ) : (
-              <ItemPhoto photoId={showExisting ? item!.photoId : null} name={item?.name ?? "No photo"} className="h-full w-full" />
+              <ItemPhoto photoId={showExisting ? item!.photoId : null} cutout={item?.photoCutout} name={item?.name ?? "No photo"} className="h-full w-full" />
             )}
             {shrinking && (
               <div className="absolute inset-0 flex items-center justify-center bg-surface/70">

@@ -15,6 +15,7 @@ type Item = {
   categoryName: string;
   status: ClothingStatus;
   photoId: string | null;
+  photoCutout: boolean;
 };
 
 type Step = {
@@ -69,6 +70,7 @@ function Row({
         >
           <ItemPhoto
             photoId={item.photoId}
+            cutout={item.photoCutout}
             name={item.name}
             className="h-14 w-14 shrink-0 rounded-xl"
           />

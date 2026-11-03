@@ -31,7 +31,7 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
           ‹ Items
         </Link>
         <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-end">
-          <ItemPhoto eager photoId={item.photoId} name={item.name} className="aspect-square w-60 max-w-full self-center rounded-2xl sm:w-48 sm:self-auto" />
+          <ItemPhoto eager photoId={item.photoId} cutout={item.photoCutout} name={item.name} className="aspect-square w-60 max-w-full self-center rounded-2xl sm:w-48 sm:self-auto" />
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>
             <p className="text-sm text-ink-muted">

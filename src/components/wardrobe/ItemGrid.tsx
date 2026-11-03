@@ -13,6 +13,7 @@ type Item = {
   color: string | null;
   status: ClothingStatus;
   photoId: string | null;
+  photoCutout: boolean;
 };
 
 const CHIP = "btn inline-flex min-h-11 shrink-0 px-4 text-sm";
@@ -53,7 +54,7 @@ export function ItemGrid({ items, categories }: { items: Item[]; categories: Cat
           <li key={item.id}>
             <Link href={`/wardrobe/items/${item.id}`} className="tap block overflow-hidden rounded-2xl border border-border bg-surface hover:border-primary">
               <div className="relative">
-                <ItemPhoto photoId={item.photoId} name={item.name} className="aspect-square w-full" />
+                <ItemPhoto photoId={item.photoId} cutout={item.photoCutout} name={item.name} className="aspect-square w-full" />
                 {item.status !== "clean" && (
                   <span className="absolute top-2 left-2 rounded-full bg-surface/90 px-2 py-0.5 text-xs font-medium text-foreground">
                     {STATUS_LABEL[item.status]}

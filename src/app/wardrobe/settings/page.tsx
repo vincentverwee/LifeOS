@@ -33,7 +33,7 @@ export default async function WardrobeSettingsPage() {
             {archived.map((item) => (
               <li key={item.id} className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2">
                 <Link href={`/wardrobe/items/${item.id}`} className="tap flex min-w-0 flex-1 items-center gap-3 rounded-xl">
-                  <ItemPhoto photoId={item.photoId} name={item.name} className="h-12 w-12 shrink-0 rounded-xl" />
+                  <ItemPhoto photoId={item.photoId} cutout={item.photoCutout} name={item.name} className="h-12 w-12 shrink-0 rounded-xl" />
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-foreground">{item.name}</span>
                     <span className="block truncate text-sm text-ink-muted">{item.categoryName}</span>
