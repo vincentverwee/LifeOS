@@ -8,7 +8,15 @@ import { resizeImage } from "@/lib/images/resize";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; categoryId: string | null; color: string | null; photoId: string | null; photoCutout: boolean };
+type Item = {
+  id: string;
+  name: string;
+  categoryId: string | null;
+  color: string | null;
+  photoId: string | null;
+  photoCutout: boolean;
+  price: number | null;
+};
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
@@ -168,6 +176,19 @@ export function ItemForm({
             <option key={c} value={c} />
           ))}
         </datalist>
+      </label>
+
+      <label className="flex flex-col gap-1">
+        <span className="text-sm text-ink-muted">Price (optional, shows cost per wear)</span>
+        <input
+          name="price"
+          type="text"
+          inputMode="decimal"
+          autoComplete="off"
+          defaultValue={item?.price != null ? String(item.price).replace(".", ",") : ""}
+          placeholder="e.g. 59,95"
+          className={`${FIELD} w-40`}
+        />
       </label>
 
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}

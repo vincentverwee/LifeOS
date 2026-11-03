@@ -48,3 +48,18 @@ export function groupByCategory<T extends { categoryId: string | null }>(
   for (const item of items) (byId.get(item.categoryId ?? "") ?? loose).items.push(item);
   return [...groups, loose].filter((g) => g.items.length > 0);
 }
+
+/**
+ * The distinct days a piece was worn, oldest first: days its outfits were worn plus days
+ * it was worn on its own, from `sinceKey` (the day it was added, so a new piece put in an
+ * old outfit doesn't inherit that outfit's history). All "YYYY-MM-DD".
+ */
+export function wearDays(outfitDays: string[], itemDays: string[], sinceKey: string): string[] {
+  return [...new Set([...outfitDays, ...itemDays])].filter((d) => d >= sinceKey).sort();
+}
+
+/** What each wear cost so far; null without a price or before the first wear. */
+export function costPerWear(price: number | null, wears: number): number | null {
+  if (price === null || wears <= 0) return null;
+  return price / wears;
+}

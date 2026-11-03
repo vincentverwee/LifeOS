@@ -162,6 +162,15 @@ export const CHECKS: Check[] = [
     label: "Clothing items with an unknown status",
     fix: "Fix those clothing statuses first.",
   },
+  // A clothing price is empty or not negative.
+  {
+    name: "clothing_price",
+    table: "ClothingItem",
+    check: `("price" IS NULL OR "price" >= 0)`,
+    columns: "id, name, price",
+    label: "Clothing items with a negative price",
+    fix: "Fix those clothing prices first.",
+  },
   // A diary line is 1–280 characters, the mood 1–5 or empty.
   {
     name: "diary_entry",

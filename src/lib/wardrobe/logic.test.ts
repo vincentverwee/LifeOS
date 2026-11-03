@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeUnavailable, describeWorn, groupByCategory, outfitReadiness, type OutfitPiece } from "./logic";
+import { costPerWear, describeUnavailable, describeWorn, groupByCategory, outfitReadiness, wearDays, type OutfitPiece } from "./logic";
 
 const piece = (id: string, status: OutfitPiece["status"], isArchived = false): OutfitPiece => ({
   id,
@@ -56,5 +56,29 @@ describe("groupByCategory", () => {
       ["Bottoms", ["1"]],
       ["No category", ["2", "4"]],
     ]);
+  });
+});
+
+describe("wearDays", () => {
+  it("counts a day worn in an outfit and on its own once", () => {
+    expect(wearDays(["2026-11-02", "2026-11-01"], ["2026-11-02", "2026-11-03"], "2026-10-01")).toEqual([
+      "2026-11-01",
+      "2026-11-02",
+      "2026-11-03",
+    ]);
+  });
+  it("ignores days before the piece was added", () => {
+    expect(wearDays(["2026-09-30", "2026-10-01"], [], "2026-10-01")).toEqual(["2026-10-01"]);
+  });
+});
+
+describe("costPerWear", () => {
+  it("is null without a price or before the first wear", () => {
+    expect(costPerWear(null, 3)).toBeNull();
+    expect(costPerWear(60, 0)).toBeNull();
+  });
+  it("divides the price by the wears", () => {
+    expect(costPerWear(60, 12)).toBe(5);
+    expect(costPerWear(0, 2)).toBe(0);
   });
 });

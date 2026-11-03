@@ -624,7 +624,8 @@ model ClothingCategory {
 
 // A piece of clothing. `status` "clean" | "wash" | "drying" (CHECK clothing_status);
 // `categoryId` null = no category; `statusSince` is the day it last changed. Archived
-// items are hidden but keep their outfits.
+// items are hidden but keep their outfits. `price` (optional, ≥ 0, CHECK clothing_price)
+// gives the cost per wear on its page: price ÷ distinct days worn (outfits + ItemWear).
 model ClothingItem {
   id          String            @id @default(cuid())
   name        String
@@ -636,8 +637,10 @@ model ClothingItem {
   isArchived  Boolean           @default(false)
   photoId     String?
   photo       ClothingPhoto?    @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  price       Decimal?          @db.Decimal(12, 2)
   createdAt   DateTime          @default(now())
   outfits     OutfitItem[]
+  wears       ItemWear[]
 
   @@index([status])
   @@index([photoId])
@@ -676,6 +679,20 @@ model OutfitWear {
   createdAt    DateTime @default(now())
 
   @@unique([outfitId, wornOn])
+  @@index([wornOn])
+}
+
+// A day one piece was worn on its own ("Wore this today" on the item page), once per day
+// like OutfitWear. `movedToWash` = that tap sent it to the wash, so Undo puts it back.
+model ItemWear {
+  id          String       @id @default(cuid())
+  itemId      String
+  item        ClothingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  wornOn      DateTime     @db.Date
+  movedToWash Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+
+  @@unique([itemId, wornOn])
   @@index([wornOn])
 }
 

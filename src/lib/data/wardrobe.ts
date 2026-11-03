@@ -1,6 +1,7 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
+import { wearDays } from "@/lib/wardrobe/logic";
 import { DEFAULT_CATEGORIES, NO_CATEGORY, isCutout, isStatus, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
 
 export type Item = {
@@ -17,6 +18,8 @@ export type Item = {
   photoId: string | null;
   /** The photo has its background removed: shown whole, on the app's colour. */
   photoCutout: boolean;
+  /** What it cost (euros); null = no price, so no cost per wear. */
+  price: number | null;
 };
 
 const ITEM_SELECT = {
@@ -30,6 +33,7 @@ const ITEM_SELECT = {
   isArchived: true,
   photoId: true,
   photo: { select: { mime: true } },
+  price: true,
 } as const;
 
 type ItemRow = {
@@ -43,11 +47,13 @@ type ItemRow = {
   isArchived: boolean;
   photoId: string | null;
   photo: { mime: string } | null;
+  price: { toNumber(): number } | null;
 };
 
-function toItem({ category, photo, ...row }: ItemRow): Item {
+function toItem({ category, photo, price, ...row }: ItemRow): Item {
   return {
     ...row,
+    price: price === null ? null : price.toNumber(),
     photoCutout: isCutout(photo?.mime),
     categoryName: category?.name ?? NO_CATEGORY,
     status: isStatus(row.status) ? row.status : "clean",
@@ -89,6 +95,34 @@ export async function getItems(opts: { archived?: boolean } = {}): Promise<Item[
 export async function getItem(id: string): Promise<Item | null> {
   const row = await prisma.clothingItem.findUnique({ where: { id }, select: ITEM_SELECT });
   return row ? toItem(row) : null;
+}
+
+export type ItemWears = {
+  /** Distinct days worn (in an outfit or on its own) since it was added. */
+  count: number;
+  lastWornOn: string | null;
+  /** Worn today with the item's own button (Undo-able here). */
+  wornTodayDirect: boolean;
+  /** Worn today as part of an outfit (undone on the outfit's page). */
+  wornTodayViaOutfit: boolean;
+};
+
+export async function getItemWears(itemId: string, todayKey: string): Promise<ItemWears | null> {
+  const [item, outfitWears, ownWears] = await Promise.all([
+    prisma.clothingItem.findUnique({ where: { id: itemId }, select: { createdAt: true } }),
+    prisma.outfitWear.findMany({ where: { outfit: { items: { some: { itemId } } } }, select: { wornOn: true } }),
+    prisma.itemWear.findMany({ where: { itemId }, select: { wornOn: true } }),
+  ]);
+  if (!item) return null;
+  const outfitDays = outfitWears.map((w) => dayKey(w.wornOn));
+  const ownDays = ownWears.map((w) => dayKey(w.wornOn));
+  const days = wearDays(outfitDays, ownDays, dayKey(item.createdAt));
+  return {
+    count: days.length,
+    lastWornOn: days.at(-1) ?? null,
+    wornTodayDirect: ownDays.includes(todayKey),
+    wornTodayViaOutfit: outfitDays.includes(todayKey),
+  };
 }
 
 export type OutfitSummary = {

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCategories, getItem, getItems, getOutfits } from "@/lib/data/wardrobe";
+import { getCategories, getItem, getItemWears, getItems, getOutfits } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
 import { usedColors } from "@/lib/wardrobe/colors";
-import { describeWorn } from "@/lib/wardrobe/logic";
+import { costPerWear, describeWorn } from "@/lib/wardrobe/logic";
+import { formatCurrency, plural } from "@/lib/format";
 import { ItemForm } from "@/components/wardrobe/ItemForm";
 import { ItemPhoto, OutfitCollage } from "@/components/wardrobe/ItemPhoto";
 import { ItemStatusPicker } from "@/components/wardrobe/ItemStatusPicker";
+import { WearButton } from "@/components/wardrobe/WearButton";
 import { ConfirmDeleteButton } from "@/components/reminders/ConfirmDeleteButton";
 import { Disclosure } from "@/components/Disclosure";
 import { archiveItem, deleteItem } from "@/lib/actions/wardrobe";
@@ -14,15 +16,16 @@ import { archiveItem, deleteItem } from "@/lib/actions/wardrobe";
 export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[id]">) {
   const { id } = await params;
   const todayKey = await getTodayKey();
-  const [item, all, outfits, categories] = await Promise.all([
+  const [item, wears, all, outfits, categories] = await Promise.all([
     getItem(id),
+    getItemWears(id, todayKey),
     getItems({ archived: true }),
     getOutfits(todayKey),
     getCategories(),
   ]);
-  if (!item) notFound();
+  if (!item || !wears) notFound();
   const inOutfits = outfits.filter((o) => o.items.some((i) => i.id === item.id));
-  const lastWorn = inOutfits.map((o) => o.lastWornOn).filter((d): d is string => d !== null).sort().at(-1) ?? null;
+  const perWear = costPerWear(item.price, wears.count);
 
   return (
     <div className="flex flex-col gap-6">
@@ -38,11 +41,28 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
               {item.categoryName}
               {item.color && ` · ${item.color}`}
               {item.isArchived && " · archived"}
-              {inOutfits.length > 0 && ` · ${describeWorn(lastWorn, todayKey).toLowerCase()}`}
+              {` · ${describeWorn(wears.lastWornOn, todayKey).toLowerCase()}`}
             </p>
+            {item.price !== null && (
+              <p className="mt-1 text-sm text-foreground">
+                {formatCurrency(item.price)} ·{" "}
+                {perWear === null ? (
+                  <span className="text-ink-muted">not worn yet</span>
+                ) : (
+                  <>
+                    {plural(wears.count, "wear", "wears")} ·{" "}
+                    <span className="font-semibold">{formatCurrency(perWear)} a wear</span>
+                  </>
+                )}
+              </p>
+            )}
           </div>
         </div>
       </div>
+
+      {!item.isArchived && (
+        <WearButton itemId={item.id} wornToday={wears.wornTodayDirect} wornInOutfit={wears.wornTodayViaOutfit} />
+      )}
 
       <ItemStatusPicker key={item.status} id={item.id} status={item.status} />
 
