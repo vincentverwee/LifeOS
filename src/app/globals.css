@@ -419,3 +419,19 @@ textarea {
     animation: none;
   }
 }
+
+/* Wardrobe cut-outs (photo with its background removed): a soft white spotlight behind
+   the clothing, over the card colour. Brighter on light cards, gentler on dark ones. */
+.cutout-glare {
+  --glare: rgb(255 255 255 / 0.95);
+  --glare-mid: rgb(255 255 255 / 0.45);
+  background-color: var(--color-surface-muted);
+  background-image: radial-gradient(ellipse 58% 52% at 50% 50%, var(--glare), var(--glare-mid) 45%, transparent 78%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cutout-glare {
+    --glare: rgb(255 255 255 / 0.4);
+    --glare-mid: rgb(255 255 255 / 0.14);
+  }
+}

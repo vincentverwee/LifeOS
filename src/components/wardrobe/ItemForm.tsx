@@ -83,7 +83,7 @@ export function ItemForm({
               <img
                 src={preview}
                 alt="New photo"
-                className={`h-full w-full bg-surface-muted ${photo && photo.type !== "image/jpeg" ? "object-contain p-[8%]" : "object-cover"}`}
+                className={`h-full w-full bg-surface-muted ${photo && photo.type !== "image/jpeg" ? "cutout-glare object-contain p-[8%]" : "object-cover"}`}
               />
             ) : (
               <ItemPhoto photoId={showExisting ? item!.photoId : null} cutout={item?.photoCutout} name={item?.name ?? "No photo"} className="h-full w-full" />

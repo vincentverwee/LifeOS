@@ -13,7 +13,7 @@ export function ItemPhoto({
   className?: string;
   /** The big photo at the top of a page: load it straight away. */
   eager?: boolean;
-  /** Background removed: shown whole and centred on the box's colour, not cropped to fill. */
+  /** Background removed: shown whole and centred on a soft white glare, not cropped to fill. */
   cutout?: boolean;
 }) {
   return (
@@ -21,7 +21,7 @@ export function ItemPhoto({
       {photoId ? (
         // Our own route behind the passcode; next/image would proxy it through the optimizer for nothing.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={`/api/wardrobe/photo/${photoId}`} alt={name} loading={eager ? "eager" : "lazy"} className={`h-full w-full ${cutout ? "object-contain p-[8%]" : "object-cover"}`} />
+        <img src={`/api/wardrobe/photo/${photoId}`} alt={name} loading={eager ? "eager" : "lazy"} className={`h-full w-full ${cutout ? "cutout-glare object-contain p-[8%]" : "object-cover"}`} />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-ink-muted">
           <Shirt className="h-1/2 w-1/2 max-h-12 max-w-12" strokeWidth={1.4} aria-hidden="true" />
