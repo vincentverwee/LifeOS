@@ -18,7 +18,8 @@ export function SlideRow({
 }) {
   return (
     <li
-      className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${
+      // grid-cols-1 = minmax(0, 1fr): a long title truncates instead of widening the row.
+      className={`grid grid-cols-1 transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${
         leaving ? "grid-rows-[0fr] delay-[400ms]" : "grid-rows-[1fr]"
       }`}
     >

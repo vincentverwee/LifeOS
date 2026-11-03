@@ -213,21 +213,21 @@ model Debt {
 // Waypoint components use.
 
 model WaypointTrip {
-  id              String               @id @default(uuid()) @db.Uuid
-  title           String
-  description     String?
-  startDate       DateTime?            @db.Date
-  endDate         DateTime?            @db.Date
-  coverImage      String?
-  totalKm         Decimal?             @db.Decimal(10, 2)
+  id            String               @id @default(uuid()) @db.Uuid
+  title         String
+  description   String?
+  startDate     DateTime?            @db.Date
+  endDate       DateTime?            @db.Date
+  coverImage    String?
+  totalKm       Decimal?             @db.Decimal(10, 2)
   // Driven in the van; stats split km by it, the map and trips list filter on it.
-  withVan         Boolean              @default(false)
+  withVan       Boolean              @default(false)
   // Whole-trip OSRM route as a GeoJSON LineString.
-  routeGeometry   Json?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  locations       WaypointLocation[]
-  people          WaypointTripPerson[]
+  routeGeometry Json?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  locations     WaypointLocation[]
+  people        WaypointTripPerson[]
 
   @@index([startDate])
 }
@@ -594,4 +594,71 @@ model PushSent {
   sentAt DateTime @default(now())
 
   @@index([sentAt])
+}
+
+// Wardrobe. A photo of a clothing item, resized in the browser (~900 px, ~100 KB)
+// and kept here, in its own table so item lists never load the bytes. Served by
+// /api/wardrobe/photo/[id]; left out of the JSON export (src/lib/data/export.ts).
+// A replaced photo is a new row (new id), so the URL can be cached forever.
+model ClothingPhoto {
+  id        String         @id @default(cuid())
+  data      Bytes
+  mime      String
+  createdAt DateTime       @default(now())
+  items     ClothingItem[]
+}
+
+// A piece of clothing. `status` "clean" | "wash" | "drying" (CHECK clothing_status),
+// `kind` one of src/lib/wardrobe/types.ts (CHECK clothing_kind); `statusSince` is
+// the day it last changed. Archived items are hidden but keep their outfits.
+model ClothingItem {
+  id          String         @id @default(cuid())
+  name        String
+  kind        String         @default("other")
+  color       String?
+  status      String         @default("clean")
+  statusSince DateTime       @db.Date
+  isArchived  Boolean        @default(false)
+  photoId     String?
+  photo       ClothingPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+  outfits     OutfitItem[]
+
+  @@index([status])
+  @@index([photoId])
+}
+
+// A combination of items ("Pub night"). Shown as a collage of its item photos.
+model Outfit {
+  id        String       @id @default(cuid())
+  name      String
+  notes     String?
+  createdAt DateTime     @default(now())
+  items     OutfitItem[]
+  wears     OutfitWear[]
+}
+
+model OutfitItem {
+  outfitId String
+  outfit   Outfit       @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  itemId   String
+  item     ClothingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@id([outfitId, itemId])
+  @@index([itemId])
+}
+
+// A day an outfit was worn. Once per day, so double taps can't duplicate (like
+// RoutineLog); "last worn" and wear counts are computed, never stored.
+model OutfitWear {
+  id           String   @id @default(cuid())
+  outfitId     String
+  outfit       Outfit   @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  wornOn       DateTime @db.Date
+  // The pieces this tap sent to the wash (they were clean), so Undo puts back exactly those.
+  movedItemIds String[] @default([])
+  createdAt    DateTime @default(now())
+
+  @@unique([outfitId, wornOn])
+  @@index([wornOn])
 }

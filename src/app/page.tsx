@@ -11,9 +11,10 @@ import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BeerIcon, BudgetIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { BeerIcon, BudgetIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WardrobeIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { getBeerGlance } from "@/lib/data/beer";
 import { getPeopleGlance } from "@/lib/data/people";
+import { getWardrobeGlance } from "@/lib/data/wardrobe";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { SheepMark } from "@/components/icons/SheepMark";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
@@ -117,6 +118,14 @@ export default async function HomePage() {
           <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <BeerTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/wardrobe" name="Wardrobe" icon={WardrobeIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <WardrobeTileBody />
             </Suspense>
           </FeatureTile>
         </li>
@@ -412,6 +421,22 @@ async function BeerTileBody({ todayKey }: { todayKey: string }) {
           )}
         </p>
       )}
+    </>
+  );
+}
+
+async function WardrobeTileBody() {
+  const wardrobe = await getWardrobeGlance();
+  if (wardrobe.items === 0) return <p className="text-sm text-ink-muted">Clothes, outfits and the wash</p>;
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {wardrobe.wash} <span className="text-lg text-ink-muted">in the wash</span>
+      </p>
+      <p className="text-sm text-ink-muted">
+        {wardrobe.drying > 0 && `${wardrobe.drying} drying · `}
+        {wardrobe.items} {wardrobe.items === 1 ? "item" : "items"} · {wardrobe.outfits} {wardrobe.outfits === 1 ? "outfit" : "outfits"}
+      </p>
     </>
   );
 }

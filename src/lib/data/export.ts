@@ -3,8 +3,11 @@ import { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { THEME } from "@/lib/theme";
 
-/** Device and login bookkeeping, not data anyone logged. */
-const EXCLUDED = new Set<Prisma.ModelName>(["LoginThrottle", "PushSent", "PushSubscription"]);
+/**
+ * Device and login bookkeeping, not data anyone logged, plus the wardrobe photos
+ * (megabytes of bytes as JSON; they stay in the weekly database backups).
+ */
+const EXCLUDED = new Set<Prisma.ModelName>(["LoginThrottle", "PushSent", "PushSubscription", "ClothingPhoto"]);
 
 type Delegate = { findMany(args: { orderBy: { id: "asc" } }): Promise<unknown[]> };
 

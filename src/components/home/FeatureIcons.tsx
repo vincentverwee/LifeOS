@@ -90,3 +90,13 @@ export function BeerIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+/** Wardrobe: a clothes hanger. */
+export function WardrobeIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M20 13a4 4 0 1 1 6 3.5c-1.2.7-2 1.6-2 3V21" />
+      <path d="M24 21 6 33c-1.5 1-.8 3 1 3h34c1.8 0 2.5-2 1-3L24 21z" />
+    </svg>
+  );
+}
