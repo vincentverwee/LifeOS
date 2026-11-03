@@ -608,24 +608,37 @@ model ClothingPhoto {
   items     ClothingItem[]
 }
 
-// A piece of clothing. `status` "clean" | "wash" | "drying" (CHECK clothing_status),
-// `kind` one of src/lib/wardrobe/types.ts (CHECK clothing_kind); `statusSince` is
-// the day it last changed. Archived items are hidden but keep their outfits.
+// A wardrobe category ("Tops", "Shoes"), managed on /wardrobe/settings in `sortOrder`.
+// The defaults (DEFAULT_CATEGORIES in src/lib/wardrobe/types.ts) are created the first
+// time the wardrobe is used. Deleting one leaves its items without a category.
+model ClothingCategory {
+  id        String         @id @default(cuid())
+  name      String         @unique
+  sortOrder Int            @default(0)
+  createdAt DateTime       @default(now())
+  items     ClothingItem[]
+}
+
+// A piece of clothing. `status` "clean" | "wash" | "drying" (CHECK clothing_status);
+// `categoryId` null = no category; `statusSince` is the day it last changed. Archived
+// items are hidden but keep their outfits.
 model ClothingItem {
-  id          String         @id @default(cuid())
+  id          String            @id @default(cuid())
   name        String
-  kind        String         @default("other")
+  categoryId  String?
+  category    ClothingCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   color       String?
-  status      String         @default("clean")
-  statusSince DateTime       @db.Date
-  isArchived  Boolean        @default(false)
+  status      String            @default("clean")
+  statusSince DateTime          @db.Date
+  isArchived  Boolean           @default(false)
   photoId     String?
-  photo       ClothingPhoto? @relation(fields: [photoId], references: [id], onDelete: SetNull)
-  createdAt   DateTime       @default(now())
+  photo       ClothingPhoto?    @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  createdAt   DateTime          @default(now())
   outfits     OutfitItem[]
 
   @@index([status])
   @@index([photoId])
+  @@index([categoryId])
 }
 
 // A combination of items ("Pub night"). Shown as a collage of its item photos.

@@ -2,36 +2,49 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { KINDS, STATUS_LABEL, type ClothingKind, type ClothingStatus } from "@/lib/wardrobe/types";
+import { STATUS_LABEL, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
+import { groupByCategory } from "@/lib/wardrobe/logic";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; kind: ClothingKind; color: string | null; status: ClothingStatus; photoId: string | null };
+type Item = {
+  id: string;
+  name: string;
+  categoryId: string | null;
+  color: string | null;
+  status: ClothingStatus;
+  photoId: string | null;
+};
 
 const CHIP = "btn inline-flex min-h-11 shrink-0 px-4 text-sm";
 
-/** Every item as photo tiles, filtered by type chips. Not-clean items carry a small badge. */
-export function ItemGrid({ items }: { items: Item[] }) {
-  const [kind, setKind] = useState<ClothingKind | "all">("all");
-  const kinds = KINDS.filter((k) => items.some((i) => i.kind === k.id));
-  const shown = kind === "all" ? items : items.filter((i) => i.kind === kind);
+/** Every item as photo tiles, filtered by category chips (only categories that have items). */
+export function ItemGrid({ items, categories }: { items: Item[]; categories: Category[] }) {
+  // "all", a category id, or "none" for items without one.
+  const [filter, setFilter] = useState<string>("all");
+  const groups = groupByCategory(items, categories);
+  const shown =
+    filter === "all" ? items : (groups.find((g) => (g.id ?? "none") === filter)?.items ?? items);
 
   return (
     <div className="flex flex-col gap-4">
-      {kinds.length > 1 && (
+      {groups.length > 1 && (
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          <button type="button" onClick={() => setKind("all")} className={`${CHIP} ${kind === "all" ? "btn-primary" : "btn-outline"}`}>
+          <button type="button" onClick={() => setFilter("all")} className={`${CHIP} ${filter === "all" ? "btn-primary" : "btn-outline"}`}>
             All
           </button>
-          {kinds.map((k) => (
-            <button
-              key={k.id}
-              type="button"
-              onClick={() => setKind(k.id)}
-              className={`${CHIP} ${kind === k.id ? "btn-primary" : "btn-outline"}`}
-            >
-              {k.label}
-            </button>
-          ))}
+          {groups.map((g) => {
+            const key = g.id ?? "none";
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={`${CHIP} ${filter === key ? "btn-primary" : "btn-outline"}`}
+              >
+                {g.name}
+              </button>
+            );
+          })}
         </div>
       )}
 

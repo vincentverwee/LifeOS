@@ -1,14 +1,8 @@
-export const KINDS = [
-  { id: "top", label: "Tops" },
-  { id: "bottom", label: "Bottoms" },
-  { id: "dress", label: "Dresses" },
-  { id: "jacket", label: "Jackets" },
-  { id: "shoes", label: "Shoes" },
-  { id: "accessory", label: "Accessories" },
-  { id: "other", label: "Other" },
-] as const;
+/** Created the first time the wardrobe is used; rename, reorder or delete them on Settings. */
+export const DEFAULT_CATEGORIES = ["Tops", "Bottoms", "Dresses", "Jackets", "Shoes", "Accessories"];
 
-export type ClothingKind = (typeof KINDS)[number]["id"];
+/** What an item without a category is listed under. */
+export const NO_CATEGORY = "No category";
 
 export const STATUSES = ["clean", "wash", "drying"] as const;
 export type ClothingStatus = (typeof STATUSES)[number];
@@ -19,17 +13,12 @@ export const STATUS_LABEL: Record<ClothingStatus, string> = {
   drying: "Drying",
 };
 
-export function isKind(value: unknown): value is ClothingKind {
-  return KINDS.some((k) => k.id === value);
-}
-
 export function isStatus(value: unknown): value is ClothingStatus {
   return (STATUSES as readonly string[]).includes(value as string);
 }
 
-export function kindLabel(kind: string): string {
-  return KINDS.find((k) => k.id === kind)?.label ?? "Other";
-}
+/** A category as the pages use it. */
+export type Category = { id: string; name: string };
 
 /** The most a stored photo may weigh (the browser aims for ~100 KB). */
 export const MAX_PHOTO_BYTES = 400_000;

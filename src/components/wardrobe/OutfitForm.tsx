@@ -4,18 +4,19 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { Check } from "lucide-react";
 import { createOutfit, updateOutfit, type WardrobeFormState } from "@/lib/actions/wardrobe";
-import { KINDS, type ClothingKind } from "@/lib/wardrobe/types";
+import type { Category } from "@/lib/wardrobe/types";
+import { groupByCategory } from "@/lib/wardrobe/logic";
 import { keepInput } from "@/components/people/keepInput";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; kind: ClothingKind; photoId: string | null };
+type Item = { id: string; name: string; categoryId: string | null; photoId: string | null };
 type Outfit = { id: string; name: string; notes: string | null; itemIds: string[] };
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
 /** Add (no `outfit`) or edit an outfit: a name and the pieces, tapped on their photos. */
-export function OutfitForm({ outfit, items }: { outfit?: Outfit; items: Item[] }) {
+export function OutfitForm({ outfit, items, categories }: { outfit?: Outfit; items: Item[]; categories: Category[] }) {
   const [state, formAction, pending] = useActionState<WardrobeFormState, FormData>(
     outfit ? updateOutfit : createOutfit,
     null,
@@ -34,7 +35,7 @@ export function OutfitForm({ outfit, items }: { outfit?: Outfit; items: Item[] }
     });
   }
 
-  const groups = KINDS.map((k) => ({ ...k, items: items.filter((i) => i.kind === k.id) })).filter((g) => g.items.length > 0);
+  const groups = groupByCategory(items, categories);
 
   return (
     <form onSubmit={keepInput(formAction)} className="flex flex-col gap-4">
@@ -70,8 +71,8 @@ export function OutfitForm({ outfit, items }: { outfit?: Outfit; items: Item[] }
           </p>
         )}
         {groups.map((g) => (
-          <div key={g.id} className="flex flex-col gap-2">
-            <h3 className="text-sm font-medium text-foreground">{g.label}</h3>
+          <div key={g.id ?? "none"} className="flex flex-col gap-2">
+            <h3 className="text-sm font-medium text-foreground">{g.name}</h3>
             <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
               {g.items.map((item) => {
                 const on = picked.has(item.id);

@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTodayKey } from "@/lib/today";
 import { knownError } from "@/lib/prismaErrors";
-import { isKind, isStatus, MAX_PHOTO_BYTES, PHOTO_MIME, type ClothingStatus } from "@/lib/wardrobe/types";
+import { isStatus, MAX_PHOTO_BYTES, PHOTO_MIME, type ClothingStatus } from "@/lib/wardrobe/types";
 
 export type WardrobeFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -35,24 +35,32 @@ async function dropOrphanPhoto(photoId: string | null) {
   if (photoId) await prisma.clothingPhoto.deleteMany({ where: { id: photoId, items: { none: {} } } });
 }
 
-type ItemFields = { name: string; kind: string; color: string | null };
+type ItemFields = { name: string; categoryId: string | null; color: string | null };
 
-function readItem(formData: FormData): ItemFields | string {
+async function readItem(formData: FormData): Promise<ItemFields | string> {
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
   if (!name) return "Give it a name.";
-  const kind = String(formData.get("kind") ?? "other");
-  if (!isKind(kind)) return "Pick a type.";
-  return { name, kind, color: optional(formData, "color", 40) };
+  const categoryId = String(formData.get("categoryId") ?? "") || null;
+  if (categoryId && !(await prisma.clothingCategory.findUnique({ where: { id: categoryId }, select: { id: true } }))) {
+    return "That category no longer exists. Pick another one.";
+  }
+  return { name, categoryId, color: optional(formData, "color", 40) };
 }
 
 export async function createItem(_prev: WardrobeFormState, formData: FormData): Promise<WardrobeFormState> {
   await requireAuth();
-  const fields = readItem(formData);
+  const fields = await readItem(formData);
   if (typeof fields === "string") return { ok: false, error: fields };
   const photo = await readPhoto(formData);
   if (typeof photo === "string") return { ok: false, error: photo };
+  const { categoryId, ...rest } = fields;
   const item = await prisma.clothingItem.create({
-    data: { ...fields, statusSince: utc(await getTodayKey()), photo: photo ? { create: photo } : undefined },
+    data: {
+      ...rest,
+      statusSince: utc(await getTodayKey()),
+      category: categoryId ? { connect: { id: categoryId } } : undefined,
+      photo: photo ? { create: photo } : undefined,
+    },
     select: { id: true },
   });
   revalidate();
@@ -63,7 +71,7 @@ export async function createItem(_prev: WardrobeFormState, formData: FormData): 
 export async function updateItem(_prev: WardrobeFormState, formData: FormData): Promise<WardrobeFormState> {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
-  const fields = readItem(formData);
+  const fields = await readItem(formData);
   if (typeof fields === "string") return { ok: false, error: fields };
   const photo = await readPhoto(formData);
   if (typeof photo === "string") return { ok: false, error: photo };
@@ -71,10 +79,12 @@ export async function updateItem(_prev: WardrobeFormState, formData: FormData): 
   const old = await prisma.clothingItem.findUnique({ where: { id }, select: { photoId: true } });
   if (!old) return { ok: false, error: "That item no longer exists." };
   try {
+    const { categoryId, ...rest } = fields;
     await prisma.clothingItem.update({
       where: { id },
       data: {
-        ...fields,
+        ...rest,
+        category: categoryId ? { connect: { id: categoryId } } : { disconnect: true },
         ...(photo ? { photo: { create: photo } } : removePhoto ? { photo: { disconnect: true } } : {}),
       },
     });
@@ -92,7 +102,8 @@ export async function archiveItem(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   await prisma.clothingItem.updateMany({ where: { id }, data: { isArchived: formData.get("archive") !== "false" } });
   revalidate();
-  redirect(`/wardrobe/items/${id}`);
+  // "Bring back" on Settings stays there; the item page shows the new state.
+  if (formData.get("back") !== "settings") redirect(`/wardrobe/items/${id}`);
 }
 
 /** Also leaves its outfits (onDelete: Cascade) and drops its photo. */
@@ -222,4 +233,60 @@ export async function unwearToday(outfitId: string): Promise<void> {
     ]);
   }
   revalidate();
+}
+
+export type CategoryResult = { ok: true } | { ok: false; error: string };
+
+function readCategoryName(raw: unknown): string | null {
+  const name = String(raw ?? "").trim().slice(0, 40);
+  return name || null;
+}
+
+export async function createCategory(rawName: string): Promise<CategoryResult> {
+  await requireAuth();
+  const name = readCategoryName(rawName);
+  if (!name) return { ok: false, error: "Give the category a name." };
+  const last = await prisma.clothingCategory.aggregate({ _max: { sortOrder: true } });
+  try {
+    await prisma.clothingCategory.create({ data: { name, sortOrder: (last._max.sortOrder ?? -1) + 1 } });
+  } catch (e) {
+    return knownError(e, { P2002: `There's already a category called "${name}".` });
+  }
+  revalidate();
+  return { ok: true };
+}
+
+export async function renameCategory(id: string, rawName: string): Promise<CategoryResult> {
+  await requireAuth();
+  const name = readCategoryName(rawName);
+  if (!name) return { ok: false, error: "Give the category a name." };
+  try {
+    await prisma.clothingCategory.update({ where: { id: String(id) }, data: { name } });
+  } catch (e) {
+    return knownError(e, {
+      P2002: `There's already a category called "${name}".`,
+      P2025: "That category no longer exists.",
+    });
+  }
+  revalidate();
+  return { ok: true };
+}
+
+/** Saves the order shown on Settings (every category's id, top first). */
+export async function reorderCategories(orderedIds: string[]): Promise<CategoryResult> {
+  await requireAuth();
+  if (!Array.isArray(orderedIds) || orderedIds.length > 200) return { ok: false, error: "That order isn't valid." };
+  await prisma.$transaction(
+    orderedIds.map((id, sortOrder) => prisma.clothingCategory.updateMany({ where: { id: String(id) }, data: { sortOrder } })),
+  );
+  revalidate();
+  return { ok: true };
+}
+
+/** Its items stay, without a category (onDelete: SetNull). */
+export async function deleteCategory(id: string): Promise<CategoryResult> {
+  await requireAuth();
+  await prisma.clothingCategory.deleteMany({ where: { id: String(id) } });
+  revalidate();
+  return { ok: true };
 }

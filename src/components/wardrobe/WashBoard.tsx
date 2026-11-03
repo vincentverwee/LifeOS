@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { WashingMachine } from "lucide-react";
 import { moveItems } from "@/lib/actions/wardrobe";
-import { kindLabel, type ClothingStatus } from "@/lib/wardrobe/types";
+import type { ClothingStatus } from "@/lib/wardrobe/types";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
 import { SLIDE_OUT_MS, SlideRow, wait } from "@/components/reminders/SlideRow";
 import { ItemPhoto } from "./ItemPhoto";
@@ -12,7 +12,7 @@ import { ItemPhoto } from "./ItemPhoto";
 type Item = {
   id: string;
   name: string;
-  kind: string;
+  categoryName: string;
   status: ClothingStatus;
   photoId: string | null;
 };
@@ -79,7 +79,7 @@ function Row({
               {item.name}
             </span>
             <span className="block truncate text-sm text-ink-muted">
-              {kindLabel(item.kind)}
+              {item.categoryName}
             </span>
           </span>
         </Link>
@@ -162,7 +162,7 @@ export function WashBoard({ items }: { items: Item[] }) {
     ? clean.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          kindLabel(i.kind).toLowerCase().includes(q),
+          i.categoryName.toLowerCase().includes(q),
       )
     : clean;
 

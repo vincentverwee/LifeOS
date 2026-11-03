@@ -1,12 +1,14 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
-import { isKind, isStatus, type ClothingKind, type ClothingStatus } from "@/lib/wardrobe/types";
+import { DEFAULT_CATEGORIES, NO_CATEGORY, isStatus, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
 
 export type Item = {
   id: string;
   name: string;
-  kind: ClothingKind;
+  categoryId: string | null;
+  /** The category's name, or NO_CATEGORY. */
+  categoryName: string;
   color: string | null;
   status: ClothingStatus;
   /** Day the status last changed ("YYYY-MM-DD"). */
@@ -18,7 +20,8 @@ export type Item = {
 const ITEM_SELECT = {
   id: true,
   name: true,
-  kind: true,
+  categoryId: true,
+  category: { select: { name: true } },
   color: true,
   status: true,
   statusSince: true,
@@ -29,7 +32,8 @@ const ITEM_SELECT = {
 type ItemRow = {
   id: string;
   name: string;
-  kind: string;
+  categoryId: string | null;
+  category: { name: string } | null;
   color: string | null;
   status: string;
   statusSince: Date;
@@ -37,13 +41,34 @@ type ItemRow = {
   photoId: string | null;
 };
 
-function toItem(row: ItemRow): Item {
+function toItem({ category, ...row }: ItemRow): Item {
   return {
     ...row,
-    kind: isKind(row.kind) ? row.kind : "other",
+    categoryName: category?.name ?? NO_CATEGORY,
     status: isStatus(row.status) ? row.status : "clean",
     statusSince: dayKey(row.statusSince),
   };
+}
+
+/**
+ * The categories in their order. The very first time (no categories and no clothes yet)
+ * it creates the defaults, so a fresh wardrobe isn't empty; after that it never does.
+ */
+export async function getCategories(): Promise<(Category & { itemCount: number })[]> {
+  const load = () =>
+    prisma.clothingCategory.findMany({
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, _count: { select: { items: true } } },
+    });
+  let rows = await load();
+  if (rows.length === 0 && (await prisma.clothingItem.count()) === 0) {
+    await prisma.clothingCategory.createMany({
+      data: DEFAULT_CATEGORIES.map((name, sortOrder) => ({ name, sortOrder })),
+      skipDuplicates: true,
+    });
+    rows = await load();
+  }
+  return rows.map((r) => ({ id: r.id, name: r.name, itemCount: r._count.items }));
 }
 
 /** Items without their photo bytes (those load through /api/wardrobe/photo/[id]). */

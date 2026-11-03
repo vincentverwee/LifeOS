@@ -3,17 +3,28 @@
 import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { Camera, ImagePlus } from "lucide-react";
 import { createItem, updateItem, type WardrobeFormState } from "@/lib/actions/wardrobe";
-import { KINDS, type ClothingKind } from "@/lib/wardrobe/types";
+import type { Category } from "@/lib/wardrobe/types";
 import { resizeImage } from "@/lib/images/resize";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
-type Item = { id: string; name: string; kind: ClothingKind; color: string | null; photoId: string | null };
+type Item = { id: string; name: string; categoryId: string | null; color: string | null; photoId: string | null };
 
 const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
 
 /** Add (no `item`) or edit a clothing item. The photo is shrunk here, before it's sent. */
-export function ItemForm({ item, colors, defaultKind = "top" }: { item?: Item; colors: string[]; defaultKind?: ClothingKind }) {
+export function ItemForm({
+  item,
+  colors,
+  categories,
+  defaultCategoryId,
+}: {
+  item?: Item;
+  colors: string[];
+  categories: Category[];
+  /** New items: the category just used ("add another"), else the first one. */
+  defaultCategoryId?: string | null;
+}) {
   const [state, formAction, pending] = useActionState<WardrobeFormState, FormData>(
     item ? updateItem : createItem,
     null,
@@ -121,13 +132,18 @@ export function ItemForm({ item, colors, defaultKind = "top" }: { item?: Item; c
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm text-ink-muted">Type</span>
-        <select name="kind" defaultValue={item?.kind ?? defaultKind} className={FIELD}>
-          {KINDS.map((k) => (
-            <option key={k.id} value={k.id}>
-              {k.label}
+        <span className="text-sm text-ink-muted">Category</span>
+        <select
+          name="categoryId"
+          defaultValue={item ? (item.categoryId ?? "") : (defaultCategoryId ?? categories[0]?.id ?? "")}
+          className={FIELD}
+        >
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
             </option>
           ))}
+          <option value="">No category</option>
         </select>
       </label>
 

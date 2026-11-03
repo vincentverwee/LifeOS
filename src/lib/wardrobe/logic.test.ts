@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeUnavailable, describeWorn, outfitReadiness, type OutfitPiece } from "./logic";
+import { describeUnavailable, describeWorn, groupByCategory, outfitReadiness, type OutfitPiece } from "./logic";
 
 const piece = (id: string, status: OutfitPiece["status"], isArchived = false): OutfitPiece => ({
   id,
@@ -34,5 +34,27 @@ describe("describeWorn", () => {
     expect(describeWorn("2026-11-03", "2026-11-03")).toBe("Worn today");
     expect(describeWorn("2026-11-02", "2026-11-03")).toBe("Worn yesterday");
     expect(describeWorn("2026-10-30", "2026-11-03")).toBe("Worn 4 days ago");
+  });
+});
+
+describe("groupByCategory", () => {
+  const cats = [
+    { id: "t", name: "Tops" },
+    { id: "s", name: "Shoes" },
+    { id: "b", name: "Bottoms" },
+  ];
+  it("follows the category order, drops empty ones, puts loose items last", () => {
+    const items = [
+      { id: "1", categoryId: "b" },
+      { id: "2", categoryId: null },
+      { id: "3", categoryId: "t" },
+      { id: "4", categoryId: "gone" },
+      { id: "5", categoryId: "t" },
+    ];
+    expect(groupByCategory(items, cats).map((g) => [g.name, g.items.map((i) => i.id)])).toEqual([
+      ["Tops", ["3", "5"]],
+      ["Bottoms", ["1"]],
+      ["No category", ["2", "4"]],
+    ]);
   });
 });

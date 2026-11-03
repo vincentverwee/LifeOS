@@ -1,15 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { getItems } from "@/lib/data/wardrobe";
+import { getCategories, getItems } from "@/lib/data/wardrobe";
 import { ItemGrid } from "@/components/wardrobe/ItemGrid";
-import { Disclosure } from "@/components/Disclosure";
-import { ItemPhoto } from "@/components/wardrobe/ItemPhoto";
 
 export default async function ItemsPage() {
   await connection();
-  const all = await getItems({ archived: true });
+  const [all, categories] = await Promise.all([getItems({ archived: true }), getCategories()]);
   const items = all.filter((i) => !i.isArchived);
-  const archived = all.filter((i) => i.isArchived);
+  const archived = all.length - items.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -25,22 +23,13 @@ export default async function ItemsPage() {
           No clothes yet. Take a photo of something you wear a lot.
         </p>
       ) : (
-        <ItemGrid items={items} />
+        <ItemGrid items={items} categories={categories} />
       )}
 
-      {archived.length > 0 && (
-        <Disclosure title={`Archived (${archived.length})`}>
-          <ul className="flex flex-col gap-1">
-            {archived.map((item) => (
-              <li key={item.id}>
-                <Link href={`/wardrobe/items/${item.id}`} className="tap flex min-h-11 items-center gap-3 rounded-xl">
-                  <ItemPhoto photoId={item.photoId} name={item.name} className="h-10 w-10 shrink-0 rounded-lg" />
-                  <span className="truncate text-foreground">{item.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </Disclosure>
+      {archived > 0 && (
+        <Link href="/wardrobe/settings#archived" className="btn btn-ghost inline-flex min-h-11 self-center px-4 text-sm">
+          {archived} archived {archived === 1 ? "item" : "items"} in Settings
+        </Link>
       )}
     </div>
   );

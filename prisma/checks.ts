@@ -162,15 +162,6 @@ export const CHECKS: Check[] = [
     label: "Clothing items with an unknown status",
     fix: "Fix those clothing statuses first.",
   },
-  // A clothing item is one of the known kinds (src/lib/wardrobe/types.ts).
-  {
-    name: "clothing_kind",
-    table: "ClothingItem",
-    check: `("kind" IN ('top', 'bottom', 'dress', 'shoes', 'jacket', 'accessory', 'other'))`,
-    columns: "id, name, kind",
-    label: "Clothing items of an unknown kind",
-    fix: "Fix those clothing kinds first.",
-  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */

@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { House, Plus } from "lucide-react";
-import { ITEMS, OUTFITS, WASH, isTabActive, type WardrobeTab } from "./nav";
+import { Plus } from "lucide-react";
+import { ITEMS, OUTFITS, SETTINGS, WASH, isTabActive, type WardrobeTab } from "./nav";
 
 function TabLink({ tab, active }: { tab: WardrobeTab; active: boolean }) {
   const Icon = tab.icon;
@@ -45,13 +45,7 @@ export function WardrobeTabBar() {
           </Link>
         </div>
         <TabLink tab={OUTFITS} active={isTabActive(pathname, OUTFITS.href)} />
-        <Link
-          href="/"
-          className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-medium text-ink-muted active:bg-surface-muted"
-        >
-          <House size={24} strokeWidth={1.8} aria-hidden="true" />
-          Home
-        </Link>
+        <TabLink tab={SETTINGS} active={isTabActive(pathname, SETTINGS.href)} />
       </div>
     </nav>
   );

@@ -30,3 +30,21 @@ export function describeWorn(lastWornOn: string | null, todayKey: string): strin
   if (days === 1) return "Worn yesterday";
   return `Worn ${days} days ago`;
 }
+
+export type CategoryGroup<T> = { id: string | null; name: string; items: T[] };
+
+/**
+ * Items grouped by category in the categories' order, "No category" last; empty groups
+ * are left out. Items keep their incoming order inside a group.
+ */
+export function groupByCategory<T extends { categoryId: string | null }>(
+  items: T[],
+  categories: { id: string; name: string }[],
+  noCategory = "No category",
+): CategoryGroup<T>[] {
+  const groups: CategoryGroup<T>[] = categories.map((c) => ({ id: c.id, name: c.name, items: [] }));
+  const byId = new Map(groups.map((g) => [g.id, g]));
+  const loose: CategoryGroup<T> = { id: null, name: noCategory, items: [] };
+  for (const item of items) (byId.get(item.categoryId ?? "") ?? loose).items.push(item);
+  return [...groups, loose].filter((g) => g.items.length > 0);
+}

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getItem, getItems, getOutfits } from "@/lib/data/wardrobe";
+import { getCategories, getItem, getItems, getOutfits } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
 import { usedColors } from "@/lib/wardrobe/colors";
-import { kindLabel } from "@/lib/wardrobe/types";
 import { describeWorn } from "@/lib/wardrobe/logic";
 import { ItemForm } from "@/components/wardrobe/ItemForm";
 import { ItemPhoto, OutfitCollage } from "@/components/wardrobe/ItemPhoto";
@@ -15,7 +14,12 @@ import { archiveItem, deleteItem } from "@/lib/actions/wardrobe";
 export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[id]">) {
   const { id } = await params;
   const todayKey = await getTodayKey();
-  const [item, all, outfits] = await Promise.all([getItem(id), getItems({ archived: true }), getOutfits(todayKey)]);
+  const [item, all, outfits, categories] = await Promise.all([
+    getItem(id),
+    getItems({ archived: true }),
+    getOutfits(todayKey),
+    getCategories(),
+  ]);
   if (!item) notFound();
   const inOutfits = outfits.filter((o) => o.items.some((i) => i.id === item.id));
   const lastWorn = inOutfits.map((o) => o.lastWornOn).filter((d): d is string => d !== null).sort().at(-1) ?? null;
@@ -31,7 +35,7 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>
             <p className="text-sm text-ink-muted">
-              {kindLabel(item.kind)}
+              {item.categoryName}
               {item.color && ` · ${item.color}`}
               {item.isArchived && " · archived"}
               {inOutfits.length > 0 && ` · ${describeWorn(lastWorn, todayKey).toLowerCase()}`}
@@ -68,7 +72,7 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
       </section>
 
       <Disclosure title="Edit">
-        <ItemForm item={item} colors={usedColors(all)} />
+        <ItemForm item={item} colors={usedColors(all)} categories={categories} />
         <form action={archiveItem}>
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="archive" value={item.isArchived ? "false" : "true"} />
