@@ -678,3 +678,15 @@ model OutfitWear {
   @@unique([outfitId, wornOn])
   @@index([wornOn])
 }
+
+// --- Diary: one line a day (/diary) ---
+// "On this day" puts it next to what else was logged that date in earlier years
+// (src/lib/data/diary.ts). `mood` 1–5 or null; checked by diary_entry.
+model DiaryEntry {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  text      String
+  mood      Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

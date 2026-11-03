@@ -11,7 +11,9 @@ import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
-import { BeerIcon, BudgetIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WardrobeIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { getDiaryGlance, memoryHeadline } from "@/lib/data/diary";
+import { describeYearsAgo, moodOf } from "@/lib/diary/onThisDay";
+import { BeerIcon, BudgetIcon, DiaryIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WardrobeIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { getBeerGlance } from "@/lib/data/beer";
 import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
@@ -80,6 +82,14 @@ export default async function HomePage() {
             </div>
             <p className="relative mt-2 text-base leading-snug">{fact.text}</p>
           </div>
+        </li>
+
+        <li>
+          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <DiaryTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
         </li>
 
         <li>
@@ -419,6 +429,33 @@ async function BeerTileBody({ todayKey }: { todayKey: string }) {
           ) : (
             describeSince(beer.lastVisit, todayKey)
           )}
+        </p>
+      )}
+    </>
+  );
+}
+
+async function DiaryTileBody({ todayKey }: { todayKey: string }) {
+  const { today, memory } = await getDiaryGlance(todayKey);
+  const mood = moodOf(today?.mood);
+  const headline = memory && memoryHeadline(memory);
+  return (
+    <>
+      {today ? (
+        <p className="line-clamp-3 text-base leading-snug text-foreground">
+          {mood && <span className="mr-1.5">{mood.face}</span>}
+          {today.text}
+        </p>
+      ) : (
+        <>
+          <p className="text-lg font-semibold text-foreground">Write today&apos;s line</p>
+          <p className="text-sm text-ink-muted">One sentence, and how it went</p>
+        </>
+      )}
+      {memory && headline && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">{describeYearsAgo(memory.yearsAgo)} · </span>
+          {headline}
         </p>
       )}
     </>

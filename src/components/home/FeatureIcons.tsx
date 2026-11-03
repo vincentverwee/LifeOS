@@ -91,6 +91,17 @@ export function BeerIcon({ className }: IconProps) {
   );
 }
 
+/** Diary: a notebook with a pencil. */
+export function DiaryIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M11 7h20a3 3 0 0 1 3 3v28a3 3 0 0 1-3 3H11z" />
+      <path d="M11 7v34M17 15h10M17 21h7" />
+      <path d="M40 18l-9 17-3 1.5.5-3.3 9-17z" />
+    </svg>
+  );
+}
+
 /** Wardrobe: a clothes hanger. */
 export function WardrobeIcon({ className }: IconProps) {
   return (

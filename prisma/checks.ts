@@ -162,6 +162,15 @@ export const CHECKS: Check[] = [
     label: "Clothing items with an unknown status",
     fix: "Fix those clothing statuses first.",
   },
+  // A diary line is 1–280 characters, the mood 1–5 or empty.
+  {
+    name: "diary_entry",
+    table: "DiaryEntry",
+    check: `(char_length(btrim("text")) BETWEEN 1 AND 280 AND ("mood" IS NULL OR "mood" BETWEEN 1 AND 5))`,
+    columns: "id, date, mood",
+    label: "Diary entries with an empty or too long line, or an invalid mood",
+    fix: "Fix those diary entries first.",
+  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */
