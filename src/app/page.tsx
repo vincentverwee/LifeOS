@@ -85,14 +85,6 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
-            <Suspense fallback={<TileSkeleton />}>
-              <DiaryTileBody todayKey={todayKey} />
-            </Suspense>
-          </FeatureTile>
-        </li>
-
-        <li>
           <FeatureTile href="/budget" name="Budget" icon={BudgetIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <BudgetTileBody todayKey={todayKey} />
@@ -117,14 +109,6 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/people" name="People" icon={PeopleIcon}>
-            <Suspense fallback={<TileSkeleton />}>
-              <PeopleTileBody todayKey={todayKey} />
-            </Suspense>
-          </FeatureTile>
-        </li>
-
-        <li>
           <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <BeerTileBody todayKey={todayKey} />
@@ -141,6 +125,14 @@ export default async function HomePage() {
         </li>
 
         <li>
+          <FeatureTile href="/people" name="People" icon={PeopleIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <PeopleTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
           <FeatureTile href="/waypoint" name="Waypoint" icon={WaypointIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <WaypointTileBody />
@@ -152,6 +144,14 @@ export default async function HomePage() {
           <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <RecipesTileBody />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
+          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <DiaryTileBody todayKey={todayKey} />
             </Suspense>
           </FeatureTile>
         </li>
