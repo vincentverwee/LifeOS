@@ -109,6 +109,14 @@ export default async function HomePage() {
         </li>
 
         <li>
+          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
+            <Suspense fallback={<TileSkeleton />}>
+              <DiaryTileBody todayKey={todayKey} />
+            </Suspense>
+          </FeatureTile>
+        </li>
+
+        <li>
           <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <BeerTileBody todayKey={todayKey} />
@@ -144,14 +152,6 @@ export default async function HomePage() {
           <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
             <Suspense fallback={<TileSkeleton />}>
               <RecipesTileBody />
-            </Suspense>
-          </FeatureTile>
-        </li>
-
-        <li>
-          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
-            <Suspense fallback={<TileSkeleton />}>
-              <DiaryTileBody todayKey={todayKey} />
             </Suspense>
           </FeatureTile>
         </li>
