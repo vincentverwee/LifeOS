@@ -13,7 +13,7 @@ import type { Location, Trip, TripSummary } from './types';
 
 const optionalDay = (value: Date | null) => (value ? dayKey(value) : null);
 
-export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry'>): TripSummary {
+export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry' | 'overviewGeometry'>): TripSummary {
   return {
     id: row.id,
     title: row.title,
@@ -28,7 +28,7 @@ export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry'>): TripSum
   };
 }
 
-export function toTrip(row: WaypointTrip): Trip {
+export function toTrip(row: Omit<WaypointTrip, 'overviewGeometry'>): Trip {
   return {
     ...toTripSummary(row),
     route_geometry: (row.routeGeometry ?? null) as unknown as RouteGeometry | null,

@@ -213,21 +213,24 @@ model Debt {
 // Waypoint components use.
 
 model WaypointTrip {
-  id            String               @id @default(uuid()) @db.Uuid
-  title         String
-  description   String?
-  startDate     DateTime?            @db.Date
-  endDate       DateTime?            @db.Date
-  coverImage    String?
-  totalKm       Decimal?             @db.Decimal(10, 2)
+  id               String               @id @default(uuid()) @db.Uuid
+  title            String
+  description      String?
+  startDate        DateTime?            @db.Date
+  endDate          DateTime?            @db.Date
+  coverImage       String?
+  totalKm          Decimal?             @db.Decimal(10, 2)
   // Driven in the van; stats split km by it, the map and trips list filter on it.
-  withVan       Boolean              @default(false)
+  withVan          Boolean              @default(false)
   // Whole-trip OSRM route as a GeoJSON LineString.
-  routeGeometry Json?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  locations     WaypointLocation[]
-  people        WaypointTripPerson[]
+  routeGeometry    Json?
+  // The same route thinned once (~50 m, overviewOf in src/lib/waypoint/simplify.ts) when it's
+  // saved: the dashboard and big map read only this, never the full line (Supabase egress).
+  overviewGeometry Json?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  locations        WaypointLocation[]
+  people           WaypointTripPerson[]
 
   @@index([startDate])
 }

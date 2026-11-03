@@ -8,6 +8,7 @@ import { Location, TripSummary } from '@/lib/waypoint/types';
 import { toLocation, toTripSummary } from '@/lib/waypoint/rows';
 import { calculateTripRoute } from '@/lib/waypoint/routing/osrm';
 import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
+import { overviewOf } from '@/lib/waypoint/simplify';
 import { parseDateKey } from '@/lib/format';
 
 /**
@@ -32,7 +33,7 @@ export type CreateLocationInput = Omit<Location, 'id' | 'created_at' | 'updated_
 export type UpdateLocationInput = Partial<Pick<Location, 'arrival_date' | 'departure_date' | 'notes'>>;
 export type TripRoute = { total_km: number | null; route_geometry: RouteGeometry | null };
 
-const WITHOUT_GEOMETRY = { routeGeometry: true } as const;
+const WITHOUT_GEOMETRY = { routeGeometry: true, overviewGeometry: true } as const;
 const MAX_STOPS = 100;
 
 function requireTitle(title: unknown): string {
@@ -140,7 +141,7 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
   if (points.length < 2) {
     await prisma.waypointTrip.updateMany({
       where: { id: tripId },
-      data: { totalKm: null, routeGeometry: Prisma.DbNull },
+      data: { totalKm: null, routeGeometry: Prisma.DbNull, overviewGeometry: Prisma.DbNull },
     });
     revalidate();
     return { total_km: null, route_geometry: null };
@@ -153,6 +154,8 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
     data: {
       totalKm: route.distanceKm,
       routeGeometry: route.geometry ? (route.geometry as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+      // The thinned copy the overview maps read, saved together so they never disagree.
+      overviewGeometry: route.geometry ? (overviewOf(route.geometry) as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
     },
   });
   revalidate();

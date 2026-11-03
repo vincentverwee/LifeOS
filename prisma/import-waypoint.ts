@@ -9,6 +9,8 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { Prisma, PrismaClient } from "../src/generated/prisma/client";
+import { overviewOf } from "../src/lib/waypoint/simplify";
+import type { RouteGeometry } from "../src/lib/waypoint/routing/lines";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
@@ -91,6 +93,10 @@ async function main() {
       totalKm: t.total_km === null ? null : new Prisma.Decimal(t.total_km),
       routeGeometry:
         t.route_geometry == null ? Prisma.DbNull : (t.route_geometry as Prisma.InputJsonValue),
+      overviewGeometry:
+        t.route_geometry == null
+          ? Prisma.DbNull
+          : (overviewOf(t.route_geometry as RouteGeometry) as unknown as Prisma.InputJsonValue),
       createdAt: new Date(t.created_at),
     };
     await prisma.waypointTrip.upsert({ where: { id: t.id }, create: { id: t.id, ...data }, update: data });

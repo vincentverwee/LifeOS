@@ -1,3 +1,5 @@
+import { joinLines, routeLines, type RouteGeometry } from "./routing/lines";
+
 /**
  * Douglas–Peucker line simplification for route overviews. A full OSRM route
  * has thousands of points (tens to hundreds of kB); a map showing every trip
@@ -53,4 +55,23 @@ function sqSegmentDistance(p: GeoJSON.Position, a: GeoJSON.Position, b: GeoJSON.
   dx = p[0] - x;
   dy = p[1] - y;
   return dx * dx + dy * dy;
+}
+
+/**
+ * The detail stored in `overviewGeometry` (~50 m): exactly what the live all-trips maps
+ * draw. The image export wants finer lines and reads the full routes instead (it's rare).
+ */
+export const OVERVIEW_TOLERANCE = 0.0005;
+
+/** 5 decimals ≈ 1 m: far below the tolerance, and a much shorter JSON. */
+const round = (n: number) => Math.round(n * 1e5) / 1e5;
+
+/** A stored route -> its thinned overview copy (null for no route). */
+export function overviewOf(geometry: RouteGeometry | null | undefined): RouteGeometry | null {
+  return joinLines(
+    routeLines(geometry).map((line) => ({
+      type: "LineString" as const,
+      coordinates: simplifyLine(line, OVERVIEW_TOLERANCE).coordinates.map(([x, y]) => [round(x), round(y)]),
+    }))
+  );
 }
