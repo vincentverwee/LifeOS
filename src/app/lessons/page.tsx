@@ -8,6 +8,7 @@ import { StudyEntryList } from "@/components/lessons/StudyEntryList";
 import { WeekLessons } from "@/components/lessons/LessonGrid";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 import { formatHours } from "@/lib/format";
+import { formatMinutes, trackedTotals } from "@/lib/lessons/tracked";
 
 export default async function LessonsTodayPage({ searchParams }: PageProps<"/lessons">) {
   const { period: requested } = await searchParams;
@@ -44,6 +45,15 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
   const showWeekLessons = week >= 1 && week <= lessonWeekCount(period) && period.courses.length > 0;
   const todaysEntries = period.entries.filter((e) => e.date === todayKey);
   const query = `?period=${encodeURIComponent(period.id)}`;
+  // Tracked time (Ekonomika, Projectvak…): only a link here, never in the study numbers above.
+  const trackedWeek = trackedTotals(
+    period.trackedEntries.map((e) => ({
+      date: e.date,
+      minutes: Math.round(e.hours * 60),
+      key: period.trackedCourses.find((c) => c.id === e.courseId)?.name ?? "",
+    })),
+    todayKey
+  ).week;
 
   return (
     <div className="flex flex-col gap-4">
@@ -78,6 +88,21 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
           Full log ›
         </Link>
       </section>
+
+      {period.trackedCourses.length > 0 && (
+        <Link
+          href="/lessons/tracked"
+          className="tap flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+        >
+          <span className="min-w-0">
+            <span className="block font-medium text-foreground">Tracked time</span>
+            <span className="block truncate text-sm text-ink-muted">{period.trackedCourses.map((c) => c.name).join(", ")}</span>
+          </span>
+          <span className="shrink-0 text-sm text-ink-muted">
+            <span className="font-mono tabular-nums text-foreground">{formatMinutes(trackedWeek)}</span> this week ›
+          </span>
+        </Link>
+      )}
 
       {showWeekLessons && (
         <section className="rounded-xl border border-border bg-surface">

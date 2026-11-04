@@ -14,11 +14,13 @@ export const LESSON_LINKS = [
   { href: "/lessons/log", label: "Log" },
   { href: "/lessons/grid", label: "Lessons" },
   { href: "/lessons/insights", label: "Insights" },
+  { href: "/lessons/tracked", label: "Tracked" },
   { href: "/lessons/settings", label: "Settings" },
 ];
 
-/** `phone`: the log has no tab of its own there, so it lights up Today. */
 export function isTabActive(pathname: string, href: string, phone = false) {
-  if (href === "/lessons") return pathname === href || (phone && pathname.startsWith("/lessons/log"));
+  // On phones the log and Tracked time have no tab of their own, so they light up Today.
+  if (href === "/lessons")
+    return pathname === href || (phone && (pathname.startsWith("/lessons/log") || pathname.startsWith("/lessons/tracked")));
   return pathname.startsWith(href);
 }

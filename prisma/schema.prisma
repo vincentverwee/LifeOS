@@ -373,16 +373,19 @@ model StudyTimer {
 
 // "color" is a palette slot key, like Category.color.
 model StudyCourse {
-  id        String       @id @default(cuid())
-  periodId  String
-  period    StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
-  name      String
-  color     String       @default("blue")
-  sortOrder Int          @default(0)
-  hasWc     Boolean      @default(false)
-  entries   StudyEntry[]
-  exams     StudyExam[]
-  lessons   LessonMark[]
+  id            String       @id @default(cuid())
+  periodId      String
+  period        StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  name          String
+  color         String       @default("blue")
+  sortOrder     Int          @default(0)
+  hasWc         Boolean      @default(false)
+  // Off = tracked time (e.g. Ekonomika, Projectvak): logged like study, but left out of study
+  // hours, goals, comparisons, Insights, the grid and notifications; shown on /lessons/tracked.
+  countsAsStudy Boolean      @default(true)
+  entries       StudyEntry[]
+  exams         StudyExam[]
+  lessons       LessonMark[]
 
   @@unique([periodId, name])
 }

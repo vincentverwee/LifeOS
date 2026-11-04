@@ -88,7 +88,8 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
       },
     }),
     prisma.studyEntry.findMany({
-      where: { date: { in: dates } },
+      // Tracked time (courses with countsAsStudy off) isn't study, so it stays out of memories.
+      where: { date: { in: dates }, OR: [{ courseId: null }, { course: { countsAsStudy: true } }] },
       select: { date: true, hours: true, note: true, periodId: true, course: { select: { name: true } } },
     }),
     prisma.outfitWear.findMany({

@@ -182,16 +182,18 @@ function CourseForm({
   const [name, setName] = useState(course?.name ?? "");
   const [color, setColor] = useState<CategoryColorSlot>(course?.color ?? nextColor);
   const [hasWc, setHasWc] = useState(course?.hasWc ?? false);
+  const [countsAsStudy, setCountsAsStudy] = useState(course?.countsAsStudy ?? true);
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const fields = { name, color, hasWc };
+    const fields = { name, color, hasWc: countsAsStudy && hasWc, countsAsStudy };
     run(
       () => (course ? updateStudyCourse(course.id, fields) : createStudyCourse(periodId, fields)),
       () => {
         if (!course) {
           setName("");
           setHasWc(false);
+          setCountsAsStudy(true);
         }
         onDone?.();
       }
@@ -205,10 +207,27 @@ function CourseForm({
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Database Technologies" className={input} />
       </label>
       <ColorPicker value={color} onChange={setColor} />
-      <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
-        <input type="checkbox" checked={hasWc} onChange={(e) => setHasWc(e.target.checked)} className="h-5 w-5 accent-[var(--color-primary)]" />
-        Has WC (exercise sessions) next to HC
+      <label className="flex min-h-11 items-start gap-2 text-sm text-foreground">
+        <input
+          type="checkbox"
+          checked={countsAsStudy}
+          onChange={(e) => setCountsAsStudy(e.target.checked)}
+          className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-primary)]"
+        />
+        <span>
+          Counts as study
+          <span className="block text-xs text-ink-muted">
+            Off for things like Ekonomika or Projectvak: you log time on it as usual, but it stays out of study hours,
+            goals, Insights, the grid and notifications, and shows under Tracked time.
+          </span>
+        </span>
       </label>
+      {countsAsStudy && (
+        <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
+          <input type="checkbox" checked={hasWc} onChange={(e) => setHasWc(e.target.checked)} className="h-5 w-5 accent-[var(--color-primary)]" />
+          Has WC (exercise sessions) next to HC
+        </label>
+      )}
       {error && <p className="text-sm text-critical">{error}</p>}
       <div className="flex gap-2">
         <SaveButton pending={isPending}>{course ? "Save course" : "Add course"}</SaveButton>
@@ -225,15 +244,19 @@ function CourseForm({
 export function CourseManager({ period }: { period: StudyPeriod }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const { error, isPending, run } = useAction();
-  const used = new Set(period.courses.map((c) => c.color));
+  // Study courses and tracked ones (countsAsStudy off) together, in their order.
+  const allCourses = [...period.courses, ...period.trackedCourses].sort(
+    (a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)
+  );
+  const used = new Set(allCourses.map((c) => c.color));
   const nextColor = CATEGORY_COLOR_SLOTS.find((s) => !used.has(s)) ?? CATEGORY_COLOR_SLOTS[0];
 
   return (
     <div className="flex flex-col gap-3">
       {error && <p className="text-sm text-critical">{error}</p>}
-      {period.courses.length > 0 && (
+      {allCourses.length > 0 && (
         <ul className="overflow-hidden rounded-xl border border-border bg-surface">
-          {period.courses.map((course) => (
+          {allCourses.map((course) => (
             <li key={course.id} className="border-b border-border p-3 last:border-b-0">
               {editingId === course.id ? (
                 <CourseForm course={course} periodId={period.id} nextColor={nextColor} onDone={() => setEditingId(null)} />
@@ -242,7 +265,11 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                   <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${course.color})` }} aria-hidden="true" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-medium text-foreground">{course.name}</span>
-                    {course.hasWc && <span className="truncate text-xs text-ink-muted">HC + WC</span>}
+                    {!course.countsAsStudy ? (
+                      <span className="truncate text-xs text-ink-muted">Tracked time, not study</span>
+                    ) : (
+                      course.hasWc && <span className="truncate text-xs text-ink-muted">HC + WC</span>
+                    )}
                   </span>
                   <button type="button" onClick={() => setEditingId(course.id)} className="btn btn-ghost min-h-11 px-4 text-sm">
                     Edit

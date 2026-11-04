@@ -27,7 +27,7 @@ function entry(date: string, hours: number, courseId: string | null = null, note
 }
 
 function course(id: string): StudyCourse {
-  return { id, name: id.toUpperCase(), color: "blue", sortOrder: 0, hasWc: false };
+  return { id, name: id.toUpperCase(), color: "blue", sortOrder: 0, hasWc: false, countsAsStudy: true };
 }
 
 function period(over: Partial<StudyPeriod> = {}): StudyPeriod {
@@ -43,6 +43,8 @@ function period(over: Partial<StudyPeriod> = {}): StudyPeriod {
     entries: [],
     exams: [],
     marks: [],
+    trackedCourses: [],
+    trackedEntries: [],
     ...over,
   };
 }

@@ -9,6 +9,8 @@ export type StudyCourse = {
   color: CategoryColorSlot;
   sortOrder: number;
   hasWc: boolean;
+  /** Off = tracked time (Ekonomika, Projectvak): logged like study, kept out of every study number. */
+  countsAsStudy: boolean;
 };
 
 export type StudyEntry = {
@@ -53,6 +55,13 @@ export type StudyPeriod = {
   /** sorted by date */
   exams: StudyExam[];
   marks: LessonMark[];
+  /**
+   * Courses with `countsAsStudy` off and their entries. Kept apart so every study number,
+   * chart, grid and notification (which read `courses`/`entries`/`exams`/`marks`) leaves
+   * them out; only Log time, Settings and /lessons/tracked use them. Empty on lean periods.
+   */
+  trackedCourses: StudyCourse[];
+  trackedEntries: StudyEntry[];
 };
 
 /** The running study timer. `startedAt` is an ISO instant. */

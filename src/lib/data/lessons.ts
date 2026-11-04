@@ -42,24 +42,36 @@ function toHeader(p: HeaderRow) {
   };
 }
 
+/** Entries that count as study: no course, or a course with `countsAsStudy` on. */
+export const STUDY_ENTRY_WHERE = { OR: [{ courseId: null }, { course: { countsAsStudy: true } }] };
+
 function toStudyPeriod(p: FullRow): StudyPeriod {
+  const allCourses = p.courses.map((c) => ({
+    id: c.id,
+    name: c.name,
+    color: isCategoryColorSlot(c.color) ? c.color : ("blue" as const),
+    sortOrder: c.sortOrder,
+    hasWc: c.hasWc,
+    countsAsStudy: c.countsAsStudy,
+  }));
+  const tracked = new Set(allCourses.filter((c) => !c.countsAsStudy).map((c) => c.id));
+  const allEntries = p.entries.map((e) => ({
+    id: e.id,
+    date: dayKey(e.date),
+    hours: e.hours.toNumber(),
+    courseId: e.courseId,
+    note: e.note,
+  }));
+  const isTracked = (e: { courseId: string | null }) => e.courseId !== null && tracked.has(e.courseId);
+  // Study pages read courses/entries/exams/marks only, so tracked time can't leak into them.
+  const studyCourses = p.courses.filter((c) => !tracked.has(c.id));
   return {
     ...toHeader(p),
-    courses: p.courses.map((c) => ({
-      id: c.id,
-      name: c.name,
-      color: isCategoryColorSlot(c.color) ? c.color : "blue",
-      sortOrder: c.sortOrder,
-      hasWc: c.hasWc,
-    })),
-    entries: p.entries.map((e) => ({
-      id: e.id,
-      date: dayKey(e.date),
-      hours: e.hours.toNumber(),
-      courseId: e.courseId,
-      note: e.note,
-    })),
-    exams: p.courses
+    courses: allCourses.filter((c) => c.countsAsStudy),
+    entries: allEntries.filter((e) => !isTracked(e)),
+    trackedCourses: allCourses.filter((c) => !c.countsAsStudy),
+    trackedEntries: allEntries.filter(isTracked),
+    exams: studyCourses
       .flatMap((c) =>
         c.exams.map((x) => ({
           id: x.id,
@@ -70,7 +82,7 @@ function toStudyPeriod(p: FullRow): StudyPeriod {
         }))
       )
       .sort((a, b) => a.date.localeCompare(b.date)),
-    marks: p.courses.flatMap((c) =>
+    marks: studyCourses.flatMap((c) =>
       c.lessons
         .filter((m) => isLessonStatus(m.status))
         .map((m) => ({
@@ -103,7 +115,13 @@ export async function loadStudyPeriods(
   const rows: (HeaderRow & { entries: { date: Date; hours: { toNumber(): number } }[] })[] = peerEntries
     ? await prisma.studyPeriod.findMany({
         orderBy: { startDate: "desc" },
-        include: { entries: { orderBy: [{ date: "asc" }, { createdAt: "asc" }], select: { date: true, hours: true } } },
+        include: {
+          entries: {
+            where: STUDY_ENTRY_WHERE,
+            orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+            select: { date: true, hours: true },
+          },
+        },
       })
     : (await prisma.studyPeriod.findMany({ orderBy: { startDate: "desc" } })).map((p) => ({ ...p, entries: [] }));
   const lean: StudyPeriod[] = rows.map((p) => ({
@@ -111,6 +129,8 @@ export async function loadStudyPeriods(
     courses: [],
     exams: [],
     marks: [],
+    trackedCourses: [],
+    trackedEntries: [],
     entries: p.entries.map((e, i) => ({
       id: `${p.id}:${i}`,
       date: dayKey(e.date),
@@ -162,6 +182,65 @@ export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance 
       : null,
     timer,
   };
+}
+
+export type TrackedEntry = {
+  id: string;
+  date: string;
+  hours: number;
+  note: string | null;
+  courseId: string;
+  /** Groups the overview: the same activity has a course per semester. */
+  courseName: string;
+  color: ReturnType<typeof slot>;
+  periodName: string;
+};
+
+const slot = (color: string) => (isCategoryColorSlot(color) ? color : ("blue" as const));
+
+/**
+ * Tracked time (courses with `countsAsStudy` off) from `sinceKey` on, across every
+ * semester, newest first. Only /lessons/tracked and the Today card read this.
+ */
+export async function getTrackedEntries(sinceKey: string): Promise<TrackedEntry[]> {
+  const rows = await prisma.studyEntry.findMany({
+    where: { date: { gte: new Date(`${sinceKey}T00:00:00Z`) }, course: { countsAsStudy: false } },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    select: {
+      id: true,
+      date: true,
+      hours: true,
+      note: true,
+      course: { select: { id: true, name: true, color: true } },
+      period: { select: { name: true } },
+    },
+  });
+  return rows.flatMap((r) =>
+    r.course
+      ? [
+          {
+            id: r.id,
+            date: dayKey(r.date),
+            hours: r.hours.toNumber(),
+            note: r.note,
+            courseId: r.course.id,
+            courseName: r.course.name,
+            color: slot(r.course.color),
+            periodName: r.period.name,
+          },
+        ]
+      : []
+  );
+}
+
+/** Every tracked course (any semester), for editing entries on /lessons/tracked. */
+export async function getTrackedCourses() {
+  const rows = await prisma.studyCourse.findMany({
+    where: { countsAsStudy: false },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, color: true, sortOrder: true, hasWc: true, countsAsStudy: true },
+  });
+  return rows.map((c) => ({ ...c, color: slot(c.color) }));
 }
 
 /** The running study timer with its courses (in course order), or null. */

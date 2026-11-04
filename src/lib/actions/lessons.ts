@@ -365,7 +365,7 @@ export async function deleteStudyPeriod(id: string): Promise<LessonsResult> {
 
 // --- Courses ---
 
-export type StudyCourseInput = { name: string; color: string; hasWc: boolean };
+export type StudyCourseInput = { name: string; color: string; hasWc: boolean; countsAsStudy: boolean };
 
 /** `currentName`: a course's existing name may stay longer than the limit (from before it). */
 function validateCourse(input: StudyCourseInput, currentName?: string): string | null {
@@ -389,6 +389,7 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
         name,
         color: input.color,
         hasWc: input.hasWc,
+        countsAsStudy: input.countsAsStudy !== false,
         sortOrder: (last?.sortOrder ?? 0) + 10,
       },
     });
@@ -412,7 +413,7 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
   try {
     await prisma.studyCourse.update({
       where: { id },
-      data: { name, color: input.color, hasWc: input.hasWc },
+      data: { name, color: input.color, hasWc: input.hasWc, countsAsStudy: input.countsAsStudy !== false },
     });
   } catch (e) {
     return knownError(e, {

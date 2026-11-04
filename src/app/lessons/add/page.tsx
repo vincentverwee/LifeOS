@@ -34,7 +34,8 @@ export default async function AddStudyTimePage({ searchParams }: PageProps<"/les
           periodId={period.id}
           startDate={period.startDate}
           endDate={period.endDate}
-          courses={period.courses}
+          // Tracked courses (Ekonomika, Projectvak…) are logged here too; they just don't count as study.
+          courses={[...period.courses, ...period.trackedCourses].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))}
           timer={timer}
         />
       ) : (
