@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getTrackedCourses, getTrackedEntries } from "@/lib/data/lessons";
+import { getStudyDays, getTrackedCourses, getTrackedEntries } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { addDays } from "@/lib/reminders/schedule";
 import {
@@ -15,6 +15,9 @@ import { Disclosure } from "@/components/Disclosure";
 
 const WEEKS = 12;
 const LATEST = 10;
+/** The weekly bars' study segment; not a course name, so it can't clash with one. */
+const SCHOOL = "\u0000school";
+const SCHOOL_COLOR = "var(--color-primary)";
 const shortDate = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 
 /**
@@ -25,16 +28,28 @@ export default async function TrackedTimePage() {
   const todayKey = await getTodayKey();
   const yearStart = academicYearStart(todayKey);
   const since = [yearStart, addDays(weekStart(todayKey), -7 * (WEEKS - 1))].sort()[0];
-  const [entries, courses] = await Promise.all([getTrackedEntries(since), getTrackedCourses()]);
+  const [entries, courses, studyDays] = await Promise.all([
+    getTrackedEntries(since),
+    getTrackedCourses(),
+    getStudyDays(since),
+  ]);
 
   const lite = entries.map((e) => ({ date: e.date, minutes: Math.round(e.hours * 60), key: e.courseName }));
   const totals = trackedTotals(lite, todayKey);
-  const weeks = trackedWeeks(lite, todayKey, WEEKS);
+  // The weekly bars also show school (everything that counts as study), to compare with.
+  const school = studyDays.map((d) => ({ date: d.date, minutes: Math.round(d.hours * 60), key: SCHOOL }));
+  const weeks = trackedWeeks([...school, ...lite], todayKey, WEEKS);
   const byName = trackedByKey(lite, yearStart, todayKey);
   // One colour per activity: its newest course's.
   const colorOf = new Map<string, string>();
   for (const e of entries) if (!colorOf.has(e.courseName)) colorOf.set(e.courseName, e.color);
   const names = [...new Set([...byName.map((b) => b.key), ...entries.map((e) => e.courseName)])];
+  const colorFor = (key: string) => (key === SCHOOL ? SCHOOL_COLOR : `var(--color-tag-${colorOf.get(key) ?? "blue"})`);
+  const labelFor = (key: string) => (key === SCHOOL ? "School" : key);
+  // Legend: each series' total over the shown weeks, school first.
+  const weekKeys = [SCHOOL, ...names]
+    .map((key) => ({ key, minutes: weeks.reduce((total, w) => total + (w.byKey[key] ?? 0), 0) }))
+    .filter((k) => k.minutes > 0);
   const maxWeek = Math.max(1, ...weeks.map((w) => w.total));
   const maxName = Math.max(1, ...byName.map((b) => b.minutes));
   const listEntries = entries.map(({ id, date, hours, courseId, note }) => ({ id, date, hours, courseId, note }));
@@ -44,7 +59,7 @@ export default async function TrackedTimePage() {
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Tracked time</h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Courses with “Counts as study” off. Log them with Log time; they stay out of your study numbers.
+          Courses with “Counts as study” off. Log them with Log time; they stay out of your study numbers. The weekly bars show school next to them.
         </p>
       </div>
 
@@ -99,7 +114,20 @@ export default async function TrackedTimePage() {
           )}
 
           <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
-            <h2 className="font-semibold text-foreground">Last {WEEKS} weeks</h2>
+            <div className="flex flex-col gap-1">
+              <h2 className="font-semibold text-foreground">Last {WEEKS} weeks</h2>
+              {weekKeys.length > 0 && (
+                <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+                  {weekKeys.map((k) => (
+                    <li key={k.key} className="flex items-center gap-1.5">
+                      <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: colorFor(k.key) }} aria-hidden="true" />
+                      <span>{labelFor(k.key)}</span>
+                      <span className="font-mono tabular-nums text-foreground">{formatMinutes(k.minutes)}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <ul className="flex flex-col gap-2">
               {[...weeks].reverse().map((w) => (
                 <li key={w.start} className="grid grid-cols-[4.5rem_1fr_4.5rem] items-center gap-3 text-sm">
@@ -107,14 +135,16 @@ export default async function TrackedTimePage() {
                   <div
                     className="flex h-2.5 w-full overflow-hidden rounded-full bg-surface-muted"
                     role="img"
-                    aria-label={`${formatMinutes(w.total)} in the week of ${w.start}`}
+                    aria-label={`Week of ${w.start}: ${
+                      weekKeys.filter((k) => w.byKey[k.key]).map((k) => `${labelFor(k.key)} ${formatMinutes(w.byKey[k.key])}`).join(", ") || "nothing"
+                    }`}
                   >
-                    {names.map((name) =>
+                    {[SCHOOL, ...names].map((name) =>
                       w.byKey[name] ? (
                         <div
                           key={name}
                           className="h-full"
-                          style={{ width: `${(w.byKey[name] / maxWeek) * 100}%`, backgroundColor: `var(--color-tag-${colorOf.get(name) ?? "blue"})` }}
+                          style={{ width: `${(w.byKey[name] / maxWeek) * 100}%`, backgroundColor: colorFor(name) }}
                         />
                       ) : null
                     )}

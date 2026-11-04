@@ -233,6 +233,16 @@ export async function getTrackedEntries(sinceKey: string): Promise<TrackedEntry[
   );
 }
 
+/** Study hours (entries that count as study, every semester) per day since `sinceKey`, for comparing with tracked time. */
+export async function getStudyDays(sinceKey: string): Promise<{ date: string; hours: number }[]> {
+  const rows = await prisma.studyEntry.groupBy({
+    by: ["date"],
+    where: { date: { gte: new Date(`${sinceKey}T00:00:00Z`) }, ...STUDY_ENTRY_WHERE },
+    _sum: { hours: true },
+  });
+  return rows.map((r) => ({ date: dayKey(r.date), hours: r._sum.hours?.toNumber() ?? 0 })).filter((r) => r.hours > 0);
+}
+
 /** Every tracked course (any semester), for editing entries on /lessons/tracked. */
 export async function getTrackedCourses() {
   const rows = await prisma.studyCourse.findMany({
