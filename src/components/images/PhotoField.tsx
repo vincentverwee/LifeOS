@@ -19,6 +19,7 @@ export function PhotoField({
   onChange,
   onShrinking,
   removable = true,
+  cutoutSide,
   className = "h-28 w-28",
 }: {
   label: string;
@@ -33,6 +34,8 @@ export function PhotoField({
   onShrinking?: (shrinking: boolean) => void;
   /** Offer "Remove photo" (off where a photo is required, e.g. stickers). */
   removable?: boolean;
+  /** Longest side of a cut-out in px (`resizeImage`, default 700); stickers are shown small. */
+  cutoutSide?: number;
   /** Size of the preview box. */
   className?: string;
 }) {
@@ -60,7 +63,7 @@ export function PhotoField({
     setError(null);
     busy(true);
     try {
-      const small = await resizeImage(file);
+      const small = await resizeImage(file, { cutoutSide });
       setPhoto(small);
       setPreview(URL.createObjectURL(small));
       setRemoved(false);

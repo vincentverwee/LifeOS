@@ -2,13 +2,16 @@
 
 import { useState, useTransition } from 'react';
 import { Plus, Sticker as StickerIcon } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/waypoint/ui/dialog';
+import { Sheet } from '@/components/recipes/Sheet';
 import { PhotoField } from '@/components/images/PhotoField';
 import { StickerImage } from '@/components/waypoint/StickerImage';
 import { createSticker, deleteSticker, updateSticker } from '@/lib/actions/stickers';
 import type { Sticker } from '@/lib/waypoint/stickers';
 
 type Stop = { id: string; name: string; city: string | null };
+
+/** Longest side of a sticker cut-out (also `prisma/shrink-photos.ts`). */
+const STICKER_SIDE = 500;
 
 const FIELD = 'rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground';
 
@@ -62,23 +65,19 @@ export function TripStickers({ tripId, stickers, stops }: { tripId: string; stic
       </ul>
       {stickers.length === 0 && <p className="text-sm text-muted-foreground">Add the sticker from this trip.</p>}
 
-      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="sm:max-w-[460px]">
-          <DialogHeader>
-            <DialogTitle>{editing === 'new' ? 'New sticker' : 'Sticker'}</DialogTitle>
-          </DialogHeader>
-          {editing !== null && (
-            <StickerForm
-              // A fresh form per sticker.
-              key={editing === 'new' ? 'new' : editing.id}
-              tripId={tripId}
-              sticker={editing === 'new' ? null : editing}
-              stops={stops}
-              onDone={() => setEditing(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* A bottom sheet on phones (the form is taller than the screen; a centred dialog scrolls badly there). */}
+      <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title={editing === 'new' ? 'New sticker' : 'Sticker'}>
+        {editing !== null && (
+          <StickerForm
+            // A fresh form per sticker.
+            key={editing === 'new' ? 'new' : editing.id}
+            tripId={tripId}
+            sticker={editing === 'new' ? null : editing}
+            stops={stops}
+            onDone={() => setEditing(null)}
+          />
+        )}
+      </Sheet>
     </div>
   );
 }
@@ -146,6 +145,8 @@ function StickerForm({
         empty={<StickerImage photoId={null} name="No photo" className="h-full w-full" />}
         // A sticker always has a photo: it can be replaced, not removed.
         removable={false}
+        // Stickers show at ~100–150 px; 500 is sharp on a 3× screen.
+        cutoutSide={STICKER_SIDE}
         onChange={(next) => setPhoto(next)}
         onShrinking={setShrinking}
       />

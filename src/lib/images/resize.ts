@@ -1,3 +1,5 @@
+import { PHOTO_LIMITS } from "./types";
+
 /** A decoded photo, upright (EXIF rotation applied), ready to draw. */
 type Source = { image: CanvasImageSource; width: number; height: number; close: () => void };
 
@@ -44,12 +46,30 @@ const toBlob = (canvas: HTMLCanvasElement, type: string, quality?: number) =>
   new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, quality));
 
 /**
+ * A cut-out as a PNG with at most 256 colours (lossy, like TinyPNG; see-through edges
+ * kept): usually 3–4× smaller than the browser's own PNG, and stickers look the same.
+ * Falls back to the plain PNG if the encoder can't load.
+ */
+async function smallPng(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D): Promise<Blob | null> {
+  try {
+    const { default: UPNG } = await import("upng-js");
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const png = UPNG.encode([data.buffer as ArrayBuffer], canvas.width, canvas.height, 256);
+    return new Blob([png], { type: "image/png" });
+  } catch {
+    return toBlob(canvas, "image/png");
+  }
+}
+
+/**
  * Shrinks a photo in the browser before it is uploaded. A normal photo becomes a JPEG,
  * longest side 900 px (~100 KB). A photo with its background removed keeps it empty
- * (the app fills it with its own colour): WebP where the browser can write it, else PNG
- * at 700 px. Returns the blob; its `type` says which.
+ * (the app fills it with its own colour), longest side `cutoutSide`: WebP where the
+ * browser can write it, else a 256-colour PNG (Safari, so every iPhone cut-out), made
+ * smaller still if it would pass `PHOTO_LIMITS` (server actions cap requests at 1 MB).
+ * Returns the blob; its `type` says which.
  */
-export async function resizeImage(file: File): Promise<Blob> {
+export async function resizeImage(file: File, { cutoutSide = 700 }: { cutoutSide?: number } = {}): Promise<Blob> {
   const source = await decode(file);
   try {
     const { canvas, ctx } = draw(source, 900);
@@ -58,13 +78,19 @@ export async function resizeImage(file: File): Promise<Blob> {
       if (!jpeg) throw new Error("Can't shrink the photo.");
       return jpeg;
     }
-    const webp = await toBlob(canvas, "image/webp", 0.8);
-    // Browsers that can't write WebP hand back a PNG instead.
-    if (webp?.type === "image/webp") return webp;
-    const small = draw(source, 700).canvas;
-    const png = await toBlob(small, "image/png");
-    if (!png) throw new Error("Can't shrink the photo.");
-    return png;
+    for (const side of [1, 0.8, 0.64, 0.5].map((f) => Math.round(cutoutSide * f))) {
+      const small = draw(source, side);
+      const webp = await toBlob(small.canvas, "image/webp", 0.8);
+      // Browsers that can't write WebP hand back a PNG instead.
+      if (webp?.type === "image/webp") {
+        if (webp.size <= PHOTO_LIMITS["image/webp"]) return webp;
+        continue;
+      }
+      const png = await smallPng(small.canvas, small.ctx);
+      if (!png) throw new Error("Can't shrink the photo.");
+      if (png.size <= PHOTO_LIMITS["image/png"]) return png;
+    }
+    throw new Error("That photo is too big.");
   } finally {
     source.close();
   }
