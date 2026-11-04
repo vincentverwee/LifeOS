@@ -37,6 +37,15 @@ export function keepTrip(filter: TripFilter, trip: { id: string; with_van: boole
   return true;
 }
 
+/** "3 van trips" / "3 trips without the van" / "3 trips with Louise" / "3 trips" for a page subtitle. */
+export function describeTripFilter(filter: TripFilter, count: number): string {
+  const trips = count === 1 ? 'trip' : 'trips';
+  if (filter.kind === 'van') return `${count} van ${trips}`;
+  if (filter.kind === 'novan') return `${count} ${trips} without the van`;
+  if (filter.kind === 'person') return `${count} ${trips} with ${filter.name}`;
+  return `${count} ${trips}`;
+}
+
 /** The query string that recreates it, always explicit (the default differs per page). */
 export function tripFilterQuery(filter: TripFilter): string {
   if (filter.kind === 'person') return `?person=${encodeURIComponent(filter.personId)}`;

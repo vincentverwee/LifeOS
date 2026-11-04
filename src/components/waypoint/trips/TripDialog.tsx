@@ -21,6 +21,8 @@ interface TripDialogProps {
   onOpenChange: (open: boolean) => void;
   trip?: TripSummary | null;
   onSave: (data: CreateTripInput) => Promise<void>;
+  /** A new trip starts with the van switch on (the list is showing van trips). */
+  defaultVan?: boolean;
 }
 
 const EMPTY: CreateTripInput = {
@@ -31,7 +33,7 @@ const EMPTY: CreateTripInput = {
   with_van: false,
 };
 
-export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps) {
+export function TripDialog({ open, onOpenChange, trip, onSave, defaultVan = false }: TripDialogProps) {
   const [form, setForm] = useState<CreateTripInput>(EMPTY);
   const [saving, setSaving] = useState(false);
 
@@ -49,7 +51,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave }: TripDialogProps
             end_date: trip.end_date ?? '',
             with_van: trip.with_van,
           }
-        : EMPTY
+        : { ...EMPTY, with_van: defaultVan }
     );
   }
 

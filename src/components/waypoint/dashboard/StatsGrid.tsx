@@ -4,27 +4,29 @@ import { DashboardStats } from '@/lib/waypoint/types';
 
 interface StatsGridProps {
   stats: DashboardStats;
+  /** The page shows van trips: the cards say so. */
+  van?: boolean;
 }
 
-export function StatsGrid({ stats }: StatsGridProps) {
+export function StatsGrid({ stats, van = false }: StatsGridProps) {
   const cards = [
     {
       label: 'Countries',
       value: stats.countries_visited,
       icon: Globe,
-      description: 'Unique countries visited',
+      description: van ? 'Countries the van has been' : 'Unique countries visited',
     },
     {
-      label: 'Trips',
+      label: van ? 'Van trips' : 'Trips',
       value: stats.trips_count,
       icon: Route,
-      description: 'Road trips completed',
+      description: van ? 'Trips in the van' : 'Road trips completed',
     },
     {
-      label: 'Km Driven',
+      label: van ? 'Van km' : 'Km Driven',
       value: stats.total_km.toLocaleString(),
       icon: Navigation,
-      description: 'Total kilometers on the road',
+      description: van ? 'Kilometres in the van' : 'Total kilometers on the road',
     },
   ];
 

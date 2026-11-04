@@ -12,6 +12,7 @@ import { getDashboardStats } from '@/lib/waypoint/stats';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { routeLines } from '@/lib/waypoint/routing/lines';
 import {
+  describeTripFilter,
   keepTrip,
   readTripFilter,
   TRIP_FILTER_COOKIE,
@@ -28,16 +29,16 @@ export default async function DashboardPage({ searchParams }: PageProps<'/waypoi
     getAllLocations(),
     getTripCompanions(),
   ]);
-  // Stats and the recent list are about every trip; the map follows the same choice as the
-  // Map tab (?trip= / ?person=, else the last one picked here, else the van trips).
-  const stats = getDashboardStats(allTrips, allLocations);
-  const recentTrips = allTrips.slice(0, 5);
+  // Everything follows the choice shared by every Waypoint page (?trip= / ?person=, else
+  // the last one picked on this device, else the van trips): van-first.
   const anyVan = allTrips.some((t) => t.with_van);
   const saved = (await cookies()).get(TRIP_FILTER_COOKIE)?.value;
   const filter = readTripFilter(params, companions, { anyVan, saved });
   const trips = allTrips.filter((t) => keepTrip(filter, t));
   const shownIds = new Set(trips.map((t) => t.id));
   const locations = allLocations.filter((l) => shownIds.has(l.trip_id));
+  const stats = getDashboardStats(trips, locations);
+  const recentTrips = trips.slice(0, 5);
   const tripLabels = Object.fromEntries(trips.map((t) => [t.id, t.title]));
   const tripColors = assignTripColors(trips);
   const routes = trips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
@@ -48,10 +49,13 @@ export default async function DashboardPage({ searchParams }: PageProps<'/waypoi
       <div className="mx-auto max-w-7xl space-y-6">
         <div>
           <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Your travel journey at a glance</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {filter.kind === 'van' ? 'Your van at a glance' : 'Your travel journey at a glance'} ·{' '}
+            {describeTripFilter(filter, trips.length)}
+          </p>
         </div>
 
-        <StatsGrid stats={stats} />
+        <StatsGrid stats={stats} van={filter.kind === 'van'} />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
           <div className="flex min-w-0 flex-col gap-3">
@@ -86,7 +90,7 @@ export default async function DashboardPage({ searchParams }: PageProps<'/waypoi
               selectable
             />
           </div>
-          <RecentTrips trips={recentTrips} />
+          <RecentTrips trips={recentTrips} title={filter.kind === 'van' ? 'Recent van trips' : undefined} />
         </div>
       </div>
     </>

@@ -24,14 +24,18 @@ import { HomeWeather } from "@/components/home/HomeWeather";
 import { logout } from "@/lib/actions/auth";
 import { authDisabled } from "@/lib/authToken";
 
-type WaypointGlance = { totalKm: number; trips: number; latest: string | null };
+type WaypointGlance = { totalKm: number; trips: number; latest: string | null; van: boolean };
 
+/** Van-first: the van's km and trips once any trip is in the van, else every trip. */
 async function waypointGlance(): Promise<WaypointGlance> {
-  const trips = await getAllTripSummaries(); // newest first
+  const all = await getAllTripSummaries(); // newest first
+  const vanTrips = all.filter((t) => t.with_van);
+  const trips = vanTrips.length > 0 ? vanTrips : all;
   return {
     totalKm: trips.reduce((sum, t) => sum + (t.total_km ?? 0), 0),
     trips: trips.length,
     latest: trips[0]?.title ?? null,
+    van: vanTrips.length > 0,
   };
 }
 
@@ -341,7 +345,8 @@ async function WaypointTileBody() {
         {kmFormatter.format(waypoint.totalKm)} <span className="text-lg text-ink-muted">km</span>
       </p>
       <p className="text-sm text-ink-muted">
-        {waypoint.trips} {waypoint.trips === 1 ? "trip" : "trips"}
+        {waypoint.trips} {waypoint.van ? "van " : ""}
+        {waypoint.trips === 1 ? "trip" : "trips"}
       </p>
       {waypoint.latest && (
         <p className="mt-4 truncate text-sm text-foreground">

@@ -9,6 +9,7 @@ import { getTripCompanions } from '@/lib/data/people';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { routeLines } from '@/lib/waypoint/routing/lines';
 import {
+  describeTripFilter,
   keepTrip,
   readTripFilter,
   TRIP_FILTER_COOKIE,
@@ -37,15 +38,7 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
   const tripColors = assignTripColors(trips);
   const routes = trips.flatMap((t) => routeLines(t.route_geometry).map((geometry) => ({ tripId: t.id, geometry })));
   const hasFilter = companions.length > 0 || anyVan;
-  const count = `${trips.length} ${trips.length === 1 ? 'trip' : 'trips'}`;
-  const subtitle =
-    filter.kind === 'person'
-      ? `${count} with ${filter.name}`
-      : filter.kind === 'van'
-        ? `${count} in the van`
-        : filter.kind === 'novan'
-          ? `${count} without the van`
-          : 'Explore your routes';
+  const subtitle = filter.kind === 'all' ? 'Explore your routes' : describeTripFilter(filter, trips.length);
 
   return (
     <>

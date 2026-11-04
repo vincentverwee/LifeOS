@@ -7,6 +7,8 @@ import { CalendarDays, Navigation, ImageDown } from 'lucide-react';
 
 interface RecentTripsProps {
   trips: Trip[];
+  /** "Recent van trips" while the page shows van trips. */
+  title?: string;
 }
 
 function formatDate(dateStr: string) {
@@ -17,13 +19,14 @@ function formatDate(dateStr: string) {
   });
 }
 
-export function RecentTrips({ trips }: RecentTripsProps) {
+export function RecentTrips({ trips, title = 'Recent Trips' }: RecentTripsProps) {
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Recent Trips</CardTitle>
+        <CardTitle className="text-base font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
+        {trips.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No trips here yet.</p>}
         {trips.map((trip, i) => (
           // CSS keyframes rather than Framer Motion. The old timing also waited 300ms before
           // the first row even started (then +70ms per row), so the list took ~0.9s to settle;

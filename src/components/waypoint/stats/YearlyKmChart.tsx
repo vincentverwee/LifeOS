@@ -3,12 +3,14 @@ import { YearlyStats } from '@/lib/waypoint/stats';
 
 interface YearlyKmChartProps {
   data: YearlyStats[];
+  /** Split each bar into van / other (off when the page already shows only one kind). */
+  split?: boolean;
 }
 
 /** Km per year; each bar is split into van (solid) and other (lighter) once any trip is in the van. */
-export function YearlyKmChart({ data }: YearlyKmChartProps) {
+export function YearlyKmChart({ data, split = true }: YearlyKmChartProps) {
   const maxKm = Math.max(...data.map((d) => d.totalKm), 1);
-  const anyVan = data.some((d) => d.vanKm > 0);
+  const anyVan = split && data.some((d) => d.vanKm > 0);
 
   return (
     <Card className="border-border/50">
@@ -48,7 +50,7 @@ export function YearlyKmChart({ data }: YearlyKmChartProps) {
                   </span>
                   <span className="text-right font-mono tabular-nums">
                     {entry.totalKm.toLocaleString()} km
-                    {entry.vanKm > 0 && (
+                    {anyVan && entry.vanKm > 0 && (
                       <span className="block text-xs font-sans text-muted-foreground">
                         {entry.vanKm.toLocaleString()} by van
                       </span>
