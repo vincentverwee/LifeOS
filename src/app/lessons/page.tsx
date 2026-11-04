@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
+import { getStudyTimer, getTrackedEntries, loadStudyPeriods } from "@/lib/data/lessons";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, lessonWeekCount, lessonWeekOf, phaseLabel } from "@/lib/lessons/stats";
@@ -8,14 +8,16 @@ import { StudyEntryList } from "@/components/lessons/StudyEntryList";
 import { WeekLessons } from "@/components/lessons/LessonGrid";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 import { formatHours } from "@/lib/format";
-import { formatMinutes, trackedTotals } from "@/lib/lessons/tracked";
+import { formatMinutes, trackedTotals, weekStart } from "@/lib/lessons/tracked";
 
 export default async function LessonsTodayPage({ searchParams }: PageProps<"/lessons">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const [{ periods, period }, timer] = await Promise.all([
+  const [{ periods, period }, timer, trackedThisWeek] = await Promise.all([
     loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true }),
     getStudyTimer(),
+    // Across semesters, so the card is right whichever period is shown.
+    getTrackedEntries(weekStart(todayKey)),
   ]);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
@@ -47,13 +49,12 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
   const query = `?period=${encodeURIComponent(period.id)}`;
   // Tracked time (Ekonomika, Projectvak…): only a link here, never in the study numbers above.
   const trackedWeek = trackedTotals(
-    period.trackedEntries.map((e) => ({
-      date: e.date,
-      minutes: Math.round(e.hours * 60),
-      key: period.trackedCourses.find((c) => c.id === e.courseId)?.name ?? "",
-    })),
+    trackedThisWeek.map((e) => ({ date: e.date, minutes: Math.round(e.hours * 60), key: e.courseName })),
     todayKey
   ).week;
+  const trackedNames = [
+    ...new Set([...period.trackedCourses.map((c) => c.name), ...trackedThisWeek.map((e) => e.courseName)]),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,14 +90,14 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
         </Link>
       </section>
 
-      {period.trackedCourses.length > 0 && (
+      {trackedNames.length > 0 && (
         <Link
           href="/lessons/tracked"
           className="tap flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
         >
           <span className="min-w-0">
             <span className="block font-medium text-foreground">Tracked time</span>
-            <span className="block truncate text-sm text-ink-muted">{period.trackedCourses.map((c) => c.name).join(", ")}</span>
+            <span className="block truncate text-sm text-ink-muted">{trackedNames.join(", ")}</span>
           </span>
           <span className="shrink-0 text-sm text-ink-muted">
             <span className="font-mono tabular-nums text-foreground">{formatMinutes(trackedWeek)}</span> this week ›

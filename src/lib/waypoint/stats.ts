@@ -34,9 +34,14 @@ export interface VanStats {
   trips: number;
 }
 
-/** Everything driven in the van, dated or not. */
-export function getVanStats(trips: Pick<TripSummary, 'with_van' | 'total_km'>[]): VanStats {
-  const van = trips.filter((t) => t.with_van);
+/** A trip that hasn't started yet (planned) doesn't count for the van; undated ones do. */
+function hasStarted(trip: Pick<TripSummary, 'start_date'>, todayKey: string): boolean {
+  return !trip.start_date || trip.start_date.slice(0, 10) <= todayKey;
+}
+
+/** Everything driven in the van, dated or not, leaving out trips that haven't started. */
+export function getVanStats(trips: Pick<TripSummary, 'with_van' | 'total_km' | 'start_date'>[], todayKey: string): VanStats {
+  const van = trips.filter((t) => t.with_van && hasStarted(t, todayKey));
   return { km: van.reduce((sum, t) => sum + (t.total_km ?? 0), 0), trips: van.length };
 }
 
@@ -165,15 +170,20 @@ export interface VanCountry {
   firstVisit: string | null;
 }
 
-/** The countries the van's trips stopped in, first visited first (undated ones last). */
+/**
+ * The countries the van's trips stopped in, first visited first (undated ones last). Trips
+ * that haven't started and stops dated after today are left out.
+ */
 export function getVanCountries(
   trips: Pick<TripSummary, 'id' | 'with_van' | 'start_date'>[],
   locations: Pick<Location, 'trip_id' | 'country' | 'arrival_date'>[],
+  todayKey: string,
 ): VanCountry[] {
-  const vanStart = new Map(trips.filter((t) => t.with_van).map((t) => [t.id, t.start_date]));
+  const vanStart = new Map(trips.filter((t) => t.with_van && hasStarted(t, todayKey)).map((t) => [t.id, t.start_date]));
   const byCountry = new Map<string, VanCountry>();
   for (const loc of locations) {
     if (!loc.country || !vanStart.has(loc.trip_id)) continue;
+    if (loc.arrival_date && loc.arrival_date.slice(0, 10) > todayKey) continue;
     const date = loc.arrival_date ?? vanStart.get(loc.trip_id) ?? null;
     const entry = byCountry.get(loc.country) ?? { country: loc.country, stops: 0, firstVisit: null };
     entry.stops += 1;

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { WashingMachine } from "lucide-react";
-import { moveItems, unwashItems, washItems } from "@/lib/actions/wardrobe";
+import { moveItems, undoMove as undoMoveAction, unwashItems, washItems, type MovedItem } from "@/lib/actions/wardrobe";
 import { groupByWash } from "@/lib/wardrobe/logic";
 import { WASH_GROUP_LABEL, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
@@ -33,8 +33,11 @@ const STEPS: Record<ClothingStatus, Step> = {
   clean: { from: "clean", to: "wash", done: "In the wash" },
 };
 
-/** `logged` (washes only) = the loads whose Last done log that wash added, so Undo takes them off again. */
-type Undo = { label: string; ids: string[]; step: Step; logged?: WashGroup[] };
+/**
+ * `moved` = the pieces the step really moved (with their old dates); `logged` (washes only) =
+ * the loads whose Last done log that wash added. Undo takes back exactly those.
+ */
+type Undo = { label: string; ids: string[]; moved: MovedItem[]; step: Step; logged?: WashGroup[] };
 
 /** Over this many clean items the "Put in the wash" list gets a search box. */
 const SEARCH_FROM = 8;
@@ -118,7 +121,7 @@ function Empty({ children }: { children: React.ReactNode }) {
  * The basket (in the wash, split into the coloured and the white load), the rack (drying)
  * and, folded away, the clean clothes to put in. A tick slides the row off and moves the
  * item one step on; "Undo" stays for a few seconds. Washing (basket → rack, a whole load or
- * single pieces) also logs today on the Last done "Wash" item.
+ * single pieces) also logs today on that load's Last done item ("Wash (coloured)" / "Wash (white)").
  */
 export function WashBoard({ items }: { items: Item[] }) {
   // Rows stay ticked until the action's re-render moves them to their next list.
@@ -151,11 +154,11 @@ export function WashBoard({ items }: { items: Item[] }) {
     startTransition(async () => {
       addLeaving(ids);
       try {
-        // A wash goes through its own action: it also logs Last done's "Wash".
+        // A wash goes through its own action: it also logs the load's Last done item.
         const [result] = await Promise.all([
           step.from === "wash"
             ? washItems(ids)
-            : moveItems(ids, step.from, step.to).then(() => undefined),
+            : moveItems(ids, step.from, step.to).then((moved) => ({ moved, logged: undefined })),
           wait(SLIDE_OUT_MS),
         ]);
         setUndo({
@@ -164,8 +167,9 @@ export function WashBoard({ items }: { items: Item[] }) {
               ? `${step.done}: ${list[0].name}`
               : `${step.done}: ${what ?? `${list.length} items`}`,
           ids,
+          moved: result.moved,
           step,
-          logged: result?.logged,
+          logged: result.logged,
         });
       } catch {
         setError("Couldn't save that. Check your connection and try again.");
@@ -179,8 +183,8 @@ export function WashBoard({ items }: { items: Item[] }) {
     startTransition(async () => {
       try {
         await (target.step.from === "wash"
-          ? unwashItems(target.ids, target.logged ?? [])
-          : moveItems(target.ids, target.step.to, target.step.from));
+          ? unwashItems(target.moved, target.logged ?? [])
+          : undoMoveAction(target.moved, target.step.from, target.step.to));
       } catch {
         setError("Couldn't undo that. Check your connection and try again.");
       }

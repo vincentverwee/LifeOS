@@ -68,30 +68,46 @@ async function saveStudyEntries(
   if (!target.ok) return target;
 
   const courses = courseIds.length
-    ? await db.studyCourse.findMany({ where: { id: { in: courseIds }, periodId: target.period.id }, select: { id: true } })
+    ? await db.studyCourse.findMany({
+        where: { id: { in: courseIds }, periodId: target.period.id },
+        select: { id: true, countsAsStudy: true },
+      })
     : [];
   if (courses.length !== courseIds.length) {
     return { ok: false, error: "Those courses belong to another period; pick them again." };
   }
+  const mixed = mixedKindsError(courses);
+  if (mixed) return { ok: false, error: mixed };
 
   if (hours > 0 && Math.round(hours * 100) < courses.length) {
     return { ok: false, error: "Too little time to split over that many courses." };
   }
 
   // Studied time is split over the courses. A 0 h day off is one row: it keeps
-  // its course only when exactly one was picked.
+  // its course only when exactly one was picked. A day off on tracked courses keeps
+  // the first one, or it would count as a study day off (no course = study).
   const split = courses.length > 0 && hours > 0;
   const shares = split ? splitHours(hours, courses.length) : [hours];
   await db.studyEntry.createMany({
     data: shares.map((share, i) => ({
       periodId: target.period.id,
-      courseId: split ? courses[i].id : courses.length === 1 ? courses[0].id : null,
+      courseId: split
+        ? courses[i].id
+        : courses.length === 1 || (courses.length > 1 && !courses[0].countsAsStudy)
+          ? courses[0].id
+          : null,
       date,
       hours: share,
       note: i === 0 ? (note?.slice(0, 500) ?? null) : null,
     })),
   });
   return { ok: true, movedTo: target.period.id !== periodId ? target.period.name : null };
+}
+
+/** Study and tracked courses can't share one log: the time would be split between them. */
+function mixedKindsError(courses: { countsAsStudy: boolean }[]): string | null {
+  const kinds = new Set(courses.map((c) => c.countsAsStudy));
+  return kinds.size > 1 ? "Log study courses and tracked ones (counts as study off) separately." : null;
 }
 
 export type StudyEntryFormState = ({ ok: true; hours: number; movedTo: string | null } | { ok: false; error: string }) | null;
@@ -134,8 +150,13 @@ export async function startStudyTimer(input: { periodId: string; courseIds: stri
   const period = await prisma.studyPeriod.findUnique({ where: { id: input.periodId }, select: { id: true } });
   if (!period) return { ok: false, error: "That study period no longer exists." };
   if (courseIds.length) {
-    const count = await prisma.studyCourse.count({ where: { id: { in: courseIds }, periodId: period.id } });
-    if (count !== courseIds.length) return { ok: false, error: "Those courses belong to another period; pick them again." };
+    const courses = await prisma.studyCourse.findMany({
+      where: { id: { in: courseIds }, periodId: period.id },
+      select: { countsAsStudy: true },
+    });
+    if (courses.length !== courseIds.length) return { ok: false, error: "Those courses belong to another period; pick them again." };
+    const mixed = mixedKindsError(courses);
+    if (mixed) return { ok: false, error: mixed };
   }
   try {
     await prisma.studyTimer.create({ data: { id: TIMER_ID, periodId: period.id, courseIds } });
@@ -211,14 +232,27 @@ export async function updateStudyEntry(input: {
   if (!dateKey) return { ok: false, error: "Pick a valid date." };
   if (dateKey > (await getTodayKey())) return { ok: false, error: "That date is in the future." };
 
-  const existing = await prisma.studyEntry.findUnique({ where: { id: input.id }, select: { periodId: true } });
+  const existing = await prisma.studyEntry.findUnique({
+    where: { id: input.id },
+    select: { periodId: true, course: { select: { countsAsStudy: true } } },
+  });
   if (!existing) return { ok: false, error: "That entry no longer exists." };
   const date = utc(dateKey);
   const target = await resolvePeriod(existing.periodId, date);
   if (!target.ok) return target;
+  // No course counts as study, so tracked time always keeps a tracked course.
+  const wasStudy = existing.course?.countsAsStudy ?? true;
+  let isStudy = true;
   if (input.courseId) {
     const course = await prisma.studyCourse.findFirst({ where: { id: input.courseId, periodId: target.period.id } });
     if (!course) return { ok: false, error: "That course isn't part of this period." };
+    isStudy = course.countsAsStudy;
+  }
+  if (wasStudy !== isStudy) {
+    return {
+      ok: false,
+      error: wasStudy ? "Pick a study course: this is study time." : "Pick a tracked course: this is tracked time, not study.",
+    };
   }
 
   try {
@@ -425,10 +459,16 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
   return { ok: true };
 }
 
-/** Its logged hours stay, without a course. */
+/**
+ * A study course's logged hours stay, without a course. A tracked course's entries go
+ * with it: without a course they would count as study.
+ */
 export async function deleteStudyCourse(id: string): Promise<LessonsResult> {
   await requireAuth();
-  await prisma.studyCourse.deleteMany({ where: { id } });
+  await prisma.$transaction([
+    prisma.studyEntry.deleteMany({ where: { courseId: id, course: { countsAsStudy: false } } }),
+    prisma.studyCourse.deleteMany({ where: { id } }),
+  ]);
   revalidateLessonRoutes();
   return { ok: true };
 }

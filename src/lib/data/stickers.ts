@@ -67,6 +67,7 @@ export async function getFirstStickerByTrip(): Promise<Record<string, { photoId:
   return first;
 }
 
-export async function countStickers(): Promise<number> {
-  return prisma.waypointSticker.count();
+/** All stickers (the wall), or only those from van trips (the van card). */
+export async function countStickers({ vanOnly = false }: { vanOnly?: boolean } = {}): Promise<number> {
+  return prisma.waypointSticker.count(vanOnly ? { where: { trip: { withVan: true } } } : undefined);
 }

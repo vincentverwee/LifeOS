@@ -33,8 +33,12 @@ describe('getYearlyStats', () => {
 
 describe('getVanStats', () => {
   it('adds up every van trip, dated or not', () => {
-    expect(getVanStats(trips)).toEqual({ km: 2100, trips: 3 });
-    expect(getVanStats([trip('x', null, null, true)])).toEqual({ km: 0, trips: 1 });
+    expect(getVanStats(trips, '2026-11-04')).toEqual({ km: 2100, trips: 3 });
+    expect(getVanStats([trip('x', null, null, true)], '2026-11-04')).toEqual({ km: 0, trips: 1 });
+  });
+  it('leaves out van trips that have not started yet', () => {
+    expect(getVanStats([...trips, trip('future', '2027-06-01', 5000, true)], '2026-11-04')).toEqual({ km: 2100, trips: 3 });
+    expect(getVanStats([trip('today', '2026-11-04', 50, true)], '2026-11-04')).toEqual({ km: 50, trips: 1 });
   });
 });
 
@@ -102,6 +106,7 @@ describe('getVanCountries', () => {
       { id: 'v1', with_van: true, start_date: '2025-07-01' },
       { id: 'v2', with_van: true, start_date: '2026-04-01' },
       { id: 'o', with_van: false, start_date: '2024-01-01' },
+      { id: 'future', with_van: true, start_date: '2027-06-01' },
     ];
     const stop = (trip_id: string, country: string | null, arrival_date: string | null = null) => ({ trip_id, country, arrival_date });
     expect(
@@ -111,7 +116,9 @@ describe('getVanCountries', () => {
         stop('v2', 'France', '2026-04-02'),
         stop('o', 'Italy'),
         stop('v1', null),
-      ]),
+        stop('v2', 'Portugal', '2026-12-01'), // a planned stop on a trip already going
+        stop('future', 'Norway'),
+      ], '2026-11-04'),
     ).toEqual([
       { country: 'France', stops: 2, firstVisit: '2025-07-01' },
       { country: 'Spain', stops: 1, firstVisit: '2026-04-03' },

@@ -30,7 +30,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
     getAllLocations(),
     getTripCompanions(),
     getTodayKey(),
-    countStickers(),
+    countStickers({ vanOnly: true }),
   ]);
   // The breakdown follows the choice shared by every Waypoint page (Van by default); the
   // van card above it is always about the van.
@@ -42,7 +42,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
   const locations = allLocations.filter((l) => shownIds.has(l.trip_id));
   const stats = getDashboardStats(trips, locations);
   const flights = getFlightStats(locations);
-  const van = getVanStats(allTrips);
+  const van = getVanStats(allTrips, todayKey);
 
   return (
     <>
@@ -66,7 +66,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
             vanTrips={van.trips}
             milestone={vanMilestone(van.km)}
             time={getVanTime(allTrips, todayKey)}
-            countries={getVanCountries(allTrips, allLocations)}
+            countries={getVanCountries(allTrips, allLocations, todayKey)}
             stickers={stickerCount}
           />
         )}

@@ -190,6 +190,7 @@ export type TrackedEntry = {
   hours: number;
   note: string | null;
   courseId: string;
+  periodId: string;
   /** Groups the overview: the same activity has a course per semester. */
   courseName: string;
   color: ReturnType<typeof slot>;
@@ -212,7 +213,7 @@ export async function getTrackedEntries(sinceKey: string): Promise<TrackedEntry[
       hours: true,
       note: true,
       course: { select: { id: true, name: true, color: true } },
-      period: { select: { name: true } },
+      period: { select: { id: true, name: true } },
     },
   });
   return rows.flatMap((r) =>
@@ -226,6 +227,7 @@ export async function getTrackedEntries(sinceKey: string): Promise<TrackedEntry[
             courseId: r.course.id,
             courseName: r.course.name,
             color: slot(r.course.color),
+            periodId: r.period.id,
             periodName: r.period.name,
           },
         ]
@@ -238,7 +240,7 @@ export async function getTrackedCourses() {
   const rows = await prisma.studyCourse.findMany({
     where: { countsAsStudy: false },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true, color: true, sortOrder: true, hasWc: true, countsAsStudy: true },
+    select: { id: true, name: true, color: true, sortOrder: true, hasWc: true, countsAsStudy: true, periodId: true },
   });
   return rows.map((c) => ({ ...c, color: slot(c.color) }));
 }

@@ -37,8 +37,10 @@ export function TripsList({
     shownTrips.kind === 'person'
       ? { ...shownTrips, tripIds: new Set(shownTrips.tripIds) }
       : { kind: anyVan ? shownTrips.kind : 'all' };
-  // Edits show at once: a trip whose van switch no longer matches drops out of view.
-  const shown = trips.filter((t) => keepTrip(filter, t));
+  // Trips created or edited on this visit stay in view even when they don't match the
+  // filter (a new trip isn't tagged with the person yet), so a save never looks lost.
+  const [savedIds, setSavedIds] = useState<ReadonlySet<string>>(new Set());
+  const shown = trips.filter((t) => savedIds.has(t.id) || keepTrip(filter, t));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTrip, setEditingTrip] = useState<TripSummary | null>(null);
 
@@ -56,9 +58,11 @@ export function TripsList({
     if (editingTrip) {
       const updated = await updateTrip(editingTrip.id, data);
       setTrips((prev) => prev.map((t) => (t.id === editingTrip.id ? updated : t)));
+      setSavedIds((prev) => new Set(prev).add(updated.id));
     } else {
       const created = await createTrip(data);
       setTrips((prev) => [created, ...prev]);
+      setSavedIds((prev) => new Set(prev).add(created.id));
     }
   }
 
@@ -102,6 +106,10 @@ export function TripsList({
               Create first trip
             </Button>
           </div>
+        ) : shown.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+            No trips match this choice. Pick another one above.
+          </p>
         ) : (
           <div className="space-y-3">
             {shown.map((trip, i) => (

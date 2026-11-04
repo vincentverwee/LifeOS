@@ -1,5 +1,6 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
+import { STUDY_ENTRY_WHERE } from "@/lib/data/lessons";
 import { dayKey } from "@/lib/format";
 import { pintsOf } from "@/lib/monthStats";
 import { addDays } from "@/lib/reminders/schedule";
@@ -89,7 +90,7 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
     }),
     prisma.studyEntry.findMany({
       // Tracked time (courses with countsAsStudy off) isn't study, so it stays out of memories.
-      where: { date: { in: dates }, OR: [{ courseId: null }, { course: { countsAsStudy: true } }] },
+      where: { date: { in: dates }, ...STUDY_ENTRY_WHERE },
       select: { date: true, hours: true, note: true, periodId: true, course: { select: { name: true } } },
     }),
     prisma.outfitWear.findMany({

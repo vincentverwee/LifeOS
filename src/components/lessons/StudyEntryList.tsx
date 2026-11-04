@@ -11,25 +11,37 @@ const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm te
 
 const dayFormatter = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
+/** `periodId` (tracked page, entries from several semesters): only that semester's courses are offered. */
+type ListEntry = StudyEntry & { periodId?: string };
+type ListCourse = StudyCourse & { periodId?: string };
+
 type StudyEntryListProps = {
-  entries: StudyEntry[];
-  courses: StudyCourse[];
+  entries: ListEntry[];
+  courses: ListCourse[];
+  /** tracked time: the edit sheet offers no "No course" (that would count as study) */
+  tracked?: boolean;
   /** group rows under a date header per day (newest day first) */
   groupByDay?: boolean;
   empty?: string;
 };
 
 /** Tappable study entries; a tap opens an edit sheet. */
-export function StudyEntryList({ entries, courses, groupByDay = false, empty = "Nothing logged yet." }: StudyEntryListProps) {
-  const [editing, setEditing] = useState<StudyEntry | null>(null);
+export function StudyEntryList({
+  entries,
+  courses,
+  tracked = false,
+  groupByDay = false,
+  empty = "Nothing logged yet.",
+}: StudyEntryListProps) {
+  const [editing, setEditing] = useState<ListEntry | null>(null);
   const courseById = new Map(courses.map((c) => [c.id, c]));
 
   if (entries.length === 0) return <p className="px-4 pb-4 text-sm text-ink-muted">{empty}</p>;
 
-  const days = new Map<string, StudyEntry[]>();
+  const days = new Map<string, ListEntry[]>();
   for (const e of [...entries].reverse()) days.set(e.date, [...(days.get(e.date) ?? []), e]);
 
-  const row = (e: StudyEntry) => {
+  const row = (e: ListEntry) => {
     const course = e.courseId ? courseById.get(e.courseId) : undefined;
     return (
       <li key={e.id} className="border-t border-border first:border-t-0">
@@ -74,14 +86,32 @@ export function StudyEntryList({ entries, courses, groupByDay = false, empty = "
       ) : (
         <ul>{[...entries].reverse().map(row)}</ul>
       )}
-      <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title="Edit study time">
-        {editing && <EditEntryForm key={editing.id} entry={editing} courses={courses} onDone={() => setEditing(null)} />}
+      <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title={tracked ? "Edit tracked time" : "Edit study time"}>
+        {editing && (
+          <EditEntryForm
+            key={editing.id}
+            entry={editing}
+            courses={editing.periodId ? courses.filter((c) => c.periodId === editing.periodId) : courses}
+            tracked={tracked}
+            onDone={() => setEditing(null)}
+          />
+        )}
       </Sheet>
     </>
   );
 }
 
-function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses: StudyCourse[]; onDone: () => void }) {
+function EditEntryForm({
+  entry,
+  courses,
+  tracked,
+  onDone,
+}: {
+  entry: StudyEntry;
+  courses: StudyCourse[];
+  tracked: boolean;
+  onDone: () => void;
+}) {
   const [hours, setHours] = useState(String(entry.hours).replace(".", ","));
   const [courseId, setCourseId] = useState(entry.courseId ?? "");
   const [date, setDate] = useState(entry.date);
@@ -135,7 +165,7 @@ function EditEntryForm({ entry, courses, onDone }: { entry: StudyEntry; courses:
         <label className="col-span-2 flex flex-col gap-1">
           <span className="text-xs text-ink-muted">Course</span>
           <select value={courseId} onChange={(e) => setCourseId(e.target.value)} className={input}>
-            <option value="">No course</option>
+            {!tracked && <option value="">No course</option>}
             {courses.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}

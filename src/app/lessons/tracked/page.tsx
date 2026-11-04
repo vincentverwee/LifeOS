@@ -37,7 +37,7 @@ export default async function TrackedTimePage() {
   const names = [...new Set([...byName.map((b) => b.key), ...entries.map((e) => e.courseName)])];
   const maxWeek = Math.max(1, ...weeks.map((w) => w.total));
   const maxName = Math.max(1, ...byName.map((b) => b.minutes));
-  const listEntries = entries.map(({ id, date, hours, courseId, note }) => ({ id, date, hours, courseId, note }));
+  const listEntries = entries.map(({ id, date, hours, courseId, note, periodId }) => ({ id, date, hours, courseId, note, periodId }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,10 +127,10 @@ export default async function TrackedTimePage() {
 
           <section className="flex flex-col gap-2">
             <h2 className="font-semibold text-foreground">Latest</h2>
-            <StudyEntryList entries={listEntries.slice(0, LATEST)} courses={courses} empty="Nothing logged yet." />
+            <StudyEntryList entries={listEntries.slice(0, LATEST)} courses={courses} tracked empty="Nothing logged yet." />
             {listEntries.length > LATEST && (
               <Disclosure title={`All ${listEntries.length} since ${shortDate.format(new Date(`${since}T00:00:00Z`))}`}>
-                <StudyEntryList entries={listEntries.slice(LATEST)} courses={courses} groupByDay />
+                <StudyEntryList entries={listEntries.slice(LATEST)} courses={courses} tracked groupByDay />
               </Disclosure>
             )}
           </section>

@@ -6,9 +6,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getTodayKey } from "@/lib/today";
 import { knownError } from "@/lib/prismaErrors";
-import { parseAmount } from "@/lib/format";
+import { dayKey, parseAmount, parseDateKey } from "@/lib/format";
 import { readPhoto } from "@/lib/images/upload";
-import { isStatus, isWashGroup, WASH_ROUTINE_NAME, WASH_ROUTINE_SOURCE, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
+import { isStatus, isWashGroup, LEGACY_WASH_SOURCE, WASH_ROUTINE_NAME, WASH_ROUTINE_SOURCE, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type WardrobeFormState = { ok: true } | { ok: false; error: string } | null;
@@ -121,18 +121,61 @@ export async function deleteItem(formData: FormData): Promise<void> {
   redirect("/wardrobe/items");
 }
 
+/** Pieces a move actually moved, with the day their old status began, so Undo can restore both. */
+export type MovedItem = { id: string; since: string };
+
+/** Valid moved pieces sent back by the client (an Undo). */
+function readMoved(moved: unknown, max = 1000): MovedItem[] {
+  if (!Array.isArray(moved) || moved.length > max) return [];
+  return moved.flatMap((m) => {
+    const id = typeof m?.id === "string" ? m.id : null;
+    const since = parseDateKey(m?.since);
+    return id && since ? [{ id, since }] : [];
+  });
+}
+
+/** Moves `moved` from `from` back to `to`, each with its own earlier `statusSince`. */
+async function moveBack(tx: Prisma.TransactionClient, moved: MovedItem[], from: ClothingStatus, to: ClothingStatus) {
+  const bySince = new Map<string, string[]>();
+  for (const m of moved) bySince.set(m.since, [...(bySince.get(m.since) ?? []), m.id]);
+  for (const [since, ids] of bySince) {
+    await tx.clothingItem.updateMany({ where: { id: { in: ids }, status: from }, data: { status: to, statusSince: utc(since) } });
+  }
+}
+
 /**
- * Moves items one step (a tick on the wash screen, "All washed", an undo). Guarded on
- * `from`, the status the screen showed, so a double tap or another device is a no-op.
+ * Moves items one step (a tick on the wash screen, "All washed", the item page's switch).
+ * Guarded on `from`, the status the screen showed, so a double tap or another device is a
+ * no-op. Returns what it moved, for `undoMove`.
  */
-export async function moveItems(ids: string[], from: ClothingStatus, to: ClothingStatus): Promise<void> {
+export async function moveItems(ids: string[], from: ClothingStatus, to: ClothingStatus): Promise<MovedItem[]> {
   await requireAuth();
   if (!isStatus(from) || !isStatus(to)) throw new Error("Unknown status.");
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return;
-  await prisma.clothingItem.updateMany({
-    where: { id: { in: ids.map(String) }, status: from },
-    data: { status: to, statusSince: utc(await getTodayKey()) },
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return [];
+  const today = utc(await getTodayKey());
+  const moved = await prisma.$transaction(async (tx) => {
+    const rows = await tx.clothingItem.findMany({
+      where: { id: { in: ids.map(String) }, status: from },
+      select: { id: true, statusSince: true },
+    });
+    if (rows.length === 0) return [];
+    await tx.clothingItem.updateMany({
+      where: { id: { in: rows.map((r) => r.id) }, status: from },
+      data: { status: to, statusSince: today },
+    });
+    return rows.map((r) => ({ id: r.id, since: dayKey(r.statusSince) }));
   });
+  revalidate();
+  return moved;
+}
+
+/** Undo of `moveItems(…, from, to)`: the pieces it moved go back to `from`, with their old dates. */
+export async function undoMove(moved: MovedItem[], from: ClothingStatus, to: ClothingStatus): Promise<void> {
+  await requireAuth();
+  if (!isStatus(from) || !isStatus(to)) throw new Error("Unknown status.");
+  const valid = readMoved(moved);
+  if (valid.length === 0) return;
+  await prisma.$transaction((tx) => moveBack(tx, valid, to, from));
   revalidate();
 }
 
@@ -146,77 +189,98 @@ const WASH_NAMES: Record<WashGroup, string[]> = {
 };
 const plainName = (name: string) => name.toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
 
-/** A load's Last done item: the linked one, else an existing one by name adopted, else a new one. */
+/**
+ * A load's Last done item: the linked one; else the single "wardrobe-wash" item of the first
+ * washing version (it becomes the coloured load's, keeping its history); else an existing one
+ * by name, adopted; else a new one. Inserts skip duplicates, so two first washes at once
+ * (two phones) end up on the same item instead of failing.
+ */
 async function ensureWashRoutine(tx: Prisma.TransactionClient, group: WashGroup): Promise<string> {
   const source = WASH_ROUTINE_SOURCE[group];
-  const linked = await tx.routine.findUnique({ where: { source }, select: { id: true } });
+  const find = () => tx.routine.findUnique({ where: { source }, select: { id: true } });
+  const linked = await find();
   if (linked) return linked.id;
-  const unlinked = await tx.routine.findMany({ where: { source: null }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
-  const named = unlinked.find((r) => WASH_NAMES[group].includes(plainName(r.name)));
-  if (named) {
-    await tx.routine.update({ where: { id: named.id }, data: { source } });
-    return named.id;
+  if (group === "coloured") {
+    await tx.routine.updateMany({ where: { source: LEGACY_WASH_SOURCE }, data: { source } });
   }
-  const name = WASH_ROUTINE_NAME[group];
-  // An unrelated item could hold the exact name; then the new one gets a variant.
-  const taken = await tx.routine.findUnique({ where: { name }, select: { id: true } });
-  const created = await tx.routine.create({ data: { name: taken ? `${name} · Wardrobe` : name, source }, select: { id: true } });
-  return created.id;
+  if (!(await find())) {
+    const unlinked = await tx.routine.findMany({ where: { source: null }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
+    const named = unlinked.find((r) => WASH_NAMES[group].includes(plainName(r.name)));
+    if (named) {
+      await tx.routine.updateMany({ where: { id: named.id, source: null }, data: { source } });
+    } else {
+      // An unrelated item could hold the exact name; then the new one gets a variant.
+      const name = WASH_ROUTINE_NAME[group];
+      for (const candidate of [name, `${name} · Wardrobe`, `${name} · Wardrobe 2`, `${name} · Wardrobe 3`]) {
+        await tx.routine.createMany({ data: [{ name: candidate, source }], skipDuplicates: true });
+        if (await find()) break;
+      }
+    }
+  }
+  const row = await find();
+  if (!row) throw new Error("Couldn't make the Last done item for the wash.");
+  return row.id;
 }
 
 /**
  * A wash: the basket's pieces move to drying and each load washed (coloured / white) gets
- * today on its Last done item. `logged` = the loads whose log this call added, so Undo
- * (`unwashItems`) takes exactly those off again.
+ * today on its Last done item. `logged` = the loads whose log this call added and `moved` =
+ * the pieces it moved, so Undo (`unwashItems`) takes back exactly those.
  */
-export async function washItems(ids: string[]): Promise<{ logged: WashGroup[] }> {
+export async function washItems(ids: string[]): Promise<{ logged: WashGroup[]; moved: MovedItem[] }> {
   await requireAuth();
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: [] };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: [], moved: [] };
   const today = utc(await getTodayKey());
-  const logged = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const inBasket = await tx.clothingItem.findMany({
       where: { id: { in: ids.map(String) }, status: "wash" },
-      select: { id: true, washGroup: true },
+      select: { id: true, washGroup: true, statusSince: true },
     });
     // A double tap / another device moved nothing: no wash to log.
-    if (inBasket.length === 0) return [];
+    if (inBasket.length === 0) return { logged: [], moved: [] };
     await tx.clothingItem.updateMany({
       where: { id: { in: inBasket.map((i) => i.id) }, status: "wash" },
       data: { status: "drying", statusSince: today },
     });
     const groups = new Set(inBasket.map((i) => (isWashGroup(i.washGroup) ? i.washGroup : "coloured")));
-    const added: WashGroup[] = [];
+    const logged: WashGroup[] = [];
     for (const group of groups) {
       const routineId = await ensureWashRoutine(tx, group);
-      const existing = await tx.routineLog.findUnique({
-        where: { routineId_doneOn: { routineId, doneOn: today } },
-        select: { id: true },
-      });
-      if (existing) continue;
-      await tx.routineLog.create({ data: { routineId, doneOn: today } });
-      added.push(group);
+      // skipDuplicates: a log already there (an earlier wash today, another phone) isn't this wash's.
+      const { count } = await tx.routineLog.createMany({ data: [{ routineId, doneOn: today }], skipDuplicates: true });
+      if (count > 0) logged.push(group);
     }
-    return added;
+    return { logged, moved: inBasket.map((i) => ({ id: i.id, since: dayKey(i.statusSince) })) };
   });
   revalidateWash();
-  return { logged };
+  return result;
 }
 
-/** Undo of a wash: back in the basket, and today's log off the loads that wash added it to. */
-export async function unwashItems(ids: string[], logged: WashGroup[]): Promise<void> {
+/**
+ * Undo of a wash: the pieces it moved go back in the basket (with their old dates), and
+ * today's log comes off the loads that wash added it to, unless another piece of that load
+ * is still washed today (a second wash, another phone).
+ */
+export async function unwashItems(moved: MovedItem[], logged: WashGroup[]): Promise<void> {
   await requireAuth();
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return;
+  const valid = readMoved(moved);
+  if (valid.length === 0) return;
   const today = utc(await getTodayKey());
-  const sources = (Array.isArray(logged) ? logged : []).filter(isWashGroup).map((g) => WASH_ROUTINE_SOURCE[g]);
-  await prisma.$transaction([
-    prisma.clothingItem.updateMany({
-      where: { id: { in: ids.map(String) }, status: "drying" },
-      data: { status: "wash", statusSince: today },
-    }),
-    ...(sources.length > 0
-      ? [prisma.routineLog.deleteMany({ where: { doneOn: today, routine: { source: { in: sources } } } })]
-      : []),
-  ]);
+  const groups = (Array.isArray(logged) ? logged : []).filter(isWashGroup);
+  await prisma.$transaction(async (tx) => {
+    await moveBack(tx, valid, "drying", "wash");
+    for (const group of groups) {
+      const stillWashed = await tx.clothingItem.count({
+        where: {
+          status: "drying",
+          statusSince: today,
+          ...(group === "white" ? { washGroup: "white" } : { NOT: { washGroup: "white" } }),
+        },
+      });
+      if (stillWashed > 0) continue;
+      await tx.routineLog.deleteMany({ where: { doneOn: today, routine: { source: WASH_ROUTINE_SOURCE[group] } } });
+    }
+  });
   revalidateWash();
 }
 

@@ -261,7 +261,7 @@ model WaypointLocation {
 
 // A sticker bought on a trip, optionally at one of its stops. Its photo (resized in the
 // browser like clothing photos; cut-outs stay see-through) lives in StickerPhoto, so lists
-// never load bytes; deleting a sticker or its trip drops the photo too (actions/waypoint.ts).
+// never load bytes; deleting or replacing a sticker drops its photo (actions/stickers.ts), deleting its trip sweeps them (actions/waypoint.ts).
 model WaypointSticker {
   id         String            @id @default(uuid()) @db.Uuid
   tripId     String            @db.Uuid

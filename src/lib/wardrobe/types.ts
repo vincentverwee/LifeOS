@@ -36,6 +36,9 @@ export const WASH_ROUTINE_SOURCE: Record<WashGroup, string> = {
   white: "wardrobe-wash-white",
 };
 
+/** The single wash item of the first washing version; the next coloured wash takes it over. */
+export const LEGACY_WASH_SOURCE = "wardrobe-wash";
+
 /** What a load's Last done item is called when the first wash has to create it. */
 export const WASH_ROUTINE_NAME: Record<WashGroup, string> = {
   coloured: "Wash (coloured)",

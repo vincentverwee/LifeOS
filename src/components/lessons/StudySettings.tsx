@@ -131,7 +131,7 @@ export function DeletePeriodButton({ period }: { period: StudyPeriod }) {
         type="button"
         disabled={isPending}
         onClick={() => {
-          if (!window.confirm(`Delete ${period.name} with its ${period.entries.length} entries, courses and exams? This can't be undone.`)) return;
+          if (!window.confirm(`Delete ${period.name} with its ${period.entries.length + period.trackedEntries.length} entries, courses and exams? This can't be undone.`)) return;
           run(
             () => deleteStudyPeriod(period.id),
             () => router.push("/lessons/settings")
@@ -186,7 +186,8 @@ function CourseForm({
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
-    const fields = { name, color, hasWc: countsAsStudy && hasWc, countsAsStudy };
+    // hasWc is kept while "Counts as study" is off, so switching it back on restores the WC column.
+    const fields = { name, color, hasWc, countsAsStudy };
     run(
       () => (course ? updateStudyCourse(course.id, fields) : createStudyCourse(periodId, fields)),
       () => {
@@ -278,7 +279,10 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                     type="button"
                     disabled={isPending}
                     onClick={() => {
-                      if (!window.confirm(`Delete ${course.name}? Its logged hours stay, without a course; its exams and lesson marks go.`)) return;
+                      const message = course.countsAsStudy
+                        ? `Delete ${course.name}? Its logged hours stay, without a course; its exams and lesson marks go.`
+                        : `Delete ${course.name} and all its tracked time? This can't be undone.`;
+                      if (!window.confirm(message)) return;
                       run(() => deleteStudyCourse(course.id));
                     }}
                     className="btn min-h-11 px-4 text-sm text-critical hover:bg-critical/10 active:bg-critical/15"

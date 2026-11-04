@@ -22,7 +22,7 @@ export function VanCard({
   milestone: Milestone;
   time: VanTime;
   countries: VanCountry[];
-  /** How many stickers in all (the wall link). */
+  /** How many stickers from van trips (the link opens the whole wall). */
   stickers: number;
 }) {
   const chip = (c: VanCountry) => (
@@ -63,7 +63,7 @@ export function VanCard({
 
         <Link href="/waypoint/stickers" className="btn btn-outline inline-flex min-h-11 items-center gap-2 px-4 text-sm">
           <Sticker size={16} aria-hidden="true" />
-          {stickers === 0 ? 'Sticker wall' : `${stickers} ${stickers === 1 ? 'sticker' : 'stickers'}`} ›
+          {stickers === 0 ? 'Sticker wall' : `${stickers} van ${stickers === 1 ? 'sticker' : 'stickers'}`} ›
         </Link>
 
         {time.nights > 0 && (

@@ -99,11 +99,13 @@ export function WearButton(props: Props) {
     );
   }
 
-  // The pieces that can still be ticked: clean ones, and the ones put in from here today.
+  // The pieces that can still be ticked: clean ones, and the ones put in from here today
+  // while they're still in the basket (once washed they've moved on, so they drop out).
   const movedIds = new Set(outfit ? outfit.movedIds : item!.inWashFromToday ? [item!.itemId] : []);
+  const canTick = (id: string, status: ClothingStatus) => status === "clean" || (status === "wash" && movedIds.has(id));
   const statusOf = (id: string, status: ClothingStatus) => ticked.get(id) ?? (status === "wash" && movedIds.has(id));
-  const choices = outfit ? outfit.pieces.filter((p) => p.status === "clean" || movedIds.has(p.id)) : [];
-  const itemChoice = item !== null && (item.status === "clean" || movedIds.has(item.itemId)) ? item : null;
+  const choices = outfit ? outfit.pieces.filter((p) => canTick(p.id, p.status)) : [];
+  const itemChoice = item !== null && canTick(item.itemId, item.status) ? item : null;
   const stillClean = choices.filter((p) => !statusOf(p.id, p.status));
 
   return (
