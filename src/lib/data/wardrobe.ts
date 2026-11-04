@@ -188,10 +188,10 @@ export async function getOutfit(
   };
 }
 
-/** The day of the last wash (the Last done item Wardrobe → Wash logs), or null. */
+/** The day of the last wash of either load (the Last done items Wardrobe → Wash logs), or null. */
 export async function getLastWashOn(): Promise<string | null> {
   const log = await prisma.routineLog.findFirst({
-    where: { routine: { source: WASH_ROUTINE_SOURCE } },
+    where: { routine: { source: { in: Object.values(WASH_ROUTINE_SOURCE) } } },
     orderBy: { doneOn: "desc" },
     select: { doneOn: true },
   });

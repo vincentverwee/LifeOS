@@ -15,10 +15,11 @@ export type Routine = {
 
 /**
  * Where an item that another feature logs is done instead of ticking it here; null for
- * ordinary items. "wardrobe-wash" = doing a wash on Wardrobe → Wash.
+ * ordinary items. "wardrobe-wash-…" = washing that load on Wardrobe → Wash.
  */
 export function routineLink(source: string | null): { href: string; label: string; from: string } | null {
-  if (source === "wardrobe-wash") return { href: "/wardrobe/wash", label: "Wardrobe", from: "Wardrobe → Wash" };
+  // "wardrobe-wash-coloured" / "wardrobe-wash-white": one per load.
+  if (source?.startsWith("wardrobe-wash")) return { href: "/wardrobe/wash", label: "Wardrobe", from: "Wardrobe → Wash" };
   return null;
 }
 

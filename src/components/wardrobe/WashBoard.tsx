@@ -33,8 +33,8 @@ const STEPS: Record<ClothingStatus, Step> = {
   clean: { from: "clean", to: "wash", done: "In the wash" },
 };
 
-/** `logged` (washes only) = that wash added today's Last done log, so Undo takes it off again. */
-type Undo = { label: string; ids: string[]; step: Step; logged?: boolean };
+/** `logged` (washes only) = the loads whose Last done log that wash added, so Undo takes them off again. */
+type Undo = { label: string; ids: string[]; step: Step; logged?: WashGroup[] };
 
 /** Over this many clean items the "Put in the wash" list gets a search box. */
 const SEARCH_FROM = 8;
@@ -179,7 +179,7 @@ export function WashBoard({ items }: { items: Item[] }) {
     startTransition(async () => {
       try {
         await (target.step.from === "wash"
-          ? unwashItems(target.ids, target.logged === true)
+          ? unwashItems(target.ids, target.logged ?? [])
           : moveItems(target.ids, target.step.to, target.step.from));
       } catch {
         setError("Couldn't undo that. Check your connection and try again.");

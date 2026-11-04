@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { getTodayKey } from "@/lib/today";
 import { knownError } from "@/lib/prismaErrors";
 import { parseAmount } from "@/lib/format";
-import { isStatus, isWashGroup, PHOTO_LIMITS, WASH_ROUTINE_SOURCE, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
+import { isStatus, isWashGroup, PHOTO_LIMITS, WASH_ROUTINE_NAME, WASH_ROUTINE_SOURCE, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type WardrobeFormState = { ok: true } | { ok: false; error: string } | null;
@@ -156,67 +156,85 @@ export async function moveItems(ids: string[], from: ClothingStatus, to: Clothin
   revalidate();
 }
 
-/** Names an existing Last done item for the wash may have; the first wash adopts it. */
-const WASH_NAMES = ["wash", "washing", "laundry", "do the wash", "the wash"];
+/**
+ * Names an existing Last done item for a load may have ("Wash (coloured)"); the first wash
+ * of that load adopts it, keeping its history. Compared lower-case, without punctuation.
+ */
+const WASH_NAMES: Record<WashGroup, string[]> = {
+  coloured: ["wash coloured", "wash colored", "wash colour", "wash color", "coloured wash", "colored wash", "wash colours"],
+  white: ["wash white", "wash whites", "white wash", "whites"],
+};
+const plainName = (name: string) => name.toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
 
-/** The Last done item a wash logs: the linked one, else an existing "Wash" adopted, else a new one. */
-async function ensureWashRoutine(tx: Prisma.TransactionClient): Promise<string> {
-  const linked = await tx.routine.findUnique({ where: { source: WASH_ROUTINE_SOURCE }, select: { id: true } });
+/** A load's Last done item: the linked one, else an existing one by name adopted, else a new one. */
+async function ensureWashRoutine(tx: Prisma.TransactionClient, group: WashGroup): Promise<string> {
+  const source = WASH_ROUTINE_SOURCE[group];
+  const linked = await tx.routine.findUnique({ where: { source }, select: { id: true } });
   if (linked) return linked.id;
-  const named = await tx.routine.findFirst({
-    where: { source: null, OR: WASH_NAMES.map((name) => ({ name: { equals: name, mode: "insensitive" as const } })) },
-    orderBy: { createdAt: "asc" },
-    select: { id: true },
-  });
+  const unlinked = await tx.routine.findMany({ where: { source: null }, orderBy: { createdAt: "asc" }, select: { id: true, name: true } });
+  const named = unlinked.find((r) => WASH_NAMES[group].includes(plainName(r.name)));
   if (named) {
-    await tx.routine.update({ where: { id: named.id }, data: { source: WASH_ROUTINE_SOURCE } });
+    await tx.routine.update({ where: { id: named.id }, data: { source } });
     return named.id;
   }
-  // Any item called "Wash" was adopted above, so the name is free.
-  const created = await tx.routine.create({ data: { name: "Wash", source: WASH_ROUTINE_SOURCE }, select: { id: true } });
+  const name = WASH_ROUTINE_NAME[group];
+  // An unrelated item could hold the exact name; then the new one gets a variant.
+  const taken = await tx.routine.findUnique({ where: { name }, select: { id: true } });
+  const created = await tx.routine.create({ data: { name: taken ? `${name} · Wardrobe` : name, source }, select: { id: true } });
   return created.id;
 }
 
 /**
- * A wash: the basket's pieces move to drying and Last done's "Wash" gets today. `logged`
- * = this call added today's log, so Undo (`unwashItems`) takes it off again.
+ * A wash: the basket's pieces move to drying and each load washed (coloured / white) gets
+ * today on its Last done item. `logged` = the loads whose log this call added, so Undo
+ * (`unwashItems`) takes exactly those off again.
  */
-export async function washItems(ids: string[]): Promise<{ logged: boolean }> {
+export async function washItems(ids: string[]): Promise<{ logged: WashGroup[] }> {
   await requireAuth();
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: false };
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: [] };
   const today = utc(await getTodayKey());
   const logged = await prisma.$transaction(async (tx) => {
-    const { count } = await tx.clothingItem.updateMany({
+    const inBasket = await tx.clothingItem.findMany({
       where: { id: { in: ids.map(String) }, status: "wash" },
-      data: { status: "drying", statusSince: today },
+      select: { id: true, washGroup: true },
     });
     // A double tap / another device moved nothing: no wash to log.
-    if (count === 0) return false;
-    const routineId = await ensureWashRoutine(tx);
-    const existing = await tx.routineLog.findUnique({
-      where: { routineId_doneOn: { routineId, doneOn: today } },
-      select: { id: true },
+    if (inBasket.length === 0) return [];
+    await tx.clothingItem.updateMany({
+      where: { id: { in: inBasket.map((i) => i.id) }, status: "wash" },
+      data: { status: "drying", statusSince: today },
     });
-    if (existing) return false;
-    await tx.routineLog.create({ data: { routineId, doneOn: today } });
-    return true;
+    const groups = new Set(inBasket.map((i) => (isWashGroup(i.washGroup) ? i.washGroup : "coloured")));
+    const added: WashGroup[] = [];
+    for (const group of groups) {
+      const routineId = await ensureWashRoutine(tx, group);
+      const existing = await tx.routineLog.findUnique({
+        where: { routineId_doneOn: { routineId, doneOn: today } },
+        select: { id: true },
+      });
+      if (existing) continue;
+      await tx.routineLog.create({ data: { routineId, doneOn: today } });
+      added.push(group);
+    }
+    return added;
   });
   revalidateWash();
   return { logged };
 }
 
-/** Undo of a wash: back in the basket, and today's Wash log off if that wash added it. */
-export async function unwashItems(ids: string[], logged: boolean): Promise<void> {
+/** Undo of a wash: back in the basket, and today's log off the loads that wash added it to. */
+export async function unwashItems(ids: string[], logged: WashGroup[]): Promise<void> {
   await requireAuth();
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return;
   const today = utc(await getTodayKey());
+  const sources = (Array.isArray(logged) ? logged : []).filter(isWashGroup).map((g) => WASH_ROUTINE_SOURCE[g]);
   await prisma.$transaction([
     prisma.clothingItem.updateMany({
       where: { id: { in: ids.map(String) }, status: "drying" },
       data: { status: "wash", statusSince: today },
     }),
-    ...(logged === true
-      ? [prisma.routineLog.deleteMany({ where: { doneOn: today, routine: { source: WASH_ROUTINE_SOURCE } } })]
+    ...(sources.length > 0
+      ? [prisma.routineLog.deleteMany({ where: { doneOn: today, routine: { source: { in: sources } } } })]
       : []),
   ]);
   revalidateWash();

@@ -4,6 +4,7 @@ import {
   compareRoutines,
   daysSince,
   describeRhythm,
+  routineLink,
   describeSince,
   isDue,
   isOverdue,
@@ -116,5 +117,13 @@ describe("compareRoutines", () => {
 
   it("breaks ties on equal days by name", () => {
     expect(sortNames([routine("b", "2026-10-20"), routine("a", "2026-10-20")])).toEqual(["a", "b"]);
+  });
+});
+
+describe("routineLink", () => {
+  it("links both wash loads to Wardrobe and leaves ordinary items alone", () => {
+    expect(routineLink("wardrobe-wash-coloured")?.href).toBe("/wardrobe/wash");
+    expect(routineLink("wardrobe-wash-white")?.href).toBe("/wardrobe/wash");
+    expect(routineLink(null)).toBeNull();
   });
 });

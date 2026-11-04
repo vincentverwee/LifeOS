@@ -30,8 +30,17 @@ export function isWashGroup(value: unknown): value is WashGroup {
   return (WASH_GROUPS as readonly string[]).includes(value as string);
 }
 
-/** `Routine.source` of the Last done item a wash on Wardrobe → Wash logs. */
-export const WASH_ROUTINE_SOURCE = "wardrobe-wash";
+/** `Routine.source` of the Last done item each load logs when washed on Wardrobe → Wash. */
+export const WASH_ROUTINE_SOURCE: Record<WashGroup, string> = {
+  coloured: "wardrobe-wash-coloured",
+  white: "wardrobe-wash-white",
+};
+
+/** What a load's Last done item is called when the first wash has to create it. */
+export const WASH_ROUTINE_NAME: Record<WashGroup, string> = {
+  coloured: "Wash (coloured)",
+  white: "Wash (white)",
+};
 
 /** A category as the pages use it. */
 export type Category = { id: string; name: string };
