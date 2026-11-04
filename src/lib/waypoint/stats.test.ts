@@ -127,3 +127,20 @@ describe('vanMilestone', () => {
     expect(vanMilestone(120000)).toMatchObject({ reached: 100000, next: 150000 });
   });
 });
+
+describe('groupStickersByYear', () => {
+  it('puts the newest year first and undated trips last', async () => {
+    const { groupStickersByYear } = await import('./stickers');
+    const s = (id: string, tripStart: string | null) => ({ id, tripStart });
+    expect(
+      groupStickersByYear([s('a', '2025-07-01'), s('b', null), s('c', '2026-04-01'), s('d', '2025-08-01')]).map((g) => [
+        g.year,
+        g.stickers.map((x) => x.id),
+      ]),
+    ).toEqual([
+      [2026, ['c']],
+      [2025, ['a', 'd']],
+      [null, ['b']],
+    ]);
+  });
+});

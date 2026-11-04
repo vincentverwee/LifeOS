@@ -1,10 +1,9 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
-import { Camera, ImagePlus } from "lucide-react";
+import { startTransition, useActionState, useState, type FormEvent } from "react";
 import { createItem, updateItem, type WardrobeFormState } from "@/lib/actions/wardrobe";
 import { WASH_GROUPS, WASH_GROUP_LABEL, type Category, type WashGroup } from "@/lib/wardrobe/types";
-import { resizeImage } from "@/lib/images/resize";
+import { PhotoField } from "@/components/images/PhotoField";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
 
@@ -36,34 +35,8 @@ export function ItemForm({
     null,
   );
   const [photo, setPhoto] = useState<Blob | null>(null);
-  const [preview, setPreview] = useState<string | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
-  const [photoError, setPhotoError] = useState<string | null>(null);
   const [shrinking, setShrinking] = useState(false);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const libraryRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => () => {
-    if (preview) URL.revokeObjectURL(preview);
-  }, [preview]);
-
-  async function pick(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    setPhotoError(null);
-    setShrinking(true);
-    try {
-      const small = await resizeImage(file);
-      setPhoto(small);
-      setPreview(URL.createObjectURL(small));
-      setRemovePhoto(false);
-    } catch {
-      setPhotoError("Couldn't read that photo. Try another one.");
-    } finally {
-      setShrinking(false);
-    }
-  }
 
   // Submitting by hand: keeps what was typed after an error (see keepInput) and adds the shrunk photo.
   function submit(e: FormEvent<HTMLFormElement>) {
@@ -74,58 +47,21 @@ export function ItemForm({
     startTransition(() => formAction(formData));
   }
 
-  const showExisting = !preview && !removePhoto && item?.photoId;
-
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       {item && <input type="hidden" name="id" value={item.id} />}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm text-ink-muted">Photo (optional)</span>
-        <div className="flex items-center gap-4">
-          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-xl border border-border">
-            {preview ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={preview}
-                alt="New photo"
-                className={`h-full w-full bg-surface-muted ${photo && photo.type !== "image/jpeg" ? "cutout-glare object-contain p-[8%]" : "object-cover"}`}
-              />
-            ) : (
-              <ItemPhoto photoId={showExisting ? item!.photoId : null} cutout={item?.photoCutout} name={item?.name ?? "No photo"} className="h-full w-full" />
-            )}
-            {shrinking && (
-              <div className="absolute inset-0 flex items-center justify-center bg-surface/70">
-                <SheepSpinner size={28} />
-              </div>
-            )}
-          </div>
-          <div className="flex flex-col gap-2">
-            <button type="button" onClick={() => cameraRef.current?.click()} className="btn btn-outline inline-flex min-h-11 items-center gap-2 px-4 text-sm">
-              <Camera size={18} aria-hidden="true" /> Take photo
-            </button>
-            <button type="button" onClick={() => libraryRef.current?.click()} className="btn btn-ghost inline-flex min-h-11 items-center gap-2 px-4 text-sm">
-              <ImagePlus size={18} aria-hidden="true" /> From library
-            </button>
-            {(preview || showExisting) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setPhoto(null);
-                  setPreview(null);
-                  setRemovePhoto(Boolean(item?.photoId));
-                }}
-                className="btn btn-ghost inline-flex min-h-11 px-4 text-sm text-critical"
-              >
-                Remove photo
-              </button>
-            )}
-          </div>
-        </div>
-        <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={pick} className="hidden" />
-        <input ref={libraryRef} type="file" accept="image/*" onChange={pick} className="hidden" />
-        {photoError && <p className="text-sm text-critical">{photoError}</p>}
-      </div>
+      <PhotoField
+        label="Photo (optional)"
+        hasExisting={Boolean(item?.photoId)}
+        existing={<ItemPhoto photoId={item?.photoId ?? null} cutout={item?.photoCutout} name={item?.name ?? "No photo"} className="h-full w-full" />}
+        empty={<ItemPhoto photoId={null} name="No photo" className="h-full w-full" />}
+        onChange={(next, removed) => {
+          setPhoto(next);
+          setRemovePhoto(removed);
+        }}
+        onShrinking={setShrinking}
+      />
 
       <label className="flex flex-col gap-1">
         <span className="text-sm text-ink-muted">Name</span>

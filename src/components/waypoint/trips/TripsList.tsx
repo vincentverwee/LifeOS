@@ -23,10 +23,13 @@ export function TripsList({
   initialTrips,
   shownTrips,
   companions,
+  stickers = {},
 }: {
   initialTrips: TripSummary[];
   shownTrips: ShownTrips;
   companions: { id: string; name: string }[];
+  /** Trip id -> its first sticker. */
+  stickers?: Record<string, { photoId: string; cutout: boolean }>;
 }) {
   const [trips, setTrips] = useState<TripSummary[]>(initialTrips);
   const anyVan = trips.some((t) => t.with_van);
@@ -108,6 +111,7 @@ export function TripsList({
                 index={i}
                 onEdit={openEdit}
                 onDelete={handleDelete}
+                sticker={stickers[trip.id]}
               />
             ))}
           </div>

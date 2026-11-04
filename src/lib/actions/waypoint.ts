@@ -116,6 +116,8 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
 export async function deleteTrip(id: string): Promise<void> {
   await requireAuth();
   await prisma.waypointTrip.deleteMany({ where: { id } });
+  // Its stickers went with it (cascade); their photos have nothing pointing at them now.
+  await prisma.stickerPhoto.deleteMany({ where: { sticker: null } });
   revalidate();
 }
 

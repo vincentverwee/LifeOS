@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/waypoint/ui/alert-dialog';
+import { StickerImage } from '@/components/waypoint/StickerImage';
 import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote, Car, Plane } from 'lucide-react';
 
 interface LocationListProps {
@@ -28,6 +29,8 @@ interface LocationListProps {
   onUpdateNotes: (id: string, notes: string) => void;
   /** While a reorder/removal is saving: blocks the next one so they can't cross. */
   disabled?: boolean;
+  /** Stop id -> the stickers bought there (shown small next to its name; there can be several). */
+  stickerStops?: Record<string, { photoId: string; cutout: boolean }[]>;
 }
 
 export function LocationList({
@@ -39,6 +42,7 @@ export function LocationList({
   onUpdateDates,
   onUpdateNotes,
   disabled = false,
+  stickerStops = {},
 }: LocationListProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -103,11 +107,30 @@ export function LocationList({
 
                 <div className="flex-1 overflow-hidden rounded-xl border border-border bg-card">
                   <div className="flex items-center justify-between gap-2 p-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-sm">{loc.name}</p>
-                      {loc.country && (
-                        <p className="text-xs text-muted-foreground">{loc.country}</p>
+                    <div className="flex min-w-0 items-center gap-2">
+                      {stickerStops[loc.id]?.length > 0 && (
+                        // Overlapping thumbnails, at most three, then "+N".
+                        <span className="flex shrink-0 items-center -space-x-3">
+                          {stickerStops[loc.id].slice(0, 3).map((s) => (
+                            <StickerImage
+                              key={s.photoId}
+                              photoId={s.photoId}
+                              cutout={s.cutout}
+                              name="Sticker bought here"
+                              className="h-7 w-7 rounded-md ring-2 ring-card"
+                            />
+                          ))}
+                          {stickerStops[loc.id].length > 3 && (
+                            <span className="pl-4 text-xs text-muted-foreground">+{stickerStops[loc.id].length - 3}</span>
+                          )}
+                        </span>
                       )}
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-sm">{loc.name}</p>
+                        {loc.country && (
+                          <p className="text-xs text-muted-foreground">{loc.country}</p>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex shrink-0 items-center gap-0.5">

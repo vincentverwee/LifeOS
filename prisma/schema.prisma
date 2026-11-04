@@ -231,30 +231,60 @@ model WaypointTrip {
   updatedAt        DateTime             @updatedAt
   locations        WaypointLocation[]
   people           WaypointTripPerson[]
+  stickers         WaypointSticker[]
 
   @@index([startDate])
 }
 
 model WaypointLocation {
-  id             String       @id @default(uuid()) @db.Uuid
-  tripId         String       @db.Uuid
-  trip           WaypointTrip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  id             String            @id @default(uuid()) @db.Uuid
+  tripId         String            @db.Uuid
+  trip           WaypointTrip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
   name           String
-  latitude       Decimal      @db.Decimal(10, 7)
-  longitude      Decimal      @db.Decimal(10, 7)
+  latitude       Decimal           @db.Decimal(10, 7)
+  longitude      Decimal           @db.Decimal(10, 7)
   country        String?
   city           String?
-  arrivalDate    DateTime?    @db.Date
-  departureDate  DateTime?    @db.Date
+  arrivalDate    DateTime?         @db.Date
+  departureDate  DateTime?         @db.Date
   notes          String?
   visitOrder     Int
   // The leg from the previous stop to this one was flown (drawn as a dashed arc, not routed
   // by car, its km kept out of totalKm). Ignored on the first stop.
-  arrivedByPlane Boolean      @default(false)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  arrivedByPlane Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  stickers       WaypointSticker[]
 
   @@index([tripId, visitOrder])
+}
+
+// A sticker bought on a trip, optionally at one of its stops. Its photo (resized in the
+// browser like clothing photos; cut-outs stay see-through) lives in StickerPhoto, so lists
+// never load bytes; deleting a sticker or its trip drops the photo too (actions/waypoint.ts).
+model WaypointSticker {
+  id         String            @id @default(uuid()) @db.Uuid
+  tripId     String            @db.Uuid
+  trip       WaypointTrip      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  // Where it was bought; must be a stop of the same trip (checked in the action).
+  locationId String?           @db.Uuid
+  location   WaypointLocation? @relation(fields: [locationId], references: [id], onDelete: SetNull)
+  name       String?
+  note       String?
+  photoId    String            @unique
+  photo      StickerPhoto      @relation(fields: [photoId], references: [id])
+  createdAt  DateTime          @default(now())
+
+  @@index([tripId])
+  @@index([locationId])
+}
+
+model StickerPhoto {
+  id        String           @id @default(cuid())
+  data      Bytes
+  mime      String
+  createdAt DateTime         @default(now())
+  sticker   WaypointSticker?
 }
 
 // --- Recipes: liked recipes from the swipe deck ---

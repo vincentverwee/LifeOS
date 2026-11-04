@@ -1,4 +1,5 @@
-import { Caravan } from 'lucide-react';
+import Link from 'next/link';
+import { Caravan, Sticker } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
 import type { Milestone, VanCountry, VanTime } from '@/lib/waypoint/stats';
 
@@ -14,12 +15,15 @@ export function VanCard({
   milestone,
   time,
   countries,
+  stickers,
 }: {
   vanKm: number;
   vanTrips: number;
   milestone: Milestone;
   time: VanTime;
   countries: VanCountry[];
+  /** How many stickers in all (the wall link). */
+  stickers: number;
 }) {
   const chip = (c: VanCountry) => (
     <li key={c.country} className="rounded-full bg-muted/60 px-3 py-1 text-sm text-foreground">
@@ -56,6 +60,11 @@ export function VanCard({
             {` · ${vanTrips} ${vanTrips === 1 ? 'trip' : 'trips'}`}
           </p>
         </div>
+
+        <Link href="/waypoint/stickers" className="btn btn-outline inline-flex min-h-11 items-center gap-2 px-4 text-sm">
+          <Sticker size={16} aria-hidden="true" />
+          {stickers === 0 ? 'Sticker wall' : `${stickers} ${stickers === 1 ? 'sticker' : 'stickers'}`} ›
+        </Link>
 
         {time.nights > 0 && (
           <div className="space-y-2">

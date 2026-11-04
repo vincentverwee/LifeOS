@@ -8,6 +8,7 @@ import { Badge } from '@/components/waypoint/ui/badge';
 import { getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { getTodayKey } from '@/lib/today';
+import { countStickers } from '@/lib/data/stickers';
 import {
   getCountryStats,
   getDashboardStats,
@@ -23,12 +24,13 @@ import { BarChart3, Plane, Trophy } from 'lucide-react';
 
 export default async function StatsPage({ searchParams }: PageProps<'/waypoint/stats'>) {
   await connection();
-  const [params, allTrips, allLocations, companions, todayKey] = await Promise.all([
+  const [params, allTrips, allLocations, companions, todayKey, stickerCount] = await Promise.all([
     searchParams,
     getAllTripSummaries(),
     getAllLocations(),
     getTripCompanions(),
     getTodayKey(),
+    countStickers(),
   ]);
   // The breakdown follows the choice shared by every Waypoint page (Van by default); the
   // van card above it is always about the van.
@@ -65,6 +67,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
             milestone={vanMilestone(van.km)}
             time={getVanTime(allTrips, todayKey)}
             countries={getVanCountries(allTrips, allLocations)}
+            stickers={stickerCount}
           />
         )}
 

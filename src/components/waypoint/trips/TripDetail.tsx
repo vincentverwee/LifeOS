@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { LocationList } from '@/components/waypoint/trips/LocationList';
 import { LocationSearch } from '@/components/waypoint/trips/LocationSearch';
+import { TripStickers } from '@/components/waypoint/trips/TripStickers';
+import type { Sticker } from '@/lib/waypoint/stickers';
 import { TripDialog } from '@/components/waypoint/trips/TripDialog';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { Button } from '@/components/waypoint/ui/button';
@@ -47,11 +49,14 @@ export function TripDetail({
   initialTrip,
   initialLocations,
   people,
+  stickers = [],
 }: {
   initialTrip: Trip;
   initialLocations: Location[];
   /** "Who came along" (People), rendered by the server page. */
   people?: React.ReactNode;
+  /** Its stickers (from the server; refreshed after each sticker change). */
+  stickers?: Sticker[];
 }) {
   const id = initialTrip.id;
   const [trip, setTrip] = useState<Trip>(initialTrip);
@@ -239,6 +244,12 @@ export function TripDetail({
 
         {people}
 
+        <TripStickers
+          tripId={id}
+          stickers={stickers}
+          stops={locations.map(({ id: stopId, name, city }) => ({ id: stopId, name, city }))}
+        />
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: locations */}
           <div className="space-y-4">
@@ -266,6 +277,10 @@ export function TripDetail({
                 onUpdateDates={updateDates}
                 onUpdateNotes={updateNotes}
                 disabled={busy}
+                stickerStops={stickers.reduce<Record<string, { photoId: string; cutout: boolean }[]>>((byStop, s) => {
+                  if (s.locationId) (byStop[s.locationId] ??= []).push({ photoId: s.photoId, cutout: s.cutout });
+                  return byStop;
+                }, {})}
               />
             </div>
           </div>

@@ -19,15 +19,17 @@ import {
   tripFilterQuery,
   tripFilterValue,
 } from '@/lib/waypoint/tripFilter';
-import { ImageDown } from 'lucide-react';
+import { ImageDown, Sticker } from 'lucide-react';
+import { countStickers } from '@/lib/data/stickers';
 
 export default async function DashboardPage({ searchParams }: PageProps<'/waypoint'>) {
   await connection();
-  const [params, allTrips, allLocations, companions] = await Promise.all([
+  const [params, allTrips, allLocations, companions, stickerCount] = await Promise.all([
     searchParams,
     getAllTrips({ simplify: 0.0005 }),
     getAllLocations(),
     getTripCompanions(),
+    countStickers(),
   ]);
   // Everything follows the choice shared by every Waypoint page (?trip= / ?person=, else
   // the last one picked on this device, else the van trips): van-first.
@@ -47,12 +49,20 @@ export default async function DashboardPage({ searchParams }: PageProps<'/waypoi
   return (
     <>
       <div className="mx-auto max-w-7xl space-y-6">
-        <div>
-          <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {filter.kind === 'van' ? 'Your van at a glance' : 'Your travel journey at a glance'} ·{' '}
-            {describeTripFilter(filter, trips.length)}
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {filter.kind === 'van' ? 'Your van at a glance' : 'Your travel journey at a glance'} ·{' '}
+              {describeTripFilter(filter, trips.length)}
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5">
+            <Link href="/waypoint/stickers">
+              <Sticker size={15} />
+              Stickers{stickerCount > 0 && <span className="text-muted-foreground tabular-nums">{stickerCount}</span>}
+            </Link>
+          </Button>
         </div>
 
         <StatsGrid stats={stats} van={filter.kind === 'van'} />

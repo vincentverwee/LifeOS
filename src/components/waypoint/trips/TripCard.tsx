@@ -17,12 +17,15 @@ import {
 } from '@/components/waypoint/ui/alert-dialog';
 import { CalendarDays, Caravan, Navigation, Pencil, Trash2, MapPin, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
+import { StickerImage } from '@/components/waypoint/StickerImage';
 
 interface TripCardProps {
   trip: TripSummary;
   index: number;
   onEdit: (trip: TripSummary) => void;
   onDelete: (id: string) => void;
+  /** Its first sticker, shown instead of the pin. */
+  sticker?: { photoId: string; cutout: boolean };
 }
 
 function formatDate(dateStr: string) {
@@ -33,7 +36,7 @@ function formatDate(dateStr: string) {
   });
 }
 
-export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
+export function TripCard({ trip, index, onEdit, onDelete, sticker }: TripCardProps) {
   return (
     // CSS keyframes rather than Framer Motion, and the stagger is capped: with a long trip list
     // the old `index * 60ms` meant the last cards took seconds to appear.
@@ -43,9 +46,18 @@ export function TripCard({ trip, index, onEdit, onDelete }: TripCardProps) {
           <div className="flex items-start justify-between gap-3">
             <Link href={`/waypoint/trips/${trip.id}`} className="min-w-0 flex-1">
               <div className="flex items-start gap-3">
-                <div className="mt-0.5 rounded-xl bg-primary/10 p-2 shrink-0">
-                  <MapPin size={18} className="text-primary" />
-                </div>
+                {sticker ? (
+                  <StickerImage
+                    photoId={sticker.photoId}
+                    cutout={sticker.cutout}
+                    name="Sticker"
+                    className="h-12 w-12 shrink-0 rounded-xl"
+                  />
+                ) : (
+                  <div className="mt-0.5 rounded-xl bg-primary/10 p-2 shrink-0">
+                    <MapPin size={18} className="text-primary" />
+                  </div>
+                )}
                 <div className="min-w-0">
                   <h3 className="truncate font-semibold group-hover:text-primary transition-colors">
                     {trip.title}

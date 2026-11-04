@@ -7,7 +7,7 @@ import { THEME } from "@/lib/theme";
  * Device and login bookkeeping, not data anyone logged, plus the wardrobe photos
  * (megabytes of bytes as JSON; they stay in the weekly database backups).
  */
-const EXCLUDED = new Set<Prisma.ModelName>(["LoginThrottle", "PushSent", "PushSubscription", "ClothingPhoto"]);
+const EXCLUDED = new Set<Prisma.ModelName>(["LoginThrottle", "PushSent", "PushSubscription", "ClothingPhoto", "StickerPhoto"]);
 
 type Delegate = { findMany(args: { orderBy: { id: "asc" } }): Promise<unknown[]> };
 
