@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { STATUS_LABEL, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
+import { STATUS_LABEL, type Category, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import { groupByCategory } from "@/lib/wardrobe/logic";
 import { ItemPhoto } from "./ItemPhoto";
 
@@ -10,7 +10,7 @@ type Item = {
   id: string;
   name: string;
   categoryId: string | null;
-  color: string | null;
+  washGroup: WashGroup;
   status: ClothingStatus;
   photoId: string | null;
   photoCutout: boolean;
@@ -63,7 +63,8 @@ export function ItemGrid({ items, categories }: { items: Item[]; categories: Cat
               </div>
               <div className="px-3 py-2">
                 <p className="truncate font-medium text-foreground">{item.name}</p>
-                {item.color && <p className="truncate text-sm text-ink-muted">{item.color}</p>}
+                {/* Coloured is the usual case; only the white wash is worth a line. */}
+                {item.washGroup === "white" && <p className="truncate text-sm text-ink-muted">White wash</p>}
               </div>
             </Link>
           </li>

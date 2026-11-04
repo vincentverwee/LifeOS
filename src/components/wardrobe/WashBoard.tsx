@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { WashingMachine } from "lucide-react";
-import { moveItems } from "@/lib/actions/wardrobe";
-import type { ClothingStatus } from "@/lib/wardrobe/types";
+import { moveItems, unwashItems, washItems } from "@/lib/actions/wardrobe";
+import { groupByWash } from "@/lib/wardrobe/logic";
+import { WASH_GROUP_LABEL, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
 import { SLIDE_OUT_MS, SlideRow, wait } from "@/components/reminders/SlideRow";
 import { ItemPhoto } from "./ItemPhoto";
@@ -13,6 +14,7 @@ type Item = {
   id: string;
   name: string;
   categoryName: string;
+  washGroup: WashGroup;
   status: ClothingStatus;
   photoId: string | null;
   photoCutout: boolean;
@@ -22,30 +24,17 @@ type Step = {
   from: ClothingStatus;
   to: ClothingStatus;
   done: string;
-  all: string;
-  hint: string;
 };
 
 /** What a tick does in each list. */
 const STEPS: Record<ClothingStatus, Step> = {
-  wash: {
-    from: "wash",
-    to: "drying",
-    done: "Washed",
-    all: "All washed",
-    hint: "Tick the sheep once it's washed.",
-  },
-  drying: {
-    from: "drying",
-    to: "clean",
-    done: "Dry",
-    all: "All dry",
-    hint: "Tick the sheep once it's dry.",
-  },
-  clean: { from: "clean", to: "wash", done: "In the wash", all: "", hint: "" },
+  wash: { from: "wash", to: "drying", done: "Washed" },
+  drying: { from: "drying", to: "clean", done: "Dry" },
+  clean: { from: "clean", to: "wash", done: "In the wash" },
 };
 
-type Undo = { label: string; ids: string[]; step: Step };
+/** `logged` (washes only) = that wash added today's Last done log, so Undo takes it off again. */
+type Undo = { label: string; ids: string[]; step: Step; logged?: boolean };
 
 /** Over this many clean items the "Put in the wash" list gets a search box. */
 const SEARCH_FROM = 8;
@@ -82,6 +71,7 @@ function Row({
             </span>
             <span className="block truncate text-sm text-ink-muted">
               {item.categoryName}
+              {item.washGroup === "white" && " · white"}
             </span>
           </span>
         </Link>
@@ -91,9 +81,44 @@ function Row({
   );
 }
 
+function Heading({
+  title,
+  count,
+  hint,
+  children,
+}: {
+  title: string;
+  count: number;
+  hint?: string | null;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-semibold text-foreground">
+          {title}{" "}
+          <span className="text-base font-normal text-ink-muted tabular-nums">{count}</span>
+        </h2>
+        {hint && <p className="text-sm text-ink-muted">{hint}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="rounded-2xl border border-dashed border-border px-4 py-4 text-center text-sm text-ink-muted">
+      {children}
+    </p>
+  );
+}
+
 /**
- * The basket (in the wash), the rack (drying) and, folded away, the clean clothes to put in.
- * A tick slides the row off and moves the item one step on; "Undo" stays for a few seconds.
+ * The basket (in the wash, split into the coloured and the white load), the rack (drying)
+ * and, folded away, the clean clothes to put in. A tick slides the row off and moves the
+ * item one step on; "Undo" stays for a few seconds. Washing (basket → rack, a whole load or
+ * single pieces) also logs today on the Last done "Wash" item.
  */
 export function WashBoard({ items }: { items: Item[] }) {
   // Rows stay ticked until the action's re-render moves them to their next list.
@@ -110,7 +135,7 @@ export function WashBoard({ items }: { items: Item[] }) {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   // Kept here, not in the DOM: the list re-renders after every move and an Undo, and must stay open.
-  const [basketOpen, setBasketOpen] = useState(false);
+  const [cleanOpen, setCleanOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -119,24 +144,28 @@ export function WashBoard({ items }: { items: Item[] }) {
     return () => clearTimeout(timer);
   }, [undo]);
 
-  function move(list: Item[], step: Step) {
+  function move(list: Item[], step: Step, what?: string) {
     const ids = list.map((i) => i.id);
     setError(null);
     setReturning(new Set());
     startTransition(async () => {
       addLeaving(ids);
       try {
-        await Promise.all([
-          moveItems(ids, step.from, step.to),
+        // A wash goes through its own action: it also logs Last done's "Wash".
+        const [result] = await Promise.all([
+          step.from === "wash"
+            ? washItems(ids)
+            : moveItems(ids, step.from, step.to).then(() => undefined),
           wait(SLIDE_OUT_MS),
         ]);
         setUndo({
           label:
             list.length === 1
               ? `${step.done}: ${list[0].name}`
-              : `${step.done}: ${list.length} items`,
+              : `${step.done}: ${what ?? `${list.length} items`}`,
           ids,
           step,
+          logged: result?.logged,
         });
       } catch {
         setError("Couldn't save that. Check your connection and try again.");
@@ -149,7 +178,9 @@ export function WashBoard({ items }: { items: Item[] }) {
     setReturning(new Set(target.ids));
     startTransition(async () => {
       try {
-        await moveItems(target.ids, target.step.to, target.step.from);
+        await (target.step.from === "wash"
+          ? unwashItems(target.ids, target.logged === true)
+          : moveItems(target.ids, target.step.to, target.step.from));
       } catch {
         setError("Couldn't undo that. Check your connection and try again.");
       }
@@ -167,67 +198,91 @@ export function WashBoard({ items }: { items: Item[] }) {
           i.categoryName.toLowerCase().includes(q),
       )
     : clean;
+  const notLeaving = (list: Item[]) => list.filter((i) => !leaving.has(i.id));
 
-  const section = (title: string, list: Item[], step: Step, empty: string) => {
-    const open = list.filter((i) => !leaving.has(i.id));
-    return (
-      <section className="flex flex-col gap-2">
-        <div className="flex min-h-11 items-center justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">
-              {title}{" "}
-              <span className="text-base font-normal text-ink-muted tabular-nums">
-                {open.length}
-              </span>
-            </h2>
-            {open.length > 0 && (
-              <p className="text-sm text-ink-muted">{step.hint}</p>
-            )}
-          </div>
-          {open.length > 1 && (
-            <button
-              type="button"
-              onClick={() => move(open, step)}
-              className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
-            >
-              {step.all}
-            </button>
-          )}
-        </div>
-        {list.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-4 text-center text-sm text-ink-muted">
-            {empty}
-          </p>
-        ) : (
-          <ul className="flex flex-col">
-            {list.map((item) => (
-              <Row
-                key={item.id}
-                item={item}
-                leaving={leaving.has(item.id)}
-                returning={returning.has(item.id)}
-                action={
-                  <SheepCheckbox
-                    checked={leaving.has(item.id)}
-                    disabled={leaving.has(item.id)}
-                    label={`${step.done}: ${item.name}`}
-                    onChange={() => move([item], step)}
-                  />
-                }
-              />
-            ))}
-          </ul>
-        )}
-      </section>
-    );
-  };
+  const rows = (list: Item[], step: Step) => (
+    <ul className="flex flex-col">
+      {list.map((item) => (
+        <Row
+          key={item.id}
+          item={item}
+          leaving={leaving.has(item.id)}
+          returning={returning.has(item.id)}
+          action={
+            <SheepCheckbox
+              checked={leaving.has(item.id)}
+              disabled={leaving.has(item.id)}
+              label={`${step.done}: ${item.name}`}
+              onChange={() => move([item], step)}
+            />
+          }
+        />
+      ))}
+    </ul>
+  );
+
+  const basketLeft = notLeaving(wash).length;
+  const dryingLeft = notLeaving(drying);
 
   return (
     // Clips the sliding rows at the screen edge (-mx-4 px-4 = the page gutter): body's
     // overflow-x clip goes to the viewport, and a mobile viewport still widens mid-slide.
     <div className="-mx-4 flex flex-col gap-6 overflow-x-clip px-4 sm:-mx-6 sm:px-6">
-      {section("In the wash", wash, STEPS.wash, "Nothing in the basket.")}
-      {section("Drying", drying, STEPS.drying, "Nothing drying.")}
+      <section className="flex flex-col gap-3">
+        <Heading
+          title="In the wash"
+          count={basketLeft}
+          hint={basketLeft > 0 ? "Wash a whole load, or tick pieces one by one." : null}
+        />
+        {wash.length === 0 ? (
+          <Empty>Nothing in the basket.</Empty>
+        ) : (
+          groupByWash(wash).map(({ group, items: load }) => {
+            const open = notLeaving(load);
+            const name = WASH_GROUP_LABEL[group];
+            return (
+              <div key={group} className="flex flex-col gap-2">
+                <div className="flex min-h-11 items-center justify-between gap-3">
+                  <h3 className="font-medium text-foreground">
+                    {name}{" "}
+                    <span className="font-normal text-ink-muted tabular-nums">{open.length}</span>
+                  </h3>
+                  {open.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => move(open, STEPS.wash, `all ${name.toLowerCase()}`)}
+                      className="btn btn-outline inline-flex min-h-11 items-center gap-1.5 px-3 text-sm"
+                    >
+                      <WashingMachine size={18} aria-hidden="true" />
+                      Wash all {name.toLowerCase()}
+                    </button>
+                  )}
+                </div>
+                {rows(load, STEPS.wash)}
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <Heading
+          title="Drying"
+          count={dryingLeft.length}
+          hint={dryingLeft.length > 0 ? "Tick the sheep once it's dry." : null}
+        >
+          {dryingLeft.length > 1 && (
+            <button
+              type="button"
+              onClick={() => move(dryingLeft, STEPS.drying)}
+              className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
+            >
+              All dry
+            </button>
+          )}
+        </Heading>
+        {drying.length === 0 ? <Empty>Nothing drying.</Empty> : rows(drying, STEPS.drying)}
+      </section>
 
       {/* Floats above the tab bar, so it's in view wherever the tick was. */}
       <div
@@ -257,8 +312,8 @@ export function WashBoard({ items }: { items: Item[] }) {
       </div>
 
       <details
-        open={basketOpen}
-        onToggle={(e) => setBasketOpen(e.currentTarget.open)}
+        open={cleanOpen}
+        onToggle={(e) => setCleanOpen(e.currentTarget.open)}
         className="group rounded-2xl border border-border bg-surface px-4 py-1"
       >
         <summary className="tap -mx-4 flex min-h-12 cursor-pointer list-none items-center justify-between rounded-2xl px-4 font-medium text-foreground [&::-webkit-details-marker]:hidden">

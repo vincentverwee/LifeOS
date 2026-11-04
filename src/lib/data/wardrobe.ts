@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { wearDays } from "@/lib/wardrobe/logic";
-import { DEFAULT_CATEGORIES, NO_CATEGORY, isCutout, isStatus, type Category, type ClothingStatus } from "@/lib/wardrobe/types";
+import { DEFAULT_CATEGORIES, NO_CATEGORY, isCutout, isStatus, isWashGroup, WASH_ROUTINE_SOURCE, type Category, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 
 export type Item = {
   id: string;
@@ -10,7 +10,7 @@ export type Item = {
   categoryId: string | null;
   /** The category's name, or NO_CATEGORY. */
   categoryName: string;
-  color: string | null;
+  washGroup: WashGroup;
   status: ClothingStatus;
   /** Day the status last changed ("YYYY-MM-DD"). */
   statusSince: string;
@@ -27,7 +27,7 @@ const ITEM_SELECT = {
   name: true,
   categoryId: true,
   category: { select: { name: true } },
-  color: true,
+  washGroup: true,
   status: true,
   statusSince: true,
   isArchived: true,
@@ -41,7 +41,7 @@ type ItemRow = {
   name: string;
   categoryId: string | null;
   category: { name: string } | null;
-  color: string | null;
+  washGroup: string;
   status: string;
   statusSince: Date;
   isArchived: boolean;
@@ -56,6 +56,7 @@ function toItem({ category, photo, price, ...row }: ItemRow): Item {
     price: price === null ? null : price.toNumber(),
     photoCutout: isCutout(photo?.mime),
     categoryName: category?.name ?? NO_CATEGORY,
+    washGroup: isWashGroup(row.washGroup) ? row.washGroup : "coloured",
     status: isStatus(row.status) ? row.status : "clean",
     statusSince: dayKey(row.statusSince),
   };
@@ -105,13 +106,15 @@ export type ItemWears = {
   wornTodayDirect: boolean;
   /** Worn today as part of an outfit (undone on the outfit's page). */
   wornTodayViaOutfit: boolean;
+  /** Today's own wear put it in the basket ("Into the wash" ticked). */
+  inWashFromToday: boolean;
 };
 
 export async function getItemWears(itemId: string, todayKey: string): Promise<ItemWears | null> {
   const [item, outfitWears, ownWears] = await Promise.all([
     prisma.clothingItem.findUnique({ where: { id: itemId }, select: { createdAt: true } }),
     prisma.outfitWear.findMany({ where: { outfit: { items: { some: { itemId } } } }, select: { wornOn: true } }),
-    prisma.itemWear.findMany({ where: { itemId }, select: { wornOn: true } }),
+    prisma.itemWear.findMany({ where: { itemId }, select: { wornOn: true, movedToWash: true } }),
   ]);
   if (!item) return null;
   const outfitDays = outfitWears.map((w) => dayKey(w.wornOn));
@@ -122,6 +125,7 @@ export async function getItemWears(itemId: string, todayKey: string): Promise<It
     lastWornOn: days.at(-1) ?? null,
     wornTodayDirect: ownDays.includes(todayKey),
     wornTodayViaOutfit: outfitDays.includes(todayKey),
+    inWashFromToday: ownWears.some((w) => w.movedToWash && dayKey(w.wornOn) === todayKey),
   };
 }
 
@@ -140,7 +144,7 @@ const OUTFIT_SELECT = {
   name: true,
   notes: true,
   items: { select: { item: { select: ITEM_SELECT } } },
-  wears: { select: { wornOn: true }, orderBy: { wornOn: "desc" as const } },
+  wears: { select: { wornOn: true, movedItemIds: true }, orderBy: { wornOn: "desc" as const } },
 } as const;
 
 type OutfitRow = {
@@ -148,7 +152,7 @@ type OutfitRow = {
   name: string;
   notes: string | null;
   items: { item: ItemRow }[];
-  wears: { wornOn: Date }[];
+  wears: { wornOn: Date; movedItemIds: string[] }[];
 };
 
 function toOutfit(row: OutfitRow, todayKey: string): OutfitSummary {
@@ -172,9 +176,26 @@ export async function getOutfits(todayKey: string): Promise<OutfitSummary[]> {
 export async function getOutfit(
   id: string,
   todayKey: string,
-): Promise<(OutfitSummary & { wornDays: string[] }) | null> {
+): Promise<(OutfitSummary & { wornDays: string[]; todayMovedIds: string[] }) | null> {
   const row = await prisma.outfit.findUnique({ where: { id }, select: OUTFIT_SELECT });
-  return row ? { ...toOutfit(row, todayKey), wornDays: row.wears.map((w) => dayKey(w.wornOn)) } : null;
+  if (!row) return null;
+  const outfit = toOutfit(row, todayKey);
+  return {
+    ...outfit,
+    wornDays: row.wears.map((w) => dayKey(w.wornOn)),
+    // The pieces put in the basket from today's wear (the "Into the wash?" ticks).
+    todayMovedIds: outfit.wornToday ? row.wears[0].movedItemIds : [],
+  };
+}
+
+/** The day of the last wash (the Last done item Wardrobe → Wash logs), or null. */
+export async function getLastWashOn(): Promise<string | null> {
+  const log = await prisma.routineLog.findFirst({
+    where: { routine: { source: WASH_ROUTINE_SOURCE } },
+    orderBy: { doneOn: "desc" },
+    select: { doneOn: true },
+  });
+  return log ? dayKey(log.doneOn) : null;
 }
 
 export type WardrobeGlance = { wash: number; drying: number; items: number; outfits: number };

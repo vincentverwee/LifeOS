@@ -18,6 +18,7 @@ const routine = (name: string, lastDoneOn: string | null, everyDays: number | nu
   everyDays,
   lastDoneOn,
   recent: lastDoneOn ? [lastDoneOn] : [],
+  source: null,
 });
 
 describe("daysSince", () => {

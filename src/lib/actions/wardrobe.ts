@@ -7,7 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { getTodayKey } from "@/lib/today";
 import { knownError } from "@/lib/prismaErrors";
 import { parseAmount } from "@/lib/format";
-import { isStatus, PHOTO_LIMITS, type ClothingStatus } from "@/lib/wardrobe/types";
+import { isStatus, isWashGroup, PHOTO_LIMITS, WASH_ROUTINE_SOURCE, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
+import type { Prisma } from "@/generated/prisma/client";
 
 export type WardrobeFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -16,6 +17,12 @@ const utc = (key: string) => new Date(`${key}T00:00:00Z`);
 function revalidate() {
   revalidatePath("/");
   revalidatePath("/wardrobe", "layout");
+}
+
+/** A wash also changes Last done. */
+function revalidateWash() {
+  revalidate();
+  revalidatePath("/reminders", "layout");
 }
 
 function optional(formData: FormData, name: string, max: number): string | null {
@@ -48,7 +55,7 @@ async function dropOrphanPhoto(photoId: string | null) {
   if (photoId) await prisma.clothingPhoto.deleteMany({ where: { id: photoId, items: { none: {} } } });
 }
 
-type ItemFields = { name: string; categoryId: string | null; color: string | null; price: number | null };
+type ItemFields = { name: string; categoryId: string | null; washGroup: WashGroup; price: number | null };
 
 async function readItem(formData: FormData): Promise<ItemFields | string> {
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
@@ -60,7 +67,8 @@ async function readItem(formData: FormData): Promise<ItemFields | string> {
   const rawPrice = String(formData.get("price") ?? "").trim();
   const price = rawPrice ? parseAmount(rawPrice) : null;
   if (rawPrice && price === null) return "That price isn't valid.";
-  return { name, categoryId, color: optional(formData, "color", 40), price };
+  const rawGroup = formData.get("washGroup");
+  return { name, categoryId, washGroup: isWashGroup(rawGroup) ? rawGroup : "coloured", price };
 }
 
 export async function createItem(_prev: WardrobeFormState, formData: FormData): Promise<WardrobeFormState> {
@@ -148,6 +156,72 @@ export async function moveItems(ids: string[], from: ClothingStatus, to: Clothin
   revalidate();
 }
 
+/** Names an existing Last done item for the wash may have; the first wash adopts it. */
+const WASH_NAMES = ["wash", "washing", "laundry", "do the wash", "the wash"];
+
+/** The Last done item a wash logs: the linked one, else an existing "Wash" adopted, else a new one. */
+async function ensureWashRoutine(tx: Prisma.TransactionClient): Promise<string> {
+  const linked = await tx.routine.findUnique({ where: { source: WASH_ROUTINE_SOURCE }, select: { id: true } });
+  if (linked) return linked.id;
+  const named = await tx.routine.findFirst({
+    where: { source: null, OR: WASH_NAMES.map((name) => ({ name: { equals: name, mode: "insensitive" as const } })) },
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  if (named) {
+    await tx.routine.update({ where: { id: named.id }, data: { source: WASH_ROUTINE_SOURCE } });
+    return named.id;
+  }
+  // Any item called "Wash" was adopted above, so the name is free.
+  const created = await tx.routine.create({ data: { name: "Wash", source: WASH_ROUTINE_SOURCE }, select: { id: true } });
+  return created.id;
+}
+
+/**
+ * A wash: the basket's pieces move to drying and Last done's "Wash" gets today. `logged`
+ * = this call added today's log, so Undo (`unwashItems`) takes it off again.
+ */
+export async function washItems(ids: string[]): Promise<{ logged: boolean }> {
+  await requireAuth();
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: false };
+  const today = utc(await getTodayKey());
+  const logged = await prisma.$transaction(async (tx) => {
+    const { count } = await tx.clothingItem.updateMany({
+      where: { id: { in: ids.map(String) }, status: "wash" },
+      data: { status: "drying", statusSince: today },
+    });
+    // A double tap / another device moved nothing: no wash to log.
+    if (count === 0) return false;
+    const routineId = await ensureWashRoutine(tx);
+    const existing = await tx.routineLog.findUnique({
+      where: { routineId_doneOn: { routineId, doneOn: today } },
+      select: { id: true },
+    });
+    if (existing) return false;
+    await tx.routineLog.create({ data: { routineId, doneOn: today } });
+    return true;
+  });
+  revalidateWash();
+  return { logged };
+}
+
+/** Undo of a wash: back in the basket, and today's Wash log off if that wash added it. */
+export async function unwashItems(ids: string[], logged: boolean): Promise<void> {
+  await requireAuth();
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return;
+  const today = utc(await getTodayKey());
+  await prisma.$transaction([
+    prisma.clothingItem.updateMany({
+      where: { id: { in: ids.map(String) }, status: "drying" },
+      data: { status: "wash", statusSince: today },
+    }),
+    ...(logged === true
+      ? [prisma.routineLog.deleteMany({ where: { doneOn: today, routine: { source: WASH_ROUTINE_SOURCE } } })]
+      : []),
+  ]);
+  revalidateWash();
+}
+
 type OutfitFields = { name: string; notes: string | null; itemIds: string[] };
 
 function readOutfit(formData: FormData): OutfitFields | string {
@@ -203,28 +277,55 @@ export async function deleteOutfit(formData: FormData): Promise<void> {
   redirect("/wardrobe/outfits");
 }
 
-/** Logs today and sends the outfit's clean pieces to the wash. A second tap the same day changes nothing. */
+/** Logs today; which pieces go in the basket is picked afterwards (`setWornInWash`). A second tap the same day changes nothing. */
 export async function wearOutfit(outfitId: string): Promise<void> {
   await requireAuth();
   const today = utc(await getTodayKey());
-  const outfit = await prisma.outfit.findUnique({
-    where: { id: outfitId },
-    select: { items: { select: { itemId: true, item: { select: { status: true } } } } },
-  });
-  if (!outfit) return;
-  const moved = outfit.items.filter((i) => i.item.status === "clean").map((i) => i.itemId);
   try {
-    await prisma.$transaction([
-      prisma.outfitWear.create({ data: { outfitId, wornOn: today, movedItemIds: moved } }),
-      prisma.clothingItem.updateMany({
-        where: { id: { in: moved }, status: "clean" },
-        data: { status: "wash", statusSince: today },
-      }),
-    ]);
+    await prisma.outfitWear.create({ data: { outfitId: String(outfitId), wornOn: today } });
   } catch (e) {
-    // Already logged today (double tap, another device): nothing to do.
-    knownError(e, { P2002: "Already worn today." });
+    // Already logged today (double tap, another device), or the outfit is gone: nothing to do.
+    knownError(e, { P2002: "Already worn today.", P2003: "That outfit no longer exists." });
   }
+  revalidate();
+}
+
+/**
+ * "Into the wash?" after wearing an outfit today: `inWash` puts clean pieces in the basket
+ * and remembers them on today's wear (so Undo of the wear puts them back); false takes back
+ * ones this list put in today.
+ */
+export async function setWornInWash(outfitId: string, itemIds: string[], inWash: boolean): Promise<void> {
+  await requireAuth();
+  if (!Array.isArray(itemIds) || itemIds.length === 0 || itemIds.length > 200) return;
+  const today = utc(await getTodayKey());
+  await prisma.$transaction(async (tx) => {
+    const wear = await tx.outfitWear.findUnique({
+      where: { outfitId_wornOn: { outfitId: String(outfitId), wornOn: today } },
+      select: { id: true, movedItemIds: true, outfit: { select: { items: { select: { itemId: true } } } } },
+    });
+    if (!wear) return;
+    const inOutfit = new Set(wear.outfit.items.map((i) => i.itemId));
+    const ids = itemIds.map(String).filter((id) => inOutfit.has(id));
+    const moved = new Set(wear.movedItemIds);
+    if (inWash) {
+      const clean = await tx.clothingItem.findMany({ where: { id: { in: ids }, status: "clean" }, select: { id: true } });
+      const now = clean.map((i) => i.id);
+      if (now.length === 0) return;
+      await tx.clothingItem.updateMany({ where: { id: { in: now }, status: "clean" }, data: { status: "wash", statusSince: today } });
+      for (const id of now) moved.add(id);
+    } else {
+      const back = ids.filter((id) => moved.has(id));
+      if (back.length === 0) return;
+      // Only while still in the basket from today; ones you moved on yourself stay put.
+      await tx.clothingItem.updateMany({
+        where: { id: { in: back }, status: "wash", statusSince: today },
+        data: { status: "clean" },
+      });
+      for (const id of back) moved.delete(id);
+    }
+    await tx.outfitWear.update({ where: { id: wear.id }, data: { movedItemIds: [...moved] } });
+  });
   revalidate();
 }
 
@@ -251,27 +352,36 @@ export async function unwearToday(outfitId: string): Promise<void> {
   revalidate();
 }
 
-/** "Wore this today" for one piece: logs the day and sends it to the wash if it was clean. */
+/** "Wore this today" for one piece: logs the day; "Into the wash" is a separate tick (`setWornItemInWash`). */
 export async function wearItem(itemId: string): Promise<void> {
   await requireAuth();
   const today = utc(await getTodayKey());
-  const item = await prisma.clothingItem.findUnique({ where: { id: String(itemId) }, select: { id: true, status: true } });
-  if (!item) return;
-  const moved = item.status === "clean";
   try {
-    const log = prisma.itemWear.create({ data: { itemId: item.id, wornOn: today, movedToWash: moved } });
-    if (moved) {
-      await prisma.$transaction([
-        log,
-        prisma.clothingItem.updateMany({ where: { id: item.id, status: "clean" }, data: { status: "wash", statusSince: today } }),
-      ]);
-    } else {
-      await log;
-    }
+    await prisma.itemWear.create({ data: { itemId: String(itemId), wornOn: today } });
   } catch (e) {
-    // Already logged today (double tap, another device): nothing to do.
-    knownError(e, { P2002: "Already worn today." });
+    // Already logged today (double tap, another device), or the item is gone: nothing to do.
+    knownError(e, { P2002: "Already worn today.", P2003: "That item no longer exists." });
   }
+  revalidate();
+}
+
+/** The "Into the wash" tick after wearing a piece on its own today; false takes back what that tick put in. */
+export async function setWornItemInWash(itemId: string, inWash: boolean): Promise<void> {
+  await requireAuth();
+  const today = utc(await getTodayKey());
+  const id = String(itemId);
+  await prisma.$transaction(async (tx) => {
+    const wear = await tx.itemWear.findUnique({
+      where: { itemId_wornOn: { itemId: id, wornOn: today } },
+      select: { id: true, movedToWash: true },
+    });
+    if (!wear || wear.movedToWash === inWash) return;
+    const { count } = inWash
+      ? await tx.clothingItem.updateMany({ where: { id, status: "clean" }, data: { status: "wash", statusSince: today } })
+      : await tx.clothingItem.updateMany({ where: { id, status: "wash", statusSince: today }, data: { status: "clean" } });
+    // Not clean any more / already moved on: leave it, the tick shows the real state.
+    await tx.itemWear.update({ where: { id: wear.id }, data: { movedToWash: count > 0 ? inWash : false } });
+  });
   revalidate();
 }
 

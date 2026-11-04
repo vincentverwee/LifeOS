@@ -7,9 +7,15 @@ import { addDays } from "@/lib/reminders/schedule";
 
 const RECENT = 6;
 
-function toRoutine(row: { id: string; name: string; everyDays: number | null; logs: { doneOn: Date }[] }): Routine {
+function toRoutine(row: {
+  id: string;
+  name: string;
+  everyDays: number | null;
+  source: string | null;
+  logs: { doneOn: Date }[];
+}): Routine {
   const recent = row.logs.map((l) => dayKey(l.doneOn));
-  return { id: row.id, name: row.name, everyDays: row.everyDays, lastDoneOn: recent[0] ?? null, recent };
+  return { id: row.id, name: row.name, everyDays: row.everyDays, source: row.source, lastDoneOn: recent[0] ?? null, recent };
 }
 
 /** Every Last done item, due first then longest ago. */
@@ -19,6 +25,7 @@ export async function getRoutines(todayKey: string): Promise<Routine[]> {
       id: true,
       name: true,
       everyDays: true,
+      source: true,
       logs: { orderBy: { doneOn: "desc" }, take: RECENT, select: { doneOn: true } },
     },
   });
@@ -34,6 +41,7 @@ export async function getRoutine(id: string): Promise<RoutineDetail | null> {
       id: true,
       name: true,
       everyDays: true,
+      source: true,
       logs: { orderBy: { doneOn: "desc" }, take: 20, select: { id: true, doneOn: true } },
     },
   });

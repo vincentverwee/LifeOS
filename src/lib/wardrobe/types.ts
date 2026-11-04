@@ -17,6 +17,22 @@ export function isStatus(value: unknown): value is ClothingStatus {
   return (STATUSES as readonly string[]).includes(value as string);
 }
 
+/** Which load an item goes in (instead of its colour). */
+export const WASH_GROUPS = ["coloured", "white"] as const;
+export type WashGroup = (typeof WASH_GROUPS)[number];
+
+export const WASH_GROUP_LABEL: Record<WashGroup, string> = {
+  coloured: "Coloured",
+  white: "White",
+};
+
+export function isWashGroup(value: unknown): value is WashGroup {
+  return (WASH_GROUPS as readonly string[]).includes(value as string);
+}
+
+/** `Routine.source` of the Last done item a wash on Wardrobe → Wash logs. */
+export const WASH_ROUTINE_SOURCE = "wardrobe-wash";
+
 /** A category as the pages use it. */
 export type Category = { id: string; name: string };
 

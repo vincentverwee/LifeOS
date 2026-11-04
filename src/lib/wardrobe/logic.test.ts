@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { costPerWear, describeUnavailable, describeWorn, groupByCategory, outfitReadiness, wearDays, type OutfitPiece } from "./logic";
+import { costPerWear, describeUnavailable, describeWorn, groupByCategory, groupByWash, outfitReadiness, wearDays, type OutfitPiece } from "./logic";
 
 const piece = (id: string, status: OutfitPiece["status"], isArchived = false): OutfitPiece => ({
   id,
@@ -80,5 +80,20 @@ describe("costPerWear", () => {
   it("divides the price by the wears", () => {
     expect(costPerWear(60, 12)).toBe(5);
     expect(costPerWear(0, 2)).toBe(0);
+  });
+});
+
+describe("groupByWash", () => {
+  it("splits into coloured then white and drops an empty load", () => {
+    const items = [
+      { id: "a", washGroup: "white" as const },
+      { id: "b", washGroup: "coloured" as const },
+      { id: "c", washGroup: "white" as const },
+    ];
+    expect(groupByWash(items).map((g) => [g.group, g.items.map((i) => i.id)])).toEqual([
+      ["coloured", ["b"]],
+      ["white", ["a", "c"]],
+    ]);
+    expect(groupByWash(items.filter((i) => i.washGroup === "white")).map((g) => g.group)).toEqual(["white"]);
   });
 });

@@ -41,7 +41,12 @@ export default async function OutfitPage({ params }: PageProps<"/wardrobe/outfit
         </p>
       )}
 
-      <WearButton outfitId={outfit.id} wornToday={outfit.wornToday} />
+      <WearButton
+        outfitId={outfit.id}
+        wornToday={outfit.wornToday}
+        pieces={outfit.items.filter((i) => !i.isArchived)}
+        movedIds={outfit.todayMovedIds}
+      />
 
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {outfit.items.map((item) => (

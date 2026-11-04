@@ -4,7 +4,7 @@ import { getRoutine } from "@/lib/data/routines";
 import { getTodayKey } from "@/lib/today";
 import { deleteRoutine, deleteRoutineLog } from "@/lib/actions/routines";
 import { formatDay } from "@/lib/reminders/schedule";
-import { describeRhythm, describeSince } from "@/lib/reminders/routines";
+import { describeRhythm, describeSince, routineLink } from "@/lib/reminders/routines";
 import { RoutineForm } from "@/components/reminders/RoutineForm";
 import { LogPastDate } from "@/components/reminders/LogPastDate";
 import { ConfirmDeleteButton } from "@/components/reminders/ConfirmDeleteButton";
@@ -14,6 +14,7 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
   const [routine, todayKey] = await Promise.all([getRoutine(id), getTodayKey()]);
   if (!routine) notFound();
   const rhythm = describeRhythm(routine);
+  const link = routineLink(routine.source);
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,7 +29,16 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
         </p>
       </div>
 
-      <LogPastDate routineId={routine.id} todayKey={todayKey} />
+      {link ? (
+        <p className="flex items-center justify-between gap-3 rounded-2xl bg-surface-muted py-1 pr-1 pl-4 text-sm text-foreground">
+          Logged from {link.from}.
+          <Link href={link.href} className="btn btn-ghost inline-flex min-h-11 shrink-0 px-3">
+            Open ›
+          </Link>
+        </p>
+      ) : (
+        <LogPastDate routineId={routine.id} todayKey={todayKey} />
+      )}
 
       {routine.logs.length > 0 && (
         <section>

@@ -3,7 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { Camera, ImagePlus } from "lucide-react";
 import { createItem, updateItem, type WardrobeFormState } from "@/lib/actions/wardrobe";
-import type { Category } from "@/lib/wardrobe/types";
+import { WASH_GROUPS, WASH_GROUP_LABEL, type Category, type WashGroup } from "@/lib/wardrobe/types";
 import { resizeImage } from "@/lib/images/resize";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { ItemPhoto } from "./ItemPhoto";
@@ -12,7 +12,7 @@ type Item = {
   id: string;
   name: string;
   categoryId: string | null;
-  color: string | null;
+  washGroup: WashGroup;
   photoId: string | null;
   photoCutout: boolean;
   price: number | null;
@@ -23,12 +23,10 @@ const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreg
 /** Add (no `item`) or edit a clothing item. The photo is shrunk here, before it's sent. */
 export function ItemForm({
   item,
-  colors,
   categories,
   defaultCategoryId,
 }: {
   item?: Item;
-  colors: string[];
   categories: Category[];
   /** New items: the category just used ("add another"), else the first one. */
   defaultCategoryId?: string | null;
@@ -159,24 +157,25 @@ export function ItemForm({
         </select>
       </label>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-ink-muted">Colour (optional)</span>
-        <input
-          name="color"
-          type="text"
-          maxLength={40}
-          autoComplete="off"
-          list="clothing-colors"
-          defaultValue={item?.color ?? ""}
-          placeholder="black, navy, white…"
-          className={FIELD}
-        />
-        <datalist id="clothing-colors">
-          {colors.map((c) => (
-            <option key={c} value={c} />
+      <fieldset className="flex flex-col gap-1">
+        <legend className="mb-1 text-sm text-ink-muted">Wash</legend>
+        <div className="grid grid-cols-2 gap-1 rounded-full bg-surface-muted p-1">
+          {WASH_GROUPS.map((g) => (
+            <label key={g} className="relative">
+              <input
+                type="radio"
+                name="washGroup"
+                value={g}
+                defaultChecked={(item?.washGroup ?? "coloured") === g}
+                className="peer sr-only"
+              />
+              <span className="flex min-h-11 cursor-pointer items-center justify-center rounded-full px-2 text-sm font-medium text-ink-muted peer-checked:bg-surface peer-checked:text-foreground peer-checked:shadow-sm peer-focus-visible:ring-2 peer-focus-visible:ring-primary">
+                {WASH_GROUP_LABEL[g]}
+              </span>
+            </label>
           ))}
-        </datalist>
-      </label>
+        </div>
+      </fieldset>
 
       <label className="flex flex-col gap-1">
         <span className="text-sm text-ink-muted">Price (optional, shows cost per wear)</span>

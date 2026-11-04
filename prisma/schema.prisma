@@ -438,6 +438,9 @@ model Routine {
   name      String       @unique
   // Optional nudge: due again this many days after the last time (then it shows in To do).
   everyDays Int?
+  // Set when another feature logs it: "wardrobe-wash" = doing a wash on Wardrobe → Wash.
+  // Such an item is informational in Last done (no sheep, a link to that feature).
+  source    String?      @unique
   createdAt DateTime     @default(now())
   logs      RoutineLog[]
 }
@@ -623,6 +626,7 @@ model ClothingCategory {
 }
 
 // A piece of clothing. `status` "clean" | "wash" | "drying" (CHECK clothing_status);
+// `washGroup` "coloured" | "white" = which load it goes in (CHECK clothing_wash_group);
 // `categoryId` null = no category; `statusSince` is the day it last changed. Archived
 // items are hidden but keep their outfits. `price` (optional, ≥ 0, CHECK clothing_price)
 // gives the cost per wear on its page: price ÷ distinct days worn (outfits + ItemWear).
@@ -631,7 +635,7 @@ model ClothingItem {
   name        String
   categoryId  String?
   category    ClothingCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  color       String?
+  washGroup   String            @default("coloured")
   status      String            @default("clean")
   statusSince DateTime          @db.Date
   isArchived  Boolean           @default(false)

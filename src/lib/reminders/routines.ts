@@ -9,7 +9,18 @@ export type Routine = {
   lastDoneOn: string | null;
   /** Latest logs first ("YYYY-MM-DD"), at most a handful. */
   recent: string[];
+  /** Logged by another feature (see `routineLink`); null = ticked by hand. */
+  source: string | null;
 };
+
+/**
+ * Where an item that another feature logs is done instead of ticking it here; null for
+ * ordinary items. "wardrobe-wash" = doing a wash on Wardrobe → Wash.
+ */
+export function routineLink(source: string | null): { href: string; label: string; from: string } | null {
+  if (source === "wardrobe-wash") return { href: "/wardrobe/wash", label: "Wardrobe", from: "Wardrobe → Wash" };
+  return null;
+}
 
 export function daysSince(lastDoneOn: string | null, todayKey: string): number | null {
   return lastDoneOn === null ? null : daysBetween(lastDoneOn, todayKey);

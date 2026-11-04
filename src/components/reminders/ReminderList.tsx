@@ -7,13 +7,16 @@ import { logRoutineToday, unlogRoutineToday } from "@/lib/actions/routines";
 import { logMessageToday, unlogContact } from "@/lib/actions/people";
 import type { PersonSummary } from "@/lib/data/people";
 import { describeDue, describeRepeat, type Reminder } from "@/lib/reminders/schedule";
-import { describeSince, isOverdue, type Routine } from "@/lib/reminders/routines";
+import { describeSince, isOverdue, routineLink, type Routine } from "@/lib/reminders/routines";
 import { SheepCheckbox } from "./SheepCheckbox";
 import { SLIDE_OUT_MS, SlideRow, wait } from "./SlideRow";
 
 type Undo = { key: string; title: string; label: string; run: () => Promise<void> };
 
-/** One To do row: the sheep box, then the title (linking to its edit page) and a grey line under it. */
+/**
+ * One To do row: the sheep box, then the title (linking to its edit page) and a grey line
+ * under it. Without `onTick` (done elsewhere, like the wash) `doneAt` replaces the sheep.
+ */
 function TodoRow({
   done,
   returning,
@@ -21,22 +24,29 @@ function TodoRow({
   href,
   meta,
   onTick,
+  doneAt,
 }: {
   done: boolean;
   returning: boolean;
   title: string;
   href: string;
   meta: React.ReactNode;
-  onTick: () => void;
+  onTick?: () => void;
+  doneAt?: { href: string; label: string };
 }) {
   return (
     <SlideRow leaving={done ? "right" : null} entering={returning}>
       <div className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2 pl-3">
-        <SheepCheckbox checked={done} label={title} onChange={onTick} disabled={done} />
+        {onTick && <SheepCheckbox checked={done} label={title} onChange={onTick} disabled={done} />}
         <Link href={href} className="tap -my-1 min-w-0 flex-1 rounded-xl px-2 py-1">
           <p className={`leading-snug font-medium text-foreground ${done ? "line-through" : ""}`}>{title}</p>
           {meta && <p className="mt-0.5 text-sm text-ink-muted">{meta}</p>}
         </Link>
+        {doneAt && (
+          <Link href={doneAt.href} className="btn btn-outline inline-flex min-h-11 shrink-0 items-center px-3 text-sm">
+            {doneAt.label} ›
+          </Link>
+        )}
       </div>
     </SlideRow>
   );
@@ -165,6 +175,7 @@ export function ReminderList({
           })}
           {routines.map((routine) => {
             const key = `l-${routine.id}`;
+            const link = routineLink(routine.source);
             return (
               <TodoRow
                 key={key}
@@ -172,7 +183,8 @@ export function ReminderList({
                 returning={returning === key}
                 title={routine.name}
                 href={`/reminders/last-done/${routine.id}`}
-                onTick={() => tickRoutine(routine)}
+                onTick={link ? undefined : () => tickRoutine(routine)}
+                doneAt={link ?? undefined}
                 meta={
                   <>
                     <span className={isOverdue(routine, todayKey) ? "text-critical" : undefined}>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 import { logRoutineToday, unlogRoutineToday } from "@/lib/actions/routines";
-import { describeRhythm, describeSince, isDue, isOverdue, type Routine } from "@/lib/reminders/routines";
+import { describeRhythm, describeSince, isDue, isOverdue, routineLink, type Routine } from "@/lib/reminders/routines";
 import { SheepCheckbox } from "./SheepCheckbox";
 
 /**
@@ -39,6 +39,8 @@ export function RoutineList({ routines, todayKey }: { routines: Routine[]; today
         const overdue = isOverdue(shown, todayKey);
         const dueToday = !overdue && isDue(shown, todayKey);
         const rhythm = describeRhythm(routine);
+        // Logged by another feature (the wash, from Wardrobe): shown here, done there.
+        const link = routineLink(routine.source);
         return (
           <li key={routine.id} className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-2 pl-1">
             <Link href={`/reminders/last-done/${routine.id}`} className="tap -my-1 min-w-0 flex-1 rounded-xl px-3 py-1">
@@ -50,7 +52,13 @@ export function RoutineList({ routines, todayKey }: { routines: Routine[]; today
                 {rhythm && ` · ${rhythm}`}
               </p>
             </Link>
-            <SheepCheckbox checked={doneToday} label={`${routine.name} today`} onChange={() => toggle(routine, doneToday)} />
+            {link ? (
+              <Link href={link.href} className="btn btn-outline inline-flex min-h-11 shrink-0 items-center px-3 text-sm">
+                {link.label} ›
+              </Link>
+            ) : (
+              <SheepCheckbox checked={doneToday} label={`${routine.name} today`} onChange={() => toggle(routine, doneToday)} />
+            )}
           </li>
         );
       })}

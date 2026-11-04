@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCategories, getItem, getItemWears, getItems, getOutfits } from "@/lib/data/wardrobe";
+import { getCategories, getItem, getItemWears, getOutfits } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
-import { usedColors } from "@/lib/wardrobe/colors";
+import { WASH_GROUP_LABEL } from "@/lib/wardrobe/types";
 import { costPerWear, describeWorn } from "@/lib/wardrobe/logic";
 import { formatCurrency, plural } from "@/lib/format";
 import { ItemForm } from "@/components/wardrobe/ItemForm";
@@ -16,10 +16,9 @@ import { archiveItem, deleteItem } from "@/lib/actions/wardrobe";
 export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[id]">) {
   const { id } = await params;
   const todayKey = await getTodayKey();
-  const [item, wears, all, outfits, categories] = await Promise.all([
+  const [item, wears, outfits, categories] = await Promise.all([
     getItem(id),
     getItemWears(id, todayKey),
-    getItems({ archived: true }),
     getOutfits(todayKey),
     getCategories(),
   ]);
@@ -39,7 +38,7 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
             <h1 className="text-2xl font-semibold text-foreground">{item.name}</h1>
             <p className="text-sm text-ink-muted">
               {item.categoryName}
-              {item.color && ` · ${item.color}`}
+              {` · ${WASH_GROUP_LABEL[item.washGroup].toLowerCase()} wash`}
               {item.isArchived && " · archived"}
               {` · ${describeWorn(wears.lastWornOn, todayKey).toLowerCase()}`}
             </p>
@@ -61,7 +60,13 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
       </div>
 
       {!item.isArchived && (
-        <WearButton itemId={item.id} wornToday={wears.wornTodayDirect} wornInOutfit={wears.wornTodayViaOutfit} />
+        <WearButton
+          itemId={item.id}
+          status={item.status}
+          wornToday={wears.wornTodayDirect}
+          wornInOutfit={wears.wornTodayViaOutfit}
+          inWashFromToday={wears.inWashFromToday}
+        />
       )}
 
       <ItemStatusPicker key={item.status} id={item.id} status={item.status} />
@@ -92,7 +97,7 @@ export default async function ItemPage({ params }: PageProps<"/wardrobe/items/[i
       </section>
 
       <Disclosure title="Edit">
-        <ItemForm item={item} colors={usedColors(all)} categories={categories} />
+        <ItemForm item={item} categories={categories} />
         <form action={archiveItem}>
           <input type="hidden" name="id" value={item.id} />
           <input type="hidden" name="archive" value={item.isArchived ? "false" : "true"} />

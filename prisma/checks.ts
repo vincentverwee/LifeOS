@@ -162,6 +162,15 @@ export const CHECKS: Check[] = [
     label: "Clothing items with an unknown status",
     fix: "Fix those clothing statuses first.",
   },
+  // A clothing item goes in the coloured or the white wash.
+  {
+    name: "clothing_wash_group",
+    table: "ClothingItem",
+    check: `("washGroup" IN ('coloured', 'white'))`,
+    columns: `id, name, "washGroup"`,
+    label: "Clothing items with an unknown wash group",
+    fix: "Fix those wash groups first.",
+  },
   // A clothing price is empty or not negative.
   {
     name: "clothing_price",

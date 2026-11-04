@@ -1,4 +1,4 @@
-import type { ClothingStatus } from "./types";
+import { WASH_GROUPS, type ClothingStatus, type WashGroup } from "./types";
 
 export type OutfitPiece = { id: string; name: string; status: ClothingStatus; isArchived: boolean };
 
@@ -29,6 +29,13 @@ export function describeWorn(lastWornOn: string | null, todayKey: string): strin
   if (days <= 0) return "Worn today";
   if (days === 1) return "Worn yesterday";
   return `Worn ${days} days ago`;
+}
+
+/** The basket split into loads: coloured first, then white; empty loads left out. */
+export function groupByWash<T extends { washGroup: WashGroup }>(items: T[]): { group: WashGroup; items: T[] }[] {
+  return WASH_GROUPS.map((group) => ({ group, items: items.filter((i) => i.washGroup === group) })).filter(
+    (g) => g.items.length > 0,
+  );
 }
 
 export type CategoryGroup<T> = { id: string | null; name: string; items: T[] };

@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { connection } from "next/server";
-import { getCategories, getItem, getItems } from "@/lib/data/wardrobe";
+import { getCategories, getItem } from "@/lib/data/wardrobe";
 import { ItemForm } from "@/components/wardrobe/ItemForm";
-import { usedColors } from "@/lib/wardrobe/colors";
 
 export default async function AddItemPage({ searchParams }: PageProps<"/wardrobe/items/add">) {
   await connection();
   const { added } = await searchParams;
-  const [items, categories, last] = await Promise.all([
-    getItems({ archived: true }),
+  const [categories, last] = await Promise.all([
     getCategories(),
     typeof added === "string" ? getItem(added) : null,
   ]);
@@ -32,7 +30,6 @@ export default async function AddItemPage({ searchParams }: PageProps<"/wardrobe
       {/* A fresh form after each "add another" (the key), on the category just used. */}
       <ItemForm
         key={last?.id ?? "new"}
-        colors={usedColors(items)}
         categories={categories}
         defaultCategoryId={last ? last.categoryId : undefined}
       />

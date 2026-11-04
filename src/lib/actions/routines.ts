@@ -86,9 +86,16 @@ export async function deleteRoutine(formData: FormData): Promise<void> {
   redirect("/reminders/last-done");
 }
 
+/** Items another feature logs (`Routine.source`, e.g. the wash) can't be ticked here. */
+async function isByHand(id: string): Promise<boolean> {
+  const routine = await prisma.routine.findUnique({ where: { id: String(id) }, select: { source: true } });
+  return routine !== null && routine.source === null;
+}
+
 /** The sheep: done today (a second tap the same day changes nothing). */
 export async function logRoutineToday(id: string): Promise<void> {
   await requireAuth();
+  if (!(await isByHand(id))) return;
   const doneOn = utc(await getTodayKey());
   await prisma.routineLog.upsert({
     where: { routineId_doneOn: { routineId: id, doneOn } },
@@ -109,6 +116,7 @@ export async function unlogRoutineToday(id: string): Promise<void> {
 export async function logRoutineOn(_prev: RoutineFormState, formData: FormData): Promise<RoutineFormState> {
   await requireAuth();
   const id = String(formData.get("id") ?? "");
+  if (!(await isByHand(id))) return { ok: false, error: "This one is logged from elsewhere." };
   const picked = await readPastDate(formData.get("doneOn"));
   if ("error" in picked) return { ok: false, error: picked.error };
   const doneOn = utc(picked.date);
