@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Memory } from "@/lib/data/diary";
-import { describeYearsAgo, moodOf } from "@/lib/diary/onThisDay";
+import { describeYearsAgo, diaryBits, moodOf } from "@/lib/diary/onThisDay";
 import { formatHours } from "@/lib/format";
 
 const fullDate = new Intl.DateTimeFormat("en-GB", {
@@ -43,14 +43,18 @@ function MemoryCard({ memory: m }: { memory: Memory }) {
       </Link>
 
       {m.entry && (
-        <p className="mt-1 text-base leading-snug text-foreground">
-          {mood && (
-            <span className="mr-1.5" role="img" aria-label={mood.label}>
-              {mood.face}
-            </span>
-          )}
-          {m.entry.text}
-        </p>
+        <div className="mt-1 flex flex-col gap-1 text-base leading-snug text-foreground">
+          {diaryBits(m.entry.text).map((bit, i) => (
+            <p key={i}>
+              {i === 0 && mood && (
+                <span className="mr-1.5" role="img" aria-label={mood.label}>
+                  {mood.face}
+                </span>
+              )}
+              {bit}
+            </p>
+          ))}
+        </div>
       )}
 
       <ul className="mt-2 flex flex-col">

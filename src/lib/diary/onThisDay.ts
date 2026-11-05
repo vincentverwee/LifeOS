@@ -1,7 +1,20 @@
 // Pure date math for the diary's "On this day" (no server imports, tested in onThisDay.test.ts).
 
-/** Longest diary line (CHECK diary_entry in prisma/checks.ts). */
-export const MAX_DIARY_LENGTH = 280;
+/** Longest single bit of a day (one line of `DiaryEntry.text`). */
+export const MAX_BIT_LENGTH = 280;
+
+/** Longest whole day, all bits plus their line breaks (CHECK diary_entry in prisma/checks.ts). */
+export const MAX_DIARY_LENGTH = 2000;
+
+/** A bit with its inner whitespace (incl. line breaks) collapsed to single spaces. */
+export function cleanBit(s: string): string {
+  return s.replace(/\s+/g, " ").trim();
+}
+
+/** The bits of a day's text: one per line, cleaned, empty lines dropped. */
+export function diaryBits(text: string): string[] {
+  return text.split("\n").map(cleanBit).filter(Boolean);
+}
 
 /** How far back "On this day" looks. */
 export const PAST_YEARS = 15;

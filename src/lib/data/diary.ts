@@ -4,7 +4,7 @@ import { STUDY_ENTRY_WHERE } from "@/lib/data/lessons";
 import { dayKey } from "@/lib/format";
 import { pintsOf } from "@/lib/monthStats";
 import { addDays } from "@/lib/reminders/schedule";
-import { dayOfTrip, sameDayInPastYears } from "@/lib/diary/onThisDay";
+import { dayOfTrip, diaryBits, sameDayInPastYears } from "@/lib/diary/onThisDay";
 
 const utc = (key: string) => new Date(`${key}T00:00:00Z`);
 
@@ -174,9 +174,9 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
   });
 }
 
-/** One short line for a memory, for the Home tile: the diary text first, else what was logged. */
+/** One short line for a memory, for the Home tile: the day's last diary bit first, else what was logged. */
 export function memoryHeadline(m: Memory): string {
-  if (m.entry) return m.entry.text;
+  if (m.entry) return diaryBits(m.entry.text).at(-1) ?? "";
   const trip = m.trips[0];
   if (trip) return `Day ${trip.day} of ${trip.title}${trip.stop ? ` · ${trip.stop}` : ""}`;
   if (m.beer) {

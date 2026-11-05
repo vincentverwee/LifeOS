@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayOfTrip, describeYearsAgo, isMood, moodOf, sameDayInPastYears } from "./onThisDay";
+import { cleanBit, dayOfTrip, describeYearsAgo, diaryBits, isMood, moodOf, sameDayInPastYears } from "./onThisDay";
 
 describe("sameDayInPastYears", () => {
   it("lists the same day in earlier years, newest first", () => {
@@ -54,5 +54,25 @@ describe("helpers", () => {
     expect(isMood(2.5)).toBe(false);
     expect(moodOf(5)?.label).toBe("Great");
     expect(moodOf(null)).toBeNull();
+  });
+});
+
+describe("diaryBits", () => {
+  it("splits a day into its bits, one per line", () => {
+    expect(diaryBits("Coffee with Anna\nRain all afternoon")).toEqual(["Coffee with Anna", "Rain all afternoon"]);
+  });
+
+  it("keeps an old single-line day as one bit", () => {
+    expect(diaryBits("Just one line")).toEqual(["Just one line"]);
+  });
+
+  it("drops empty lines and tidies spaces", () => {
+    expect(diaryBits("  a   b \n\n \r\n c\t")).toEqual(["a b", "c"]);
+  });
+});
+
+describe("cleanBit", () => {
+  it("collapses whitespace and line breaks into single spaces", () => {
+    expect(cleanBit("  one\n two   three ")).toBe("one two three");
   });
 });

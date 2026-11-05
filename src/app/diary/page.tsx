@@ -7,7 +7,7 @@ import { OnThisDay } from "@/components/diary/OnThisDay";
 import { MoodStrip } from "@/components/diary/MoodStrip";
 import { DiaryTimeline } from "@/components/diary/DiaryTimeline";
 
-/** Lines per page of the timeline. */
+/** Days per page of the timeline. */
 const PAGE = 20;
 
 export default async function DiaryPage({ searchParams }: PageProps<"/diary">) {
@@ -32,7 +32,7 @@ export default async function DiaryPage({ searchParams }: PageProps<"/diary">) {
 
       <section className="rounded-2xl border border-border bg-surface p-4">
         <h2 className="mb-3 font-semibold text-foreground">Today</h2>
-        <DiaryForm key={todayKey} date={todayKey} entry={entry} placeholder="One line about today…" />
+        <DiaryForm key={todayKey} date={todayKey} entry={entry} placeholder="Add something…" />
       </section>
 
       <section className="flex flex-col gap-3">
@@ -44,7 +44,7 @@ export default async function DiaryPage({ searchParams }: PageProps<"/diary">) {
 
       {(recent.rows.length > 0 || before) && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-foreground">{before ? "Older lines" : "Timeline"}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{before ? "Older days" : "Timeline"}</h2>
           {recent.rows.length > 0 ? (
             <DiaryTimeline rows={recent.rows} />
           ) : (

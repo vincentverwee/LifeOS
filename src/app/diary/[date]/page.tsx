@@ -15,7 +15,7 @@ const longDate = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-/** One day: write or fix its line (back-dating), and what happened on it in earlier years. */
+/** One day: add to or fix it (back-dating), and what happened on it in earlier years. */
 export default async function DiaryDayPage({ params }: PageProps<"/diary/[date]">) {
   const { date: raw } = await params;
   const date = parseDateKey(raw);
@@ -45,7 +45,7 @@ export default async function DiaryDayPage({ params }: PageProps<"/diary/[date]"
       </div>
 
       <section className="rounded-2xl border border-border bg-surface p-4">
-        <DiaryForm key={date} date={date} entry={entry} placeholder="One line about that day…" />
+        <DiaryForm key={date} date={date} entry={entry} placeholder="Add something about that day…" />
       </section>
 
       <section className="flex flex-col gap-3">

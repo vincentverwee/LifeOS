@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { DiaryRow } from "@/lib/data/diary";
-import { moodOf } from "@/lib/diary/onThisDay";
+import { diaryBits, moodOf } from "@/lib/diary/onThisDay";
 import { formatDay } from "@/lib/reminders/schedule";
 
 const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
 
-/** Diary lines grouped by month, newest first (they arrive newest first). */
+/** Diary days (each bit on its own line) grouped by month, newest first (they arrive newest first). */
 export function DiaryTimeline({ rows }: { rows: DiaryRow[] }) {
   const months: { label: string; rows: DiaryRow[] }[] = [];
   for (const row of rows) {
@@ -26,7 +26,11 @@ export function DiaryTimeline({ rows }: { rows: DiaryRow[] }) {
                 <li key={row.id}>
                   <Link href={`/diary/${row.date}`} className="tap -mx-2 flex min-h-11 items-start gap-3 rounded-lg px-2 py-2">
                     <span className="w-20 shrink-0 pt-0.5 text-sm tabular-nums text-ink-muted">{formatDay(row.date)}</span>
-                    <span className="min-w-0 flex-1 text-foreground">{row.text}</span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-1 text-foreground">
+                      {diaryBits(row.text).map((bit, i) => (
+                        <span key={i}>{bit}</span>
+                      ))}
+                    </span>
                     {mood && (
                       <span className="shrink-0" role="img" aria-label={mood.label}>
                         {mood.face}

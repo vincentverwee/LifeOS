@@ -12,7 +12,7 @@ import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
 import { getDiaryGlance, memoryHeadline } from "@/lib/data/diary";
-import { describeYearsAgo, moodOf } from "@/lib/diary/onThisDay";
+import { describeYearsAgo, diaryBits, moodOf } from "@/lib/diary/onThisDay";
 import { BeerIcon, BudgetIcon, DiaryIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WardrobeIcon, WaypointIcon } from "@/components/home/FeatureIcons";
 import { getBeerGlance } from "@/lib/data/beer";
 import { getPeopleGlance } from "@/lib/data/people";
@@ -449,12 +449,12 @@ async function DiaryTileBody({ todayKey }: { todayKey: string }) {
       {today ? (
         <p className="line-clamp-3 text-base leading-snug text-foreground">
           {mood && <span className="mr-1.5">{mood.face}</span>}
-          {today.text}
+          {diaryBits(today.text).at(-1)}
         </p>
       ) : (
         <>
-          <p className="text-lg font-semibold text-foreground">Write today&apos;s line</p>
-          <p className="text-sm text-ink-muted">One sentence, and how it went</p>
+          <p className="text-lg font-semibold text-foreground">Add to today</p>
+          <p className="text-sm text-ink-muted">A few words, any time of day</p>
         </>
       )}
       {memory && headline && (

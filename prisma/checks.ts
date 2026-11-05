@@ -180,13 +180,13 @@ export const CHECKS: Check[] = [
     label: "Clothing items with a negative price",
     fix: "Fix those clothing prices first.",
   },
-  // A diary line is 1–280 characters, the mood 1–5 or empty.
+  // A diary day is 1–2000 characters (bits of ≤ 280 on their own lines), the mood 1–5 or empty.
   {
     name: "diary_entry",
     table: "DiaryEntry",
-    check: `(char_length(btrim("text")) BETWEEN 1 AND 280 AND ("mood" IS NULL OR "mood" BETWEEN 1 AND 5))`,
+    check: `(char_length(btrim("text")) BETWEEN 1 AND 2000 AND ("mood" IS NULL OR "mood" BETWEEN 1 AND 5))`,
     columns: "id, date, mood",
-    label: "Diary entries with an empty or too long line, or an invalid mood",
+    label: "Diary entries that are empty or too long, or have an invalid mood",
     fix: "Fix those diary entries first.",
   },
 ];
