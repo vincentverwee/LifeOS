@@ -65,7 +65,8 @@ async function moodInput(kind: SectionKind, todayKey: string): Promise<MoodInput
         left: g.week.left,
         daysLeft: g.week.daysLeft,
         behind: g.week.behind && g.week.reachable,
-        lastOn: g.lastOn,
+        missed: g.week.left > 0 && !g.week.reachable,
+        lastOn: g.last?.date ?? null,
       };
     }
   }

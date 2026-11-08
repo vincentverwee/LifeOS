@@ -6,7 +6,7 @@ import { dayKey } from "@/lib/format";
 import { getTimeZone } from "@/lib/today";
 import { addDays } from "@/lib/reminders/schedule";
 import { CATEGORY_COLOR_SLOTS } from "@/lib/categoryPalette";
-import { lastSetsFor, streakWeeks, weekProgress, type SetLite, type WeekProgress, type WorkoutLite } from "@/lib/workouts/stats";
+import { lastSetsFor, streakWeeks, totals, weekProgress, type SetLite, type Totals, type WeekProgress, type WorkoutLite } from "@/lib/workouts/stats";
 import { timeOfDayIn } from "@/lib/workouts/time";
 import type { WeighIn } from "@/lib/workouts/weight";
 import {
@@ -266,34 +266,33 @@ export async function getBodyWeights(): Promise<WeighIn[]> {
 export type WorkoutsGlance = {
   week: WeekProgress;
   streak: number;
+  /** This week's finished sessions added up (shown on the tile when there's no goal). */
+  weekTotals: Totals;
+  /** The newest finished workout in the last year, or null. */
   last: { activityName: string; date: string; durationMin: number; distanceKm: number | null } | null;
-  /** The newest finished workout's day, or null. */
-  lastOn: string | null;
   live: { activityName: string; startedAt: string } | null;
-  total: number;
 };
 
 /** The Home tile and the coach's mood: this week vs the goal, the streak, the last workout. Cached per request. */
 async function loadWorkoutsGlance(todayKey: string): Promise<WorkoutsGlance> {
   // A year back is plenty for a streak; the tile needs nothing older.
-  const [lites, goal, live, total] = await Promise.all([
+  const [lites, goal, live] = await Promise.all([
     getWorkoutLites(addDays(todayKey, -371)),
     getGoal(),
     prisma.workoutLive.findUnique({
       where: { id: "current" },
       select: { workout: { select: { startedAt: true, activity: { select: { name: true } } } } },
     }),
-    prisma.workout.count({ where: FINISHED }),
   ]);
   const upToToday = lites.filter((w) => w.date <= todayKey);
   const newest = upToToday.at(-1);
+  const week = weekProgress(upToToday, goal, todayKey);
   return {
-    week: weekProgress(upToToday, goal, todayKey),
+    week,
     streak: streakWeeks(upToToday, goal, todayKey),
+    weekTotals: totals(upToToday.filter((w) => w.date >= week.monday)),
     last: newest ? { activityName: newest.activityName, date: newest.date, durationMin: newest.durationMin, distanceKm: newest.distanceKm } : null,
-    lastOn: newest?.date ?? null,
     live: live ? { activityName: live.workout.activity.name, startedAt: live.workout.startedAt.toISOString() } : null,
-    total,
   };
 }
 export const getWorkoutsGlance = cache(loadWorkoutsGlance);

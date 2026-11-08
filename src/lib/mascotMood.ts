@@ -27,6 +27,8 @@ export type MoodInput =
       left: number;
       daysLeft: number;
       behind: boolean;
+      /** This week's goal can't be made any more (one session a day). */
+      missed: boolean;
       lastOn: string | null;
     };
 
@@ -117,6 +119,7 @@ function sectionMood(input: MoodInput, name: string, todayKey: string): MascotMo
       const days = daysSince(input.lastOn, todayKey);
       if (days === null) return { mood: "default", line: `${name} is ready when you are.` };
       if (days >= WORKOUT_SLEEPY_DAYS) return { mood: "sleepy", line: `${name} dozed off. ${days} days since the last one.` };
+      if (input.missed) return { mood: "default", line: `${name} is already planning next week.` };
       return {
         mood: "default",
         line: input.goal !== null ? `${name} says: ${input.left} more this week.` : `${name} is stretching.`,

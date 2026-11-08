@@ -4,6 +4,8 @@ import { getWaypointGlance } from "@/lib/data/waypoint";
 import { getWorkoutsGlance } from "@/lib/data/workouts";
 import { workoutHeadline } from "@/lib/workouts/describe";
 import { WeekDots } from "@/components/workouts/ui";
+import { ElapsedClock } from "@/components/workouts/ElapsedClock";
+import { formatKm, formatMinutes } from "@/lib/workouts/types";
 import { getSectionMood, type SectionKind } from "@/lib/data/homeMoods";
 import { LiveMascot } from "@/components/home/LiveMascot";
 import { getRecipesGlance } from "@/lib/data/recipes";
@@ -197,8 +199,27 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
 }
 
 async function WorkoutsTileBody({ todayKey }: { todayKey: string }) {
-  const { week, streak, last, live, total } = await getWorkoutsGlance(todayKey);
-  if (total === 0 && !live) return <p className="text-sm text-ink-muted">Runs, sports and home workouts</p>;
+  const { week, streak, weekTotals, last, live } = await getWorkoutsGlance(todayKey);
+  if (!last && !live) return <p className="text-sm text-ink-muted">Runs, sports and home workouts</p>;
+  // Without a goal: what this week added up to (nothing while it's empty).
+  const weekSum =
+    weekTotals.sessions > 0
+      ? [formatMinutes(weekTotals.minutes), weekTotals.km > 0 ? formatKm(weekTotals.km) : null].filter(Boolean).join(" · ")
+      : null;
+  const status = live ? (
+    <span className="font-medium text-primary">
+      Training now · {live.activityName} ·{" "}
+      <span className="font-mono tabular-nums">
+        <ElapsedClock since={live.startedAt} />
+      </span>
+    </span>
+  ) : week.met ? (
+    "Goal met"
+  ) : week.goal !== null ? (
+    `${week.left} to go`
+  ) : (
+    weekSum
+  );
   return (
     <>
       <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
@@ -206,18 +227,16 @@ async function WorkoutsTileBody({ todayKey }: { todayKey: string }) {
         {week.goal !== null && <span className="text-lg text-ink-muted"> / {week.goal}</span>}
         <span className="text-lg text-ink-muted"> this week</span>
       </p>
-      <p className={`text-sm ${week.met ? "text-positive-text" : "text-ink-muted"}`}>
-        {live ? (
-          <span className="font-medium text-primary">Training now · {live.activityName}</span>
-        ) : week.met ? (
-          "Goal met"
-        ) : week.goal !== null ? (
-          `${week.left} to go`
-        ) : (
-          "No weekly goal"
-        )}
-        {streak > 0 && <span className="text-ink-muted"> · 🔥 {streak} {streak === 1 ? "week" : "weeks"}</span>}
-      </p>
+      {(status || streak > 0) && (
+        <p className={`text-sm ${week.met && !live ? "text-positive-text" : "text-ink-muted"}`}>
+          {status}
+          {streak > 0 && (
+            <span className="text-ink-muted">
+              {status ? " · " : ""}🔥 {streak} {streak === 1 ? "week" : "weeks"}
+            </span>
+          )}
+        </p>
+      )}
       {last && (
         <p className="mt-4 truncate text-sm text-foreground">
           <span className="text-ink-muted">Last · </span>

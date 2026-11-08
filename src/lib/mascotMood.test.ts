@@ -97,6 +97,7 @@ describe("workouts", () => {
     left: 2,
     daysLeft: 4,
     behind: false,
+    missed: false,
     lastOn: "2026-11-06",
     ...o,
   });
@@ -109,6 +110,12 @@ describe("workouts", () => {
     const m = moodFor(w({ behind: true, left: 2, daysLeft: 2 }), "Coach Ramsay", TODAY, NOON);
     expect(m.mood).toBe("worried");
     expect(m.line).toContain("2 to go, 2 days left");
+  });
+  it("looks ahead instead of counting down once the week's goal can't be made", () => {
+    const m = moodFor(w({ missed: true, left: 2, daysLeft: 1 }), "Coach Ramsay", TODAY, NOON);
+    expect(m.mood).toBe("default");
+    expect(m.line).toContain("next week");
+    expect(m.line).not.toContain("more this week");
   });
   it("dozes off after a week without one, waits when there's none yet", () => {
     expect(mood(w({ lastOn: "2026-11-01" }))).toBe("sleepy"); // 7 days

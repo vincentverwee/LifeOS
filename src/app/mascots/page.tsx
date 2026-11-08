@@ -53,6 +53,7 @@ const workouts = (o: Partial<Extract<MoodInput, { kind: "workouts" }>>): MoodInp
   left: 3,
   daysLeft: 7,
   behind: false,
+  missed: false,
   lastOn: "2026-11-05",
   ...o,
 });
