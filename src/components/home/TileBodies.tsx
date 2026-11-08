@@ -17,6 +17,8 @@ import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
+import { mascotName } from "@/lib/mascots";
+import { THEME } from "@/lib/theme";
 
 /*
  * The Home tiles: each section's card body (async server components reading
@@ -380,3 +382,13 @@ export const HOME_SECTIONS: HomeSection[] = [
   { kind: "waypoint", name: "Waypoint", href: "/waypoint", render: () => <WaypointTileBody /> },
   { kind: "recipes", name: "Recipes", href: "/recipes", render: () => <RecipesTileBody /> },
 ];
+
+/** The quick column's entries: each section's mascot by name (Penny, Hops…), opening its page. */
+export function railSections() {
+  return HOME_SECTIONS.map((s) => ({
+    kind: s.kind,
+    name: s.kind === "plain" ? s.name : mascotName(s.kind, THEME),
+    section: s.name,
+    href: s.href,
+  }));
+}

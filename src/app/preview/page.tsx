@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { HomeContent } from "@/components/home/HomeContent";
 import { QuickRail } from "@/components/home/QuickRail";
-import { HOME_SECTIONS } from "@/components/home/TileBodies";
+import { railSections } from "@/components/home/TileBodies";
 import { getHomeAlerts } from "@/lib/data/homeAlerts";
-import { mascotName } from "@/lib/mascots";
-import { THEME } from "@/lib/theme";
 import { dayKeyIn, getTimeZone } from "@/lib/today";
 
 export const metadata = { title: "Home preview" };
@@ -27,23 +25,16 @@ function Choice({ href, active, children }: { href: string; active: boolean; chi
 }
 
 /**
- * Not linked anywhere: the real Home with the quick column of mascots that open their section (swipe right from the
- * left edge or tap the tab; swipe left to hide). ?frame=phone shows it in a
+ * Not linked anywhere: Home (with its quick column) in a phone-sized box, to
+ * judge phone layouts on a laptop. ?frame=phone shows it in a
  * phone-sized box (390 wide), ?frame=full at full size.
  */
 export default async function PreviewPage({ searchParams }: PageProps<"/preview">) {
   const frame: Frame = (await searchParams).frame === "full" ? "full" : "phone";
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
-  const alerts = await getHomeAlerts(todayKey);
-  // The column shows who lives there (Penny, Hops…); every section kind has a mascot.
-  const sections = HOME_SECTIONS.map((s) => ({
-    kind: s.kind,
-    name: s.kind === "plain" ? s.name : mascotName(s.kind, THEME),
-    section: s.name,
-    href: s.href,
-    alert: alerts.has(s.kind),
-  }));
+  const sections = railSections();
+  const alerts = getHomeAlerts(todayKey);
 
   return (
     <div className="flex flex-col gap-5">
@@ -66,12 +57,12 @@ export default async function PreviewPage({ searchParams }: PageProps<"/preview"
       {frame === "phone" ? (
         // An iPhone-sized screen; Home scrolls inside it like on the phone.
         <div className="mx-auto h-[796px] w-[390px] max-w-full overflow-hidden rounded-[2.5rem] border-8 border-foreground/80 bg-background shadow-xl">
-          <QuickRail sections={sections} contained>
+          <QuickRail sections={sections} alerts={alerts} contained>
             <HomeContent tz={tz} todayKey={todayKey} />
           </QuickRail>
         </div>
       ) : (
-        <QuickRail sections={sections}>
+        <QuickRail sections={sections} alerts={alerts}>
           <HomeContent tz={tz} todayKey={todayKey} />
         </QuickRail>
       )}

@@ -1,11 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { Mascot, type MascotKind } from "@/components/icons/Mascot";
 
 /** `name` is the mascot's (Penny, Hops…); `section` and `href` the page it opens. */
-export type QuickSection = { kind: MascotKind; name: string; section: string; href: string; alert: boolean };
+export type QuickSection = { kind: MascotKind; name: string; section: string; href: string };
+
+/** The red dot on a section that needs something; the list arrives after the page. */
+function AlertDot({ kind, alerts }: { kind: MascotKind; alerts: Promise<MascotKind[]> }) {
+  if (!use(alerts).includes(kind)) return null;
+  return (
+    <span className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-critical">
+      <span className="sr-only">, needs attention</span>
+    </span>
+  );
+}
 
 /** A swipe must start this close to the left edge to open the column. */
 const EDGE = 32;
@@ -21,10 +31,13 @@ const SWIPE = 50;
  */
 export function QuickRail({
   sections,
+  alerts,
   contained = false,
   children,
 }: {
   sections: QuickSection[];
+  /** Sections that need something today (red dots), loaded without holding up the page. */
+  alerts: Promise<MascotKind[]>;
   contained?: boolean;
   children: ReactNode;
 }) {
@@ -109,14 +122,16 @@ export function QuickRail({
             key={s.kind}
             href={s.href}
             onClick={() => setOpen(false)}
-            aria-label={`${s.name}: ${s.section}${s.alert ? ", needs attention" : ""}`}
             className="tap flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5"
           >
             <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-primary">
               <Mascot kind={s.kind} size={44} decorative />
-              {s.alert && (
-                <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-surface bg-critical" />
-              )}
+              <span className="sr-only">
+                {s.name}: {s.section}
+              </span>
+              <Suspense fallback={null}>
+                <AlertDot kind={s.kind} alerts={alerts} />
+              </Suspense>
             </span>
             <span aria-hidden="true" className="px-1 text-center text-[11px] leading-tight text-ink-muted">
               {s.name}

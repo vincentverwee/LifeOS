@@ -9,7 +9,7 @@ import { getStudyTimer } from "@/lib/data/lessons";
 const BIRTHDAY_DOT_DAYS = 7;
 
 /** Sections that need something from you today (a dot in the side column). */
-export async function getHomeAlerts(todayKey: string): Promise<Set<MascotKind>> {
+export async function getHomeAlerts(todayKey: string): Promise<MascotKind[]> {
   const [reminders, subscriptions, people, timer] = await Promise.all([
     getRemindersGlance(todayKey),
     getDueSubscriptions(todayKey),
@@ -22,5 +22,5 @@ export async function getHomeAlerts(todayKey: string): Promise<Set<MascotKind>> 
   const birthday = people.nextBirthday?.next;
   if (people.catchUp.length > 0 || (birthday && birthday.daysUntil <= BIRTHDAY_DOT_DAYS)) alerts.add("people");
   if (timer) alerts.add("lessons");
-  return alerts;
+  return [...alerts];
 }
