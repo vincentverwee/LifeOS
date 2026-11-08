@@ -1,4 +1,5 @@
 import "server-only";
+import { workoutHeadline } from "@/lib/workouts/describe";
 import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { STUDY_ENTRY_WHERE } from "@/lib/data/lessons";
@@ -62,6 +63,8 @@ export type Memory = {
   study: MemoryStudy | null;
   outfits: MemoryLink[];
   recipes: MemoryLink[];
+  /** Finished workouts that day; `name` is the headline ("Running 5,2 km"). */
+  workouts: MemoryLink[];
 };
 
 /**
@@ -77,7 +80,7 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
   const first = keys[keys.length - 1];
   const last = keys[0];
 
-  const [entries, beers, study, wears, myRecipes, savedRecipes, trips] = await Promise.all([
+  const [entries, beers, study, wears, myRecipes, savedRecipes, trips, workouts] = await Promise.all([
     prisma.diaryEntry.findMany({ where: { date: { in: dates } }, select: ROW_SELECT }),
     prisma.expense.findMany({
       where: { date: { in: dates }, category: { pintPrice: { not: null } } },
@@ -114,6 +117,11 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
           select: { name: true, city: true, arrivalDate: true, departureDate: true },
         },
       },
+    }),
+    prisma.workout.findMany({
+      where: { date: { in: dates }, endedAt: { not: null } },
+      orderBy: { startedAt: "asc" },
+      select: { id: true, date: true, durationMin: true, distanceKm: true, activity: { select: { name: true } } },
     }),
   ]);
 
@@ -159,7 +167,24 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
       return [{ id: t.id, title: t.title, day: dayOfTrip(start, day), withVan: t.withVan, stop: stop ? (stop.city ?? stop.name) : null }];
     });
 
-    if (!entry && !beer && !studyShown && outfits.length === 0 && recipes.length === 0 && yearTrips.length === 0) return [];
+    const yearWorkouts = workouts
+      .filter((w) => inYear(w.date))
+      .map((w) => ({
+        id: w.id,
+        name: workoutHeadline({ activityName: w.activity.name, distanceKm: w.distanceKm?.toNumber() ?? null, durationMin: w.durationMin }),
+        href: `/workouts/${w.id}`,
+      }));
+
+    if (
+      !entry &&
+      !beer &&
+      !studyShown &&
+      outfits.length === 0 &&
+      recipes.length === 0 &&
+      yearTrips.length === 0 &&
+      yearWorkouts.length === 0
+    )
+      return [];
     return [
       {
         yearsAgo: year.yearsAgo,
@@ -170,6 +195,7 @@ export async function getOnThisDay(dateKey: string): Promise<Memory[]> {
         study: studyShown,
         outfits,
         recipes,
+        workouts: yearWorkouts,
       },
     ];
   });
@@ -184,6 +210,7 @@ export function memoryHeadline(m: Memory): string {
     const where = m.beer.pubs[0] ? ` at ${m.beer.pubs[0].name}` : "";
     return m.beer.pints > 0 ? `${m.beer.pints} ${m.beer.pints === 1 ? "pint" : "pints"}${where}` : `A beer${where}`;
   }
+  if (m.workouts[0]) return m.workouts[0].name;
   if (m.study) return m.study.dayOff ? "A day off studying" : `Studied ${m.study.hours.toLocaleString("nl-BE", { maximumFractionDigits: 2 })} h`;
   if (m.outfits[0]) return `Wore ${m.outfits[0].name}`;
   if (m.recipes[0]) return `Made ${m.recipes[0].name}`;

@@ -13,6 +13,7 @@ export const MASCOT_NAMES: Record<SectionKind, Record<MascotAnimal, string>> = {
   people: { sheep: "Dolly", cat: "Dolly" },
   waypoint: { sheep: "Ewe-lysses", cat: "Marco Purrlo" },
   recipes: { sheep: "Chef Baa-tista", cat: "Chef Purrcy" },
+  workouts: { sheep: "Coach Ramsay", cat: "Coach Whiskers" },
 };
 
 /** What each mascot is busy with while its section loads; `{name}` is filled in. */
@@ -79,6 +80,13 @@ export const MASCOT_LINES: Record<SectionKind, string[]> = {
     "{name} is tasting the sauce…",
     "{name} is flipping through cookbooks…",
     "{name} is raiding the fridge…",
+  ],
+  workouts: [
+    "{name} is tying their laces…",
+    "{name} is filling the water bottle…",
+    "{name} is warming up…",
+    "{name} is counting reps…",
+    "{name} is blowing the whistle…",
   ],
 };
 

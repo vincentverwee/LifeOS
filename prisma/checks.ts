@@ -23,6 +23,14 @@ const PUSH_LOCATION_CHECK = `(
       AND "placeLabel" IS NOT NULL AND "locationSource" IS NOT NULL AND "locationSource" IN ('gps', 'city'))
 )`;
 
+const WORKOUT_CHECK = `(
+  ("endedAt" IS NULL OR ("durationMin" IS NOT NULL AND "endedAt" >= "startedAt"))
+  AND ("durationMin" IS NULL OR "durationMin" BETWEEN 1 AND 1440)
+  AND ("distanceKm" IS NULL OR "distanceKm" > 0)
+  AND ("effort" IS NULL OR "effort" BETWEEN 1 AND 5)
+  AND ("feel" IS NULL OR "feel" BETWEEN 1 AND 5)
+)`;
+
 const SUBSCRIPTION_CHECK = `(
   "amount" > 0 AND "anchorDay" BETWEEN 1 AND 31 AND "repeat" IN ('monthly', 'yearly')
   AND ("repeat" = 'yearly') = ("anchorMonth" IS NOT NULL)
@@ -197,6 +205,69 @@ export const CHECKS: Check[] = [
     columns: '"weekStart", win',
     label: "Week reviews with an empty or too long win, or not on a Monday",
     fix: "Fix those week reviews first.",
+  },
+  // A workout activity is cardio, a sport or bodyweight.
+  {
+    name: "workout_activity",
+    table: "WorkoutActivity",
+    check: `("kind" IN ('cardio', 'sport', 'bodyweight') AND char_length(btrim("name")) BETWEEN 1 AND 40)`,
+    columns: "id, name, kind",
+    label: "Workout activities with an unknown kind or a bad name",
+    fix: "Fix those workout activities first.",
+  },
+  // An exercise is counted in reps or held for a time.
+  {
+    name: "exercise_measure",
+    table: "Exercise",
+    check: `("measure" IN ('reps', 'time') AND char_length(btrim("name")) BETWEEN 1 AND 40)`,
+    columns: "id, name, measure",
+    label: "Exercises with an unknown measure or a bad name",
+    fix: "Fix those exercises first.",
+  },
+  // A finished workout has a duration; numbers stay in range.
+  {
+    name: "workout_valid",
+    table: "Workout",
+    check: WORKOUT_CHECK,
+    columns: `id, date, "durationMin", "endedAt", effort, feel`,
+    label: "Workouts without a duration, or with out-of-range numbers",
+    fix: "Fix those workouts first.",
+  },
+  // A set has reps or seconds (exactly one of them), each at least 1.
+  {
+    name: "workout_set",
+    table: "WorkoutSet",
+    check: `(("reps" IS NULL) <> ("seconds" IS NULL) AND ("reps" IS NULL OR "reps" BETWEEN 1 AND 1000) AND ("seconds" IS NULL OR "seconds" BETWEEN 1 AND 7200))`,
+    columns: `id, "workoutId", reps, seconds`,
+    label: "Workout sets without exactly one of reps or seconds",
+    fix: "Fix those workout sets first.",
+  },
+  // A template exercise: 1-10 sets, a target of at least 1, rest 0-600 s.
+  {
+    name: "template_exercise",
+    table: "TemplateExercise",
+    check: `("sets" BETWEEN 1 AND 10 AND "target" BETWEEN 1 AND 7200 AND "restSeconds" BETWEEN 0 AND 600)`,
+    columns: `id, "templateId", sets, target, "restSeconds"`,
+    label: "Template exercises with out-of-range sets, target or rest",
+    fix: "Fix those template exercises first.",
+  },
+  // 1-14 workouts a week.
+  {
+    name: "workout_goal",
+    table: "WorkoutGoal",
+    check: `("perWeek" BETWEEN 1 AND 14)`,
+    columns: `id, "perWeek"`,
+    label: "Workout goals outside 1-14 a week",
+    fix: "Fix the workout goal first.",
+  },
+  // A weigh-in between 20 and 300 kg.
+  {
+    name: "body_weight",
+    table: "BodyWeight",
+    check: `("kg" BETWEEN 20 AND 300)`,
+    columns: "id, date, kg",
+    label: "Weigh-ins outside 20-300 kg",
+    fix: "Fix those weigh-ins first.",
   },
 ];
 

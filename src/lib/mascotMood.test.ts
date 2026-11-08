@@ -87,6 +87,37 @@ describe("other sections", () => {
   });
 });
 
+describe("workouts", () => {
+  const w = (o: Partial<Extract<MoodInput, { kind: "workouts" }>> = {}): MoodInput => ({
+    kind: "workouts",
+    live: false,
+    todayDone: false,
+    goal: 3,
+    done: 1,
+    left: 2,
+    daysLeft: 4,
+    behind: false,
+    lastOn: "2026-11-06",
+    ...o,
+  });
+  it("cheers during a session and after one today or a met goal", () => {
+    expect(mood(w({ live: true, behind: true }))).toBe("happy");
+    expect(mood(w({ todayDone: true }))).toBe("happy");
+    expect(mood(w({ done: 3, left: 0 }))).toBe("happy");
+  });
+  it("worries when behind, says how many to go", () => {
+    const m = moodFor(w({ behind: true, left: 2, daysLeft: 2 }), "Coach Ramsay", TODAY, NOON);
+    expect(m.mood).toBe("worried");
+    expect(m.line).toContain("2 to go, 2 days left");
+  });
+  it("dozes off after a week without one, waits when there's none yet", () => {
+    expect(mood(w({ lastOn: "2026-11-01" }))).toBe("sleepy"); // 7 days
+    expect(mood(w({ lastOn: "2026-11-02" }))).toBe("default");
+    expect(mood(w({ lastOn: null, done: 0, left: 3 }))).toBe("default");
+    expect(mood(w({ goal: null, left: 0, done: 0, lastOn: "2026-11-05" }))).toBe("default");
+  });
+});
+
 describe("night", () => {
   it("everyone not worried sleeps before 6", () => {
     expect(mood({ kind: "diary", wroteToday: true }, 2)).toBe("sleepy");

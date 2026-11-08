@@ -8,12 +8,18 @@ export const PUSH_KINDS = [
     key: "digest",
     label: "Morning to-do",
     time: "08:00",
-    description: "Every day · the weather (if a location is set), open reminders, Last done items that are due, subscriptions to log or renewing tomorrow, exams in 7/3/1 days, rent tomorrow, birthdays in 7/1 days and today, people to catch up with.",
+    description: "Every day · the weather (if a location is set), open reminders, Last done items that are due, subscriptions to log or renewing tomorrow, exams in 7/3/1 days, rent tomorrow, birthdays in 7/1 days and today, people to catch up with, workouts still to do from Friday on.",
   },
   {
     key: "timer",
-    label: "Forgotten study timer",
-    description: "When a study timer has been running for 3 hours.",
+    label: "Forgotten timer",
+    description: "When a study timer or a workout session has been running for 3 hours.",
+  },
+  {
+    key: "workout-goal",
+    label: "Workout goal",
+    time: "18:00",
+    description: "When you need a workout today to make this week's goal (and haven't done one yet).",
   },
   {
     key: "study-evening",

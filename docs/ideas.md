@@ -2,6 +2,11 @@
 
 Projects to pick up later, next one first.
 
+## Next up (picked 2026-11-08)
+
+- **Trip planning in Waypoint**: plan the next van trip before leaving: stops in order, a km/route estimate (same OSRM route as finished trips), and a budget Trip created alongside it, so the plan becomes the journal once you're on the road.
+- **Monthly mini-review**: like the weekly review (`/review`), told by the mascots on the 1st of the month, with month-on-month comparisons per section (spend vs budget, pints, study hours, km, Last done on-time share, outfits worn…). Could reuse `WeekStory` and the Sunday-push pattern.
+
 ## Done: Pint map → the Beer section (/beer)
 
 Built 2026-10-29: pub picker with OpenStreetMap Nearby + typing, a pints stepper for real prices per pub, its own section with map. See CLAUDE.md ("Beer").
@@ -22,6 +27,10 @@ Built 2026-11-03: one line a day with an optional mood, a Home tile, and "On thi
 
 Built 2026-11-08 after looking at other "LifeOS" projects: every section's sheep/cat gets a prop and a name (tweaked on /mascots), and the week is told as tap-through cards narrated by them, ending on a "win of the week". Also a System/Light/Dark switch in Settings. See CLAUDE.md ("Mascots", "Weekly review").
 
+## Done: Workouts (/workouts)
+
+Built 2026-11-08: cardio, sports and bodyweight sessions (what, when, how long, distance/pace, sets, effort, feel, where, with whom), a live session with rest timer, templates, a weekly goal with a streak, body weight, records. Coach Ramsay / Coach Whiskers on Home, in the weekly review and On this day; training with someone counts as seeing them. See CLAUDE.md ("Workouts"). Possible follow-ups: GPS/route for runs, a calendar heatmap, import from a watch/Strava.
+
 ## Done: Living mascots
 
 Built 2026-11-08: Home tile and quick-column mascots take a mood from your data (happy / sleepy / worried, see `src/lib/mascotMood.ts`), bob and blink, say a line when tapped, and show their name under the section. Penny traded the monocle for a tie; People is Dolly, Waypoint Ewe-lysses / Marco Purrlo.
@@ -33,7 +42,7 @@ Looked at lifeos-app/lifeos (RPG habits, habit garden), manthanmtg/LifeOS (18 mo
 - "What goes with a good day": diary mood next to pints, study hours, people seen, spend, weather (data is all there already).
 - One-tap energy + hours slept next to the diary mood (feeds the above).
 - Save the day's weather with each diary day, so On this day can say "3°, rain".
-- Bookshelf / reading list; shopping list fed by the Fridge's "Buy 1–2 things"; gym / workouts; savings and net worth over time (`SavingsEntry` has no entry UI yet).
+- Bookshelf / reading list; shopping list fed by the Fridge's "Buy 1–2 things"; savings and net worth over time (`SavingsEntry` has no entry UI yet).
 - Ask Claude about your data (an MCP endpoint).
 
 ## Later: Year in Review ("Wrapped")

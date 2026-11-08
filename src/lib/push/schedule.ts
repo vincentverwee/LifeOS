@@ -2,7 +2,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { dayKeyIn } from "@/lib/timeZone";
 import { dayKey, formatCurrency, formatHours } from "@/lib/format";
-import { addDays } from "@/lib/reminders/schedule";
+import { addDays, weekdayOf } from "@/lib/reminders/schedule";
 import { describeSince, isDue } from "@/lib/reminders/routines";
 import { getReminders } from "@/lib/data/reminders";
 import { getRoutines } from "@/lib/data/routines";
@@ -19,6 +19,10 @@ import { getDueSubscriptions, getSubscriptions } from "@/lib/data/subscriptions"
 import { isDue as isSubscriptionDue } from "@/lib/subscriptions/schedule";
 import { byNextBirthday, getPeople } from "@/lib/data/people";
 import { BIRTHDAY_HEADS_UP_DAYS } from "@/lib/people/birthdays";
+import { getLiveWorkout, getWorkoutsGlance } from "@/lib/data/workouts";
+import { mascotName } from "@/lib/mascots";
+import { THEME } from "@/lib/theme";
+import type { WeekProgress } from "@/lib/workouts/stats";
 
 // Runs every 15 minutes (GitHub Actions → /api/push/cron). Each notification has
 // a window in the device's local time, from its chosen time (PushSubscription.times,
@@ -38,14 +42,21 @@ function inDays(days: number): string {
   return days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
 }
 
+/** "2 workouts to go" while this week's goal can still be made, else null. */
+function workoutsToGo(week: WeekProgress): string | null {
+  if (week.goal === null || week.met || !week.reachable) return null;
+  return `${week.left} ${week.left === 1 ? "workout" : "workouts"} to go`;
+}
+
 async function digest(todayKey: string): Promise<PushPayload | null> {
-  const [{ open }, routines, subscriptions, { period }, running, people] = await Promise.all([
+  const [{ open }, routines, subscriptions, { period }, running, people, workouts] = await Promise.all([
     getReminders(todayKey),
     getRoutines(todayKey),
     getSubscriptions(),
     loadStudyPeriods(undefined, todayKey),
     getAllPeriods().then((all) => getRunningPeriods(all, todayKey).find((p) => p.type === "cycle")),
     getPeople(todayKey),
+    getWorkoutsGlance(todayKey),
   ]);
 
   const dueSubscriptions = subscriptions.filter((s) => isSubscriptionDue(s, todayKey));
@@ -86,6 +97,12 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
   }
   lines.push(...peopleLines);
 
+  // The weekly workout goal, from Friday on while it can still be made.
+  const toGo = workoutsToGo(workouts.week);
+  if (toGo && [5, 6, 0].includes(weekdayOf(todayKey))) {
+    lines.push(`Workout goal: ${toGo}, ${workouts.week.daysLeft} ${workouts.week.daysLeft === 1 ? "day" : "days"} left`);
+  }
+
   // Sent every morning, also with nothing on: the runner adds the weather or a quiet line.
   return {
     title: todo.length ? `${todo.length} to do today` : "Good morning",
@@ -119,6 +136,19 @@ async function studyEvening(todayKey: string): Promise<PushPayload | null> {
       : `${formatHours(hours)} of ${formatHours(period.goalHours)} today.`,
     url: "/lessons/add",
     tag: "study-evening",
+  };
+}
+
+/** When today needs a workout to make the week's goal and none is done or running yet. */
+async function workoutGoal(todayKey: string): Promise<PushPayload | null> {
+  const { week, live } = await getWorkoutsGlance(todayKey);
+  const toGo = workoutsToGo(week);
+  if (!toGo || !week.behind || week.todayDone || live) return null;
+  return {
+    title: "Workout",
+    body: `${toGo} this week, ${week.daysLeft} ${week.daysLeft === 1 ? "day" : "days"} left. ${mascotName("workouts", THEME)} believes in you.`,
+    url: "/workouts",
+    tag: "workout-goal",
   };
 }
 
@@ -214,22 +244,42 @@ async function weekReview(todayKey: string): Promise<PushPayload | null> {
   return { title: "Your week", body: lines.join("\n"), url: "/review", tag: "week" };
 }
 
-async function timerNudge(now: Date): Promise<{ key: string; payload: PushPayload } | null> {
-  const timer = await getStudyTimer();
-  if (!timer) return null;
-  const started = new Date(timer.startedAt);
-  const hours = (now.getTime() - started.getTime()) / 3_600_000;
-  if (hours < TIMER_NUDGE_HOURS) return null;
-  const names = timer.courses.map((c) => c.name).join(", ");
-  return {
-    key: `timer:${started.getTime()}`,
-    payload: {
-      title: names ? `Still studying ${names}?` : "Still studying?",
-      body: `The timer has been running for ${Math.floor(hours)} h. Tap to stop it.`,
-      url: "/lessons/add",
-      tag: "study-timer",
-    },
-  };
+/** The study timer and the workout session, each once it's been running for TIMER_NUDGE_HOURS. */
+async function timerNudges(now: Date): Promise<{ key: string; payload: PushPayload }[]> {
+  const [timer, live] = await Promise.all([getStudyTimer(), getLiveWorkout()]);
+  const nudges: { key: string; payload: PushPayload }[] = [];
+  if (timer) {
+    const started = new Date(timer.startedAt);
+    const hours = (now.getTime() - started.getTime()) / 3_600_000;
+    const names = timer.courses.map((c) => c.name).join(", ");
+    if (hours >= TIMER_NUDGE_HOURS) {
+      nudges.push({
+        key: `timer:${started.getTime()}`,
+        payload: {
+          title: names ? `Still studying ${names}?` : "Still studying?",
+          body: `The timer has been running for ${Math.floor(hours)} h. Tap to stop it.`,
+          url: "/lessons/add",
+          tag: "study-timer",
+        },
+      });
+    }
+  }
+  if (live) {
+    const started = new Date(live.workout.startedAt);
+    const hours = (now.getTime() - started.getTime()) / 3_600_000;
+    if (hours >= TIMER_NUDGE_HOURS) {
+      nudges.push({
+        key: `session:${started.getTime()}`,
+        payload: {
+          title: `Still training? ${live.workout.activity.name}`,
+          body: `The session has been running for ${Math.floor(hours)} h. Tap to finish it.`,
+          url: "/workouts/session",
+          tag: "workout-session",
+        },
+      });
+    }
+  }
+  return nudges;
 }
 
 /** Claims a PushSent key; false when another run already has it. */
@@ -257,7 +307,7 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
     if (!cache.has(name)) cache.set(name, load().catch((error) => (cache.delete(name), Promise.reject(error))));
     return cache.get(name)!;
   };
-  let timer: ReturnType<typeof timerNudge> | null = null;
+  let timers: ReturnType<typeof timerNudges> | null = null;
 
   for (const sub of subscriptions) {
     const todayKey = dayKeyIn(sub.timeZone, now);
@@ -267,36 +317,40 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
     for (const kind of sub.kinds.filter(isPushKind)) {
       // One failing query or send must not hold up the other devices and kinds.
       try {
-        let key: string;
-        let payload: PushPayload | null;
+        const outgoing: { key: string; payload: PushPayload }[] = [];
         if (kind === "timer") {
-          timer ??= timerNudge(now).catch((error) => ((timer = null), Promise.reject(error)));
-          const nudge = await timer;
-          if (!nudge) continue;
-          key = nudge.key;
-          payload = nudge.payload;
+          timers ??= timerNudges(now).catch((error) => ((timers = null), Promise.reject(error)));
+          outgoing.push(...(await timers));
         } else {
           if (!isKindDueNow(kind, minute, times, todayKey)) continue;
-          key = `${kind}:${todayKey}`;
+          const key = `${kind}:${todayKey}`;
           if (await prisma.pushSent.findUnique({ where: { key: `${sub.id}:${key}` } })) continue;
-          const load = { digest, "study-evening": studyEvening, "budget-evening": budgetEvening, week: weekReview }[kind];
-          payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
+          const load = {
+            digest,
+            "study-evening": studyEvening,
+            "budget-evening": budgetEvening,
+            week: weekReview,
+            "workout-goal": workoutGoal,
+          }[kind];
+          let payload = await once(`${kind}:${todayKey}`, () => load(todayKey));
           // The digest goes out every morning: weather on top, then the day's lines.
           if (kind === "digest" && payload) {
             const weather = await weatherLine(sub, todayKey);
             const body = [weather, payload.body].filter(Boolean).join("\n") || DIGEST_EMPTY;
             payload = { ...payload, body };
           }
+          if (payload) outgoing.push({ key, payload });
         }
-        if (!payload) continue;
 
-        const sentKey = `${sub.id}:${key}`;
-        if (!(await claim(sentKey))) continue;
-        if (await sendPush(sub, payload)) {
-          sent.push(sentKey);
-        } else {
-          // Not delivered (or the device is gone): let a later run try again.
-          await prisma.pushSent.deleteMany({ where: { key: sentKey } });
+        for (const { key, payload } of outgoing) {
+          const sentKey = `${sub.id}:${key}`;
+          if (!(await claim(sentKey))) continue;
+          if (await sendPush(sub, payload)) {
+            sent.push(sentKey);
+          } else {
+            // Not delivered (or the device is gone): let a later run try again.
+            await prisma.pushSent.deleteMany({ where: { key: sentKey } });
+          }
         }
       } catch (error) {
         console.error("Push schedule failed", sub.id, kind, error);

@@ -66,6 +66,9 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
     myRecipes,
     savedRecipes,
     trips,
+    workouts,
+    prevWorkouts,
+    workoutGoal,
     win,
   ] = await Promise.all([
     prisma.expense.findMany({ where: { date: range }, select: EXPENSE_SELECT }),
@@ -102,6 +105,12 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
         locations: { orderBy: { visitOrder: "asc" }, select: { name: true, city: true, arrivalDate: true } },
       },
     }),
+    prisma.workout.findMany({
+      where: { date: range, endedAt: { not: null } },
+      select: { date: true, durationMin: true, distanceKm: true, activity: { select: { name: true } } },
+    }),
+    prisma.workout.count({ where: { date: prevRange, endedAt: { not: null } } }),
+    prisma.workoutGoal.findUnique({ where: { id: "current" }, select: { perWeek: true } }),
     prisma.weekReview.findUnique({ where: { weekStart: utc(monday) }, select: { win: true } }),
   ]);
 
@@ -136,6 +145,14 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
         .filter((l) => l.arrivalDate && days.includes(dayKey(l.arrivalDate)))
         .map((l) => l.city || l.name),
     })),
+    workouts: workouts.map((w) => ({
+      date: dayKey(w.date),
+      activity: w.activity.name,
+      minutes: w.durationMin ?? 0,
+      km: w.distanceKm === null ? null : w.distanceKm.toNumber(),
+    })),
+    prevWorkouts,
+    workoutGoal: workoutGoal?.perWeek ?? null,
     win: win?.win ?? null,
   });
 }

@@ -18,6 +18,9 @@ describe("isKindDueNow", () => {
     expect(isKindDueNow("digest", at(7, 59), {}, THURSDAY)).toBe(false);
     expect(isKindDueNow("digest", at(8), {}, THURSDAY)).toBe(true);
     expect(isKindDueNow("digest", at(10, 59), {}, THURSDAY)).toBe(true);
+    expect(isKindDueNow("workout-goal", at(17, 59), {}, THURSDAY)).toBe(false);
+    expect(isKindDueNow("workout-goal", at(18), {}, THURSDAY)).toBe(true);
+    expect(isKindDueNow("workout-goal", at(21), {}, THURSDAY)).toBe(false);
     expect(isKindDueNow("digest", at(11), {}, THURSDAY)).toBe(false);
   });
 

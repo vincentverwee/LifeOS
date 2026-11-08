@@ -16,7 +16,19 @@ export type MoodInput =
   | { kind: "wardrobe"; items: number; wash: number; lastWash: { coloured: string | null; white: string | null } }
   | { kind: "people"; total: number; birthdayToday: string | null; catchUp: number }
   | { kind: "waypoint"; latest: string | null }
-  | { kind: "recipes"; lastMade: string | null };
+  | { kind: "recipes"; lastMade: string | null }
+  | {
+      kind: "workouts";
+      live: boolean;
+      todayDone: boolean;
+      /** null = no weekly goal. */
+      goal: number | null;
+      done: number;
+      left: number;
+      daysLeft: number;
+      behind: boolean;
+      lastOn: string | null;
+    };
 
 export type MascotMood = { mood: Mood; line: string };
 
@@ -28,6 +40,8 @@ export const BEER_THIRSTY_DAYS = 14;
 export const WASH_WORRY = 8;
 /** Days since a load (white or coloured) was last washed before the wardrobe mascot worries. */
 export const WASH_OVERDUE_DAYS = 10;
+/** Days without a workout before the coach dozes off. */
+export const WORKOUT_SLEEPY_DAYS = 7;
 /** Before this hour (and from midnight) everyone not worried is asleep. */
 export const NIGHT_UNTIL_HOUR = 6;
 
@@ -90,6 +104,24 @@ function sectionMood(input: MoodInput, name: string, todayKey: string): MascotMo
       return { mood: "default", line: input.latest ? `${name} is still thinking about ${input.latest}.` : `${name} is ready for a road trip.` };
     case "recipes":
       return { mood: "default", line: input.lastMade ? `${name} remembers ${input.lastMade}.` : `${name} is hungry.` };
+    case "workouts": {
+      if (input.live) return { mood: "happy", line: `${name} is cheering you on!` };
+      if (input.goal !== null && input.left === 0 && input.done > 0)
+        return { mood: "happy", line: `${name} is proud: ${input.done} of ${input.goal} this week.` };
+      if (input.todayDone) return { mood: "happy", line: `${name} says: great session today!` };
+      if (input.behind)
+        return {
+          mood: "worried",
+          line: `${name} is pacing: ${input.left} to go, ${input.daysLeft} ${input.daysLeft === 1 ? "day" : "days"} left.`,
+        };
+      const days = daysSince(input.lastOn, todayKey);
+      if (days === null) return { mood: "default", line: `${name} is ready when you are.` };
+      if (days >= WORKOUT_SLEEPY_DAYS) return { mood: "sleepy", line: `${name} dozed off. ${days} days since the last one.` };
+      return {
+        mood: "default",
+        line: input.goal !== null ? `${name} says: ${input.left} more this week.` : `${name} is stretching.`,
+      };
+    }
   }
 }
 

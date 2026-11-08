@@ -27,15 +27,15 @@ export function SeenCard({
   recentContacts,
   seeEveryDays,
   catchUp,
-  tripContactOn,
+  sharedContact,
   todayKey,
   footer,
 }: {
   personId: string;
   name: string;
   recentContacts: Contact[];
-  /** The day shared Waypoint trips count as seen (a trip still going = today). */
-  tripContactOn: string | null;
+  /** The latest day a shared Waypoint trip (a trip still going = today) or workout counts as seen. */
+  sharedContact: { day: string; label: "trip" | "workout" } | null;
   seeEveryDays: number | null;
   catchUp: boolean;
   todayKey: string;
@@ -62,8 +62,8 @@ export function SeenCard({
   const before = recentContacts.find((c) => c.day !== todayKey) ?? null;
   const last: { day: string; past: string } | null = tick
     ? { day: todayKey, past: CONTACT_LABEL[tick].past }
-    : tripContactOn && (!before || tripContactOn > before.day)
-      ? { day: tripContactOn, past: "trip" }
+    : sharedContact && (!before || sharedContact.day > before.day)
+      ? { day: sharedContact.day, past: sharedContact.label }
       : before && { day: before.day, past: CONTACT_LABEL[before.kind].past };
   const inTouchToday = last?.day === todayKey;
 

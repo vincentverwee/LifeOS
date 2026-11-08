@@ -1,3 +1,4 @@
+import { formatKm, formatMinutes } from "@/lib/workouts/types";
 import type { MascotAnimal, MascotKind } from "@/components/icons/mascotProps";
 import { formatCurrency, formatHours, formatLiters, plural } from "@/lib/format";
 import { mondayOf } from "@/lib/lessons/stats";
@@ -68,6 +69,10 @@ export type WeekRaw = {
   itemWears: number;
   recipes: string[];
   trips: { title: string; start: string | null; end: string | null; stops: string[] }[];
+  /** Finished workouts this week, and how many last week's same days had. */
+  workouts: { date: string; activity: string; minutes: number; km: number | null }[];
+  prevWorkouts: number;
+  workoutGoal: number | null;
   win: string | null;
 };
 
@@ -125,6 +130,14 @@ export type WeekSummary = {
   wardrobe: { outfits: { name: string; count: number }[]; itemWears: number; washes: number };
   recipes: string[];
   trips: { title: string; days: number; stops: string[] }[];
+  workouts: {
+    sessions: number;
+    minutes: number;
+    km: number;
+    activities: { name: string; count: number }[];
+    goal: number | null;
+    prevSessions: number;
+  };
   win: string | null;
 };
 
@@ -206,6 +219,17 @@ export function summarizeWeek(raw: WeekRaw): WeekSummary {
         stops: t.stops,
       }))
       .filter((t) => t.days > 0),
+    workouts: (() => {
+      const list = raw.workouts.filter((w) => inWeek(w.date));
+      return {
+        sessions: list.length,
+        minutes: list.reduce((n, w) => n + w.minutes, 0),
+        km: round2(list.reduce((n, w) => n + (w.km ?? 0), 0)),
+        activities: counted(list.map((w) => w.activity)),
+        goal: raw.workoutGoal,
+        prevSessions: raw.prevWorkouts,
+      };
+    })(),
     win: raw.win,
   };
 }
@@ -312,6 +336,30 @@ export function buildStory(week: WeekSummary, animal: MascotAnimal): StoryCard[]
         { value: versus(s.hours, week.prevStudyHours, formatHours), label: "" },
       ],
       bars: { labels, values: s.perDay, goal: s.goalHours, format: "hours" },
+    });
+  }
+
+  // Workouts
+  const wo = week.workouts;
+  if (wo.sessions > 0) {
+    const met = wo.goal !== null && wo.sessions >= wo.goal;
+    const line =
+      wo.goal === null
+        ? pick(["You got moving this week. Good stuff.", "Sweat, done. Nice work.", "Every session counts!"], seed("workouts"))
+        : met
+          ? pick(["Goal smashed. That's the spirit!", "Every session in. I'm proud of you.", "Weekly goal: done. Rest well."], seed("workouts"))
+          : pick(["Some good sessions. Next week we go again.", "Not quite the goal, but you showed up.", "A start! Let's build on it."], seed("workouts"));
+    cards.push({
+      key: "workouts",
+      kind: "workouts",
+      speaker: say("workouts"),
+      line,
+      big: [
+        { value: plural(wo.sessions, "workout", "workouts"), label: wo.goal !== null ? `of ${wo.goal}` : "done" },
+        { value: formatMinutes(wo.minutes), label: wo.km > 0 ? formatKm(wo.km) : "moving" },
+        { value: versus(wo.sessions, wo.prevSessions, (n) => plural(n, "workout", "workouts")), label: "" },
+      ],
+      list: shortList(wo.activities.map((a) => (a.count > 1 ? `${a.name} ×${a.count}` : a.name))),
     });
   }
 

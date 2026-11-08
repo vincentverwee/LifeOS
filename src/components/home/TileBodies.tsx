@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { getWaypointGlance } from "@/lib/data/waypoint";
+import { getWorkoutsGlance } from "@/lib/data/workouts";
+import { workoutHeadline } from "@/lib/workouts/describe";
+import { WeekDots } from "@/components/workouts/ui";
 import { getSectionMood, type SectionKind } from "@/lib/data/homeMoods";
 import { LiveMascot } from "@/components/home/LiveMascot";
 import { getRecipesGlance } from "@/lib/data/recipes";
@@ -189,6 +192,42 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
       </p>
       {lessons.timer && <RunningTimerBadge timer={lessons.timer} />}
       <LessonsWeek glance={lessons} />
+    </>
+  );
+}
+
+async function WorkoutsTileBody({ todayKey }: { todayKey: string }) {
+  const { week, streak, last, live, total } = await getWorkoutsGlance(todayKey);
+  if (total === 0 && !live) return <p className="text-sm text-ink-muted">Runs, sports and home workouts</p>;
+  return (
+    <>
+      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+        {week.done}
+        {week.goal !== null && <span className="text-lg text-ink-muted"> / {week.goal}</span>}
+        <span className="text-lg text-ink-muted"> this week</span>
+      </p>
+      <p className={`text-sm ${week.met ? "text-positive-text" : "text-ink-muted"}`}>
+        {live ? (
+          <span className="font-medium text-primary">Training now · {live.activityName}</span>
+        ) : week.met ? (
+          "Goal met"
+        ) : week.goal !== null ? (
+          `${week.left} to go`
+        ) : (
+          "No weekly goal"
+        )}
+        {streak > 0 && <span className="text-ink-muted"> · 🔥 {streak} {streak === 1 ? "week" : "weeks"}</span>}
+      </p>
+      {last && (
+        <p className="mt-4 truncate text-sm text-foreground">
+          <span className="text-ink-muted">Last · </span>
+          {workoutHeadline(last)}
+          <span className="text-ink-muted"> · {describeSince(last.date, todayKey).toLowerCase()}</span>
+        </p>
+      )}
+      <div className="mt-auto pt-4">
+        <WeekDots week={week} todayKey={todayKey} size="h-6 w-6" />
+      </div>
     </>
   );
 }
@@ -388,6 +427,7 @@ export const HOME_SECTIONS: HomeSection[] = [
   { kind: "reminders", name: "Reminders", href: "/reminders", render: (t) => <RemindersTileBody todayKey={t} /> },
   { kind: "diary", name: "Diary", href: "/diary", render: (t) => <DiaryTileBody todayKey={t} /> },
   { kind: "beer", name: "Beer", href: "/beer", render: (t) => <BeerTileBody todayKey={t} /> },
+  { kind: "workouts", name: "Workouts", href: "/workouts", render: (t) => <WorkoutsTileBody todayKey={t} /> },
   { kind: "wardrobe", name: "Wardrobe", href: "/wardrobe/items", render: () => <WardrobeTileBody /> },
   { kind: "people", name: "People", href: "/people", render: (t) => <PeopleTileBody todayKey={t} /> },
   { kind: "waypoint", name: "Waypoint", href: "/waypoint", render: () => <WaypointTileBody /> },

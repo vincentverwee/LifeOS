@@ -69,15 +69,31 @@ function lastTripDay(trips: TripDates[], todayKey: string): Date | null {
   return best;
 }
 
-/** The newest seen/message day or trip day, whichever is later (a trip counts as "seen"). */
+/** Finished workouts they were tagged on, up to today: only the newest day matters for contact. */
+function workoutContactSelect(todayKey: string) {
+  return {
+    where: { workout: { endedAt: { not: null }, date: { lte: new Date(`${todayKey}T00:00:00Z`) } } },
+    orderBy: { workout: { date: "desc" } },
+    take: 1,
+    select: { workout: { select: { date: true } } },
+  } as const;
+}
+
+type WorkoutDates = { workout: { date: Date } }[];
+
+/** The newest seen/message day, trip day or shared workout, whichever is latest (trips and workouts count as "seen"). */
 function lastContact(
   seen: { seenOn: Date; kind: string } | undefined,
   trips: TripDates[],
+  workouts: WorkoutDates,
   todayKey: string
 ): { seenOn: Date; kind: string } | undefined {
+  let best = seen;
   const tripDay = lastTripDay(trips, todayKey);
-  if (tripDay && (!seen || tripDay > seen.seenOn)) return { seenOn: tripDay, kind: "seen" };
-  return seen;
+  if (tripDay && (!best || tripDay > best.seenOn)) best = { seenOn: tripDay, kind: "seen" };
+  const workoutDay = workouts[0]?.workout.date;
+  if (workoutDay && (!best || workoutDay > best.seenOn)) best = { seenOn: workoutDay, kind: "seen" };
+  return best;
 }
 
 export type PersonDetail = PersonSummary & {
@@ -90,11 +106,14 @@ export type PersonDetail = PersonSummary & {
   links: (LinkView & { otherName: string; otherGroup: string | null })[];
   /** Waypoint trips they came on, newest first. */
   trips: TripTogether[];
-  /** The day shared trips count as "seen" ("YYYY-MM-DD"; a trip still going = today), null = none. */
-  tripContactOn: string | null;
+  /** The latest day a shared trip or workout counts as "seen" ("YYYY-MM-DD"; a trip still going = today), null = none. */
+  sharedContact: { day: string; label: "trip" | "workout" } | null;
+  /** Workouts together, newest first, a handful. */
+  workouts: { id: string; date: string; activityName: string; distanceKm: number | null; durationMin: number | null }[];
 };
 
 const RECENT_CONTACTS = 8;
+const RECENT_WORKOUTS = 5;
 
 export type ContactKind = "seen" | "message";
 export type Contact = { /** "YYYY-MM-DD" */ day: string; kind: ContactKind };
@@ -157,11 +176,12 @@ export const getPeople = cache(async (todayKey: string): Promise<PersonSummary[]
       ...SUMMARY_SELECT,
       seen: { orderBy: [{ seenOn: "desc" }, { createdAt: "desc" }], take: 1, select: { seenOn: true, kind: true } },
       trips: TRIP_SELECT,
+      workouts: workoutContactSelect(todayKey),
       _count: { select: { gifts: { where: { status: { not: "given" } } } } },
     },
   });
   return rows
-    .map((row) => toSummary(row, lastContact(row.seen[0], row.trips, todayKey), row._count.gifts, todayKey))
+    .map((row) => toSummary(row, lastContact(row.seen[0], row.trips, row.workouts, todayKey), row._count.gifts, todayKey))
     .sort((a, b) => a.name.localeCompare(b.name, "en", { sensitivity: "base" }));
 });
 
@@ -182,6 +202,14 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
       gifts: { orderBy: [{ givenOn: { sort: "desc", nulls: "first" } }, { createdAt: "asc" }] },
       seen: { orderBy: [{ seenOn: "desc" }, { createdAt: "desc" }], take: RECENT_CONTACTS, select: { seenOn: true, kind: true } },
       trips: { select: { trip: { select: { id: true, title: true, startDate: true, endDate: true } } } },
+      workouts: {
+        where: { workout: { endedAt: { not: null } } },
+        orderBy: { workout: { date: "desc" } },
+        take: RECENT_WORKOUTS,
+        select: {
+          workout: { select: { id: true, date: true, distanceKm: true, durationMin: true, activity: { select: { name: true } } } },
+        },
+      },
     },
   });
   if (!row) return null;
@@ -213,8 +241,16 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
     givenOn: g.givenOn ? dayKey(g.givenOn) : null,
   }));
   const tripDay = lastTripDay(row.trips, todayKey);
+  const pastWorkouts = row.workouts.filter((w) => dayKey(w.workout.date) <= todayKey);
+  const workoutDay = pastWorkouts[0]?.workout.date ?? null;
+  const sharedContact =
+    workoutDay && (!tripDay || workoutDay > tripDay)
+      ? { day: dayKey(workoutDay), label: "workout" as const }
+      : tripDay
+        ? { day: dayKey(tripDay), label: "trip" as const }
+        : null;
   return {
-    ...toSummary(row, lastContact(row.seen[0], row.trips, todayKey), gifts.filter((g) => g.status !== "given").length, todayKey),
+    ...toSummary(row, lastContact(row.seen[0], row.trips, pastWorkouts, todayKey), gifts.filter((g) => g.status !== "given").length, todayKey),
     facts: row.facts,
     notes: row.notes.map((n) => ({ id: n.id, date: dayKey(n.date), text: n.text })),
     gifts,
@@ -228,7 +264,14 @@ export async function getPerson(id: string, todayKey: string): Promise<PersonDet
         endDate: trip.endDate ? dayKey(trip.endDate) : null,
       }))
       .sort((a, b) => (b.startDate ?? "").localeCompare(a.startDate ?? "")),
-    tripContactOn: tripDay ? dayKey(tripDay) : null,
+    sharedContact,
+    workouts: row.workouts.map(({ workout: w }) => ({
+      id: w.id,
+      date: dayKey(w.date),
+      activityName: w.activity.name,
+      distanceKm: w.distanceKm === null ? null : Number(w.distanceKm),
+      durationMin: w.durationMin,
+    })),
   };
 }
 

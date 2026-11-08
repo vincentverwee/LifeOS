@@ -515,6 +515,7 @@ model Person {
   linksAsA     PersonLink[]         @relation("LinkA")
   linksAsB     PersonLink[]         @relation("LinkB")
   trips        WaypointTripPerson[]
+  workouts     WorkoutPerson[]
 }
 
 // Who came along on a Waypoint trip. Shown as "Trips together" on their page; a
@@ -750,4 +751,139 @@ model WeekReview {
   weekStart DateTime @id @db.Date
   win       String
   updatedAt DateTime @updatedAt
+}
+
+// --- Workouts (/workouts) ---
+// What you do: cardio (distance + pace), sport (just the session) or bodyweight (sets).
+// `color` is a palette slot like Category.color. Checked by workout_activity.
+model WorkoutActivity {
+  id         String            @id @default(cuid())
+  name       String            @unique
+  kind       String            @default("cardio")
+  color      String            @default("blue")
+  sortOrder  Int               @default(0)
+  isArchived Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+  workouts   Workout[]
+  templates  WorkoutTemplate[]
+}
+
+// A bodyweight move, counted in reps or held for seconds (`measure`; CHECK exercise_measure).
+model Exercise {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  measure    String             @default("reps")
+  isArchived Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  sets       WorkoutSet[]
+  templates  TemplateExercise[]
+}
+
+// One session. `date` = the local day it started; `endedAt` null = still live (then it
+// has the WorkoutLive row and no duration yet). `effort` = how hard (1-5), `feel` =
+// how you felt after (1-5). Checked by workout_valid.
+model Workout {
+  id          String           @id @default(cuid())
+  activityId  String
+  activity    WorkoutActivity  @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  date        DateTime         @db.Date
+  startedAt   DateTime
+  endedAt     DateTime?
+  durationMin Int?
+  distanceKm  Decimal?         @db.Decimal(7, 2)
+  effort      Int?
+  feel        Int?
+  place       String?
+  note        String?
+  templateId  String?
+  template    WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  createdAt   DateTime         @default(now())
+  sets        WorkoutSet[]
+  people      WorkoutPerson[]
+  live        WorkoutLive?
+
+  @@index([date])
+  @@index([activityId])
+}
+
+// The running session, if any: one row, id "current" (so there's never two), like
+// StudyTimer. `restUntil` = the rest countdown, so another device shows it too.
+model WorkoutLive {
+  id        String    @id @default("current")
+  workoutId String    @unique
+  workout   Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  restUntil DateTime?
+}
+
+// One set of a bodyweight exercise: `reps` or `seconds`, whichever the exercise measures.
+// `done` = ticked off (a live session fills them in as you go). Checked by workout_set.
+model WorkoutSet {
+  id         String   @id @default(cuid())
+  workoutId  String
+  workout    Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId String
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  position   Int
+  reps       Int?
+  seconds    Int?
+  done       Boolean  @default(true)
+
+  @@index([workoutId])
+  @@index([exerciseId])
+}
+
+// A saved routine ("Morning core"): exercises with sets, a target and the rest between sets.
+model WorkoutTemplate {
+  id         String             @id @default(cuid())
+  name       String             @unique
+  activityId String
+  activity   WorkoutActivity    @relation(fields: [activityId], references: [id], onDelete: Restrict)
+  note       String?
+  sortOrder  Int                @default(0)
+  createdAt  DateTime           @default(now())
+  exercises  TemplateExercise[]
+  workouts   Workout[]
+}
+
+// Checked by template_exercise: 1-10 sets, target >= 1 (reps or seconds), rest 0-600 s.
+model TemplateExercise {
+  id          String          @id @default(cuid())
+  templateId  String
+  template    WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exerciseId  String
+  exercise    Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  position    Int
+  sets        Int             @default(3)
+  target      Int             @default(10)
+  restSeconds Int             @default(60)
+
+  @@index([templateId])
+}
+
+// Who you trained with; a workout's day counts as "seen" for them (src/lib/data/people.ts).
+model WorkoutPerson {
+  id        String   @id @default(cuid())
+  workoutId String
+  workout   Workout  @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  personId  String
+  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([workoutId, personId])
+  @@index([personId])
+}
+
+// Workouts a week to aim for: one row, id "current"; none = no goal (CHECK workout_goal).
+model WorkoutGoal {
+  id        String   @id @default("current")
+  perWeek   Int
+  updatedAt DateTime @updatedAt
+}
+
+// One weigh-in per day (CHECK body_weight).
+model BodyWeight {
+  id        String   @id @default(cuid())
+  date      DateTime @unique @db.Date
+  kg        Decimal  @db.Decimal(5, 2)
+  createdAt DateTime @default(now())
 }

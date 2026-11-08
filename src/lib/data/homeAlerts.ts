@@ -4,6 +4,8 @@ import { getRemindersGlance } from "@/lib/data/reminders";
 import { getDueSubscriptions } from "@/lib/data/subscriptions";
 import { getPeopleGlance } from "@/lib/data/people";
 import { getStudyTimer } from "@/lib/data/lessons";
+import { getWorkoutsGlance } from "@/lib/data/workouts";
+import { weekdayOf } from "@/lib/reminders/schedule";
 
 /** Birthdays this close get a dot on People. */
 const BIRTHDAY_DOT_DAYS = 7;
@@ -23,11 +25,12 @@ export async function getHomeAlerts(todayKey: string): Promise<MascotKind[]> {
 }
 
 async function loadAlerts(todayKey: string): Promise<MascotKind[]> {
-  const [reminders, subscriptions, people, timer] = await Promise.all([
+  const [reminders, subscriptions, people, timer, workouts] = await Promise.all([
     getRemindersGlance(todayKey),
     getDueSubscriptions(todayKey),
     getPeopleGlance(todayKey),
     getStudyTimer(),
+    getWorkoutsGlance(todayKey),
   ]);
   const alerts = new Set<MascotKind>();
   if (reminders.open > 0) alerts.add("reminders");
@@ -35,5 +38,8 @@ async function loadAlerts(todayKey: string): Promise<MascotKind[]> {
   const birthday = people.nextBirthday?.next;
   if (people.catchUp.length > 0 || (birthday && birthday.daysUntil <= BIRTHDAY_DOT_DAYS)) alerts.add("people");
   if (timer) alerts.add("lessons");
+  // A session running, or behind on the weekly goal from Friday on (while it can still be made).
+  const lateInWeek = [5, 6, 0].includes(weekdayOf(todayKey));
+  if (workouts.live || (lateInWeek && workouts.week.behind && workouts.week.reachable)) alerts.add("workouts");
   return [...alerts];
 }

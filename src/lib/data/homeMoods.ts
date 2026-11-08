@@ -9,6 +9,7 @@ import { getRecipesGlance } from "@/lib/data/recipes";
 import { getRemindersGlance } from "@/lib/data/reminders";
 import { getLastWashByLoad, getWardrobeGlance } from "@/lib/data/wardrobe";
 import { getWaypointGlance } from "@/lib/data/waypoint";
+import { getWorkoutsGlance } from "@/lib/data/workouts";
 import { mascotName } from "@/lib/mascots";
 import { moodFor, type MascotMood, type MoodInput } from "@/lib/mascotMood";
 import { THEME } from "@/lib/theme";
@@ -53,6 +54,20 @@ async function moodInput(kind: SectionKind, todayKey: string): Promise<MoodInput
       return { kind, latest: (await getWaypointGlance()).latest };
     case "recipes":
       return { kind, lastMade: (await getRecipesGlance()).lastMade };
+    case "workouts": {
+      const g = await getWorkoutsGlance(todayKey);
+      return {
+        kind,
+        live: g.live !== null,
+        todayDone: g.week.todayDone,
+        goal: g.week.goal,
+        done: g.week.done,
+        left: g.week.left,
+        daysLeft: g.week.daysLeft,
+        behind: g.week.behind && g.week.reachable,
+        lastOn: g.lastOn,
+      };
+    }
   }
 }
 

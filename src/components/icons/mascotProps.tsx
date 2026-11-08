@@ -19,7 +19,8 @@ export type MascotKind =
   | "wardrobe"
   | "people"
   | "waypoint"
-  | "recipes";
+  | "recipes"
+  | "workouts";
 
 export const MASCOT_KINDS: MascotKind[] = [
   "plain",
@@ -32,6 +33,7 @@ export const MASCOT_KINDS: MascotKind[] = [
   "people",
   "waypoint",
   "recipes",
+  "workouts",
 ];
 
 const O = "currentColor";
@@ -50,6 +52,8 @@ type Anchors = {
   pin: Point;
   /** Just under the chin, for Penny's tie. */
   chin: Point;
+  /** Across the forehead, for the coach's sweatband. */
+  brow: Point;
   /** The eye centres and lens radius, for glasses. */
   eyes: { lx: number; rx: number; y: number; r: number };
   /** Colour that shows on the face: the sheep's face is dark, the cat's light. */
@@ -63,6 +67,7 @@ const ANCHORS: Record<MascotAnimal, Anchors> = {
     front: { x: 77, y: 65, s: 1.35 },
     pin: { x: 81, y: 25, s: 1.25 },
     chin: { x: 50, y: 69.5, s: 1.2 },
+    brow: { x: 50, y: 31.5, s: 1.05 },
     eyes: { lx: 42.4, rx: 57.6, y: 44.5, r: 5.6 },
     faceInk: W,
   },
@@ -72,6 +77,7 @@ const ANCHORS: Record<MascotAnimal, Anchors> = {
     front: { x: 77, y: 67, s: 1.35 },
     pin: { x: 83, y: 32, s: 1.25 },
     chin: { x: 50, y: 73, s: 1.02 },
+    brow: { x: 50, y: 33, s: 1.15 },
     eyes: { lx: 39.5, rx: 60.5, y: 46, r: 6.8 },
     faceInk: O,
   },
@@ -293,6 +299,30 @@ function Beanie() {
   );
 }
 
+/** The coach's sweatband: a band across the forehead with a stripe and the knot's tails. */
+function Sweatband() {
+  return (
+    <>
+      <path d="M15.5 -1.5 L21.5 2.5 L19 4.5 Z M15.5 0 L22.5 -1 L21 2 Z" fill={O} stroke={W} strokeWidth="1" strokeLinejoin="round" />
+      <path d="M-16.8 -3.6 Q0 -7.6 16.8 -3.6 L16.8 4 Q0 0 -16.8 4 Z" fill={O} stroke={W} strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M-15 0.3 Q0 -3.4 15 0.3" fill="none" stroke={W} strokeWidth="1.2" strokeLinecap="round" />
+    </>
+  );
+}
+
+/** A sports water bottle with a spout cap and a label band. */
+function WaterBottle() {
+  return (
+    <>
+      <path d="M-2.4 -16 H2.4 V-13 H-2.4 Z" fill={O} />
+      <path d="M-5 -13 H5 L6 -9.5 H-6 Z" fill={O} stroke={O} strokeWidth="1.6" strokeLinejoin="round" />
+      <rect x="-7" y="-9.5" width="14" height="24" rx="3.5" fill={W} stroke={O} strokeWidth="2.6" />
+      <rect x="-7" y="-1.5" width="14" height="7" fill={O} />
+      <path d="M-4 -6.5 V-4" stroke={O} strokeWidth="1.4" strokeLinecap="round" opacity="0.5" />
+    </>
+  );
+}
+
 /** The prop layer for one kind, drawn on top of the head. */
 export function MascotProp({ kind, animal }: { kind: MascotKind; animal: MascotAnimal }) {
   const a = ANCHORS[animal];
@@ -334,6 +364,17 @@ export function MascotProp({ kind, animal }: { kind: MascotKind; animal: MascotA
           <Glasses a={a} />
           <At p={a.top}>
             <Mortarboard />
+          </At>
+        </>
+      );
+    case "workouts":
+      return (
+        <>
+          <At p={a.brow}>
+            <Sweatband />
+          </At>
+          <At p={nudge(a.front, 2, 1)} rotate={-12}>
+            <WaterBottle />
           </At>
         </>
       );

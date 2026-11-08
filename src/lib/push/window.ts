@@ -9,6 +9,7 @@ export const WINDOW_HOURS: Record<TimedPushKind, number> = {
   digest: 3,
   "study-evening": 3,
   "budget-evening": 3,
+  "workout-goal": 3,
   week: 4, // Sundays only
 };
 

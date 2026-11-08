@@ -20,6 +20,7 @@ const NAMES: Record<MascotKind, string> = {
   people: "People",
   waypoint: "Waypoint",
   recipes: "Recipes",
+  workouts: "Workouts",
 };
 
 // The theme tokens copied from globals.css, so both animals show in both modes
@@ -43,6 +44,18 @@ const lessons = (todayHours: number, examInDays: number | null = null): MoodInpu
   kind: "lessons",
   lessons: { todayHours, goalHours: 4, examInDays, timerRunning: false },
 });
+const workouts = (o: Partial<Extract<MoodInput, { kind: "workouts" }>>): MoodInput => ({
+  kind: "workouts",
+  live: false,
+  todayDone: false,
+  goal: 3,
+  done: 0,
+  left: 3,
+  daysLeft: 7,
+  behind: false,
+  lastOn: "2026-11-05",
+  ...o,
+});
 const SAMPLES: Record<Exclude<MascotKind, "plain">, MoodInput[]> = {
   budget: [budget(290), budget(180), budget(318)],
   lessons: [lessons(2), lessons(5), lessons(0), lessons(1, 2)],
@@ -61,6 +74,13 @@ const SAMPLES: Record<Exclude<MascotKind, "plain">, MoodInput[]> = {
   ],
   waypoint: [{ kind: "waypoint", latest: "Normandy" }],
   recipes: [{ kind: "recipes", lastMade: "Dahl" }],
+  workouts: [
+    workouts({ done: 1, left: 2, daysLeft: 5 }),
+    workouts({ done: 3, left: 0, daysLeft: 3 }),
+    workouts({ done: 0, left: 3, daysLeft: 3, behind: true, lastOn: "2026-10-20" }),
+    workouts({ done: 1, left: 2, daysLeft: 2, behind: true }),
+    workouts({ goal: null, done: 0, left: 0, daysLeft: 3, lastOn: "2026-10-25" }),
+  ],
 };
 
 /** Not linked anywhere: a page to look at every section mascot while tweaking them. */

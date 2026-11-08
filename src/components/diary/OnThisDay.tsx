@@ -82,6 +82,11 @@ function MemoryCard({ memory: m }: { memory: Memory }) {
             )}
           </Line>
         )}
+        {m.workouts.map((w) => (
+          <Line key={w.id} icon="🏃" href={w.href}>
+            {w.name}
+          </Line>
+        ))}
         {m.outfits.map((o) => (
           <Line key={o.id} icon="👕" href={o.href}>
             Wore {o.name}

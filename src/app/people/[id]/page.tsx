@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { workoutHeadline } from "@/lib/workouts/describe";
 import { notFound } from "next/navigation";
 import { getGroups, getPeopleNames, getPerson } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
@@ -93,7 +94,7 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
           recentContacts={person.recentContacts}
           seeEveryDays={person.seeEveryDays}
           catchUp={person.catchUp}
-          tripContactOn={person.tripContactOn}
+          sharedContact={person.sharedContact}
           todayKey={todayKey}
         />
       )}
@@ -144,6 +145,24 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
                       {trip.endDate && trip.endDate !== trip.startDate && ` – ${formatDay(trip.endDate)}`}
                     </span>
                   )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {person.workouts.length > 0 && (
+        <Section title="Trained together">
+          <ul className="flex flex-col gap-2">
+            {person.workouts.map((w) => (
+              <li key={w.id}>
+                <Link
+                  href={`/workouts/${w.id}`}
+                  className="tap flex min-h-11 items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-2.5 hover:border-primary"
+                >
+                  <span className="min-w-0 truncate font-medium text-foreground">{workoutHeadline(w)}</span>
+                  <span className="shrink-0 text-sm text-ink-muted">{formatDay(w.date)}</span>
                 </Link>
               </li>
             ))}

@@ -21,6 +21,9 @@ function raw(over: Partial<WeekRaw> = {}): WeekRaw {
     itemWears: 0,
     recipes: [],
     trips: [],
+    workouts: [],
+    prevWorkouts: 0,
+    workoutGoal: null,
     win: null,
     ...over,
   };
@@ -168,6 +171,25 @@ describe("buildStory", () => {
     );
     expect(cards.map((c) => c.key)).toEqual(["intro", "money", "beer", "recipes", "outro"]);
     expect(cards.find((c) => c.key === "recipes")?.speaker).toBe("Chef Purrcy");
+  });
+
+  it("adds a workouts card, told by the coach, after study", () => {
+    const week = summarizeWeek(
+      raw({
+        workouts: [
+          { date: "2026-11-03", activity: "Running", minutes: 30, km: 5.2 },
+          { date: "2026-11-05", activity: "Running", minutes: 28, km: 5 },
+          { date: "2026-11-06", activity: "Yoga", minutes: 60, km: null },
+          { date: "2026-10-30", activity: "Running", minutes: 30, km: 5 },
+        ],
+        prevWorkouts: 1,
+        workoutGoal: 3,
+      })
+    );
+    expect(week.workouts).toMatchObject({ sessions: 3, minutes: 118, km: 10.2, goal: 3, prevSessions: 1 });
+    const card = buildStory(week, "sheep").find((c) => c.key === "workouts")!;
+    expect(card.speaker).toBe("Coach Ramsay");
+    expect(card.list).toEqual(["Running ×2", "Yoga"]);
   });
 
   it("says the same thing on every reload of a week", () => {
