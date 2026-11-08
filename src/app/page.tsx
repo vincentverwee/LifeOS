@@ -8,7 +8,7 @@ export default async function HomePage() {
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
   return (
-    // Swipe right from the left edge (or tap the tab) for a column of mascots that open their section.
+    // Swipe right anywhere (or tap the edge tab) for a column of mascots that open their section.
     <QuickRail sections={railSections()} alerts={getHomeAlerts(todayKey)}>
       <HomeContent tz={tz} todayKey={todayKey} />
     </QuickRail>

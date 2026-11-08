@@ -17,14 +17,13 @@ function AlertDot({ kind, alerts }: { kind: MascotKind; alerts: Promise<MascotKi
   );
 }
 
-/** A swipe must start this close to the left edge to open the column. */
-const EDGE = 32;
-/** …and travel this far sideways. */
+/** A swipe must travel this far sideways (and mostly sideways) to count. */
 const SWIPE = 50;
 
 /**
- * A column of section mascots that slides in from the left: swipe right from the
- * edge (or tap the tab) to show it, swipe left (or tap outside, Esc) to hide it.
+ * A column of section mascots that slides in from the left: swipe right anywhere
+ * on the page (or tap the edge tab) to show it, swipe left (or tap outside, Esc)
+ * to hide it.
  * Tapping a mascot opens its section, like tapping its tile.
  * `contained` keeps it inside its own box (the phone frame on /preview), with
  * the children scrolling in there; otherwise it covers the screen's left side.
@@ -60,8 +59,9 @@ export function QuickRail({
       const dy = t.clientY - s.y;
       // A scroll, not a swipe.
       if (Math.abs(dx) < SWIPE || Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      if (dx > 0 && s.x - box.left < EDGE) setOpen(true);
-      else if (dx < 0) setOpen(false);
+      // In the /preview phone frame only swipes inside the frame count.
+      if (contained && (s.x < box.left || s.x > box.right || s.y < box.top || s.y > box.bottom)) return;
+      setOpen(dx > 0);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -74,7 +74,7 @@ export function QuickRail({
       window.removeEventListener("touchend", onEnd);
       window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [contained]);
 
   const place = contained ? "absolute" : "fixed";
 
