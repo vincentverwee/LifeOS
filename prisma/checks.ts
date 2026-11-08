@@ -189,6 +189,15 @@ export const CHECKS: Check[] = [
     label: "Diary entries that are empty or too long, or have an invalid mood",
     fix: "Fix those diary entries first.",
   },
+  // The weekly review's win: 1–280 characters, keyed by a Monday.
+  {
+    name: "week_review",
+    table: "WeekReview",
+    check: `(char_length(btrim("win")) BETWEEN 1 AND 280 AND extract(isodow FROM "weekStart") = 1)`,
+    columns: '"weekStart", win',
+    label: "Week reviews with an empty or too long win, or not on a Monday",
+    fix: "Fix those week reviews first.",
+  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */

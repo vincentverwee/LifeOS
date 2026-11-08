@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { isPushKind, parsePushTimes, type PushKind } from "@/lib/push/kinds";
 import { DeviceSettings } from "@/components/settings/DeviceSettings";
+import { AppearanceSettings } from "@/components/settings/AppearanceSettings";
 
 export default async function SettingsPage() {
   await connection();
@@ -34,6 +35,7 @@ export default async function SettingsPage() {
         </Link>
         <h1 className="mt-1 text-2xl font-semibold text-foreground">Settings</h1>
       </div>
+      <AppearanceSettings />
       <DeviceSettings devices={devices} publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null} />
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-foreground">Backup</h2>

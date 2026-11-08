@@ -45,6 +45,78 @@ function Fleece() {
   );
 }
 
+/** How one leaf eye is turned and sized; the logo is { slant: 22, sx: 1, sy: 1, dy: 0 }.
+ *  `closed` draws a happy ^ instead (Beer, the People wink), sized by `sx`. */
+export type SheepEye = { slant: number; sx: number; sy: number; dy: number; closed?: boolean };
+/** A closed, smiling eye: a ^ in wool. */
+function HappyEye({ x, size = 1 }: { x: number; size?: number }) {
+  return (
+    <path
+      d={`M${x - 4.2 * size} ${44.5 + 1.4 * size} Q${x} ${44.5 - 3.6 * size} ${x + 4.2 * size} ${44.5 + 1.4 * size}`}
+      fill="none"
+      stroke="var(--color-wool)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
+  );
+}
+
+export const LOGO_SHEEP_EYE: SheepEye = { slant: EYE_SLANT, sx: 1, sy: 1, dy: 0 };
+
+/**
+ * The sheep drawing itself (viewBox space "8 0 84 84"), shared by <Sheep> and <Mascot>.
+ * `eyes` lets a section mascot show a small mood with the logo's own eye shape.
+ */
+export function SheepHead({ eyes }: { eyes?: { l: SheepEye; r: SheepEye } }) {
+  const l = eyes?.l ?? LOGO_SHEEP_EYE;
+  const r = eyes?.r ?? LOGO_SHEEP_EYE;
+  return (
+    <>
+      {/* fleece: outline pass (stroke around every puff), then the fill on top
+          hides the inner strokes so only the outer scalloped edge remains */}
+      <g fill="currentColor" stroke="currentColor" strokeWidth="6" strokeLinejoin="round">
+        <Fleece />
+      </g>
+      <g fill="var(--color-wool)">
+        <Fleece />
+      </g>
+
+      {/* ears and face */}
+      <g fill="currentColor">
+        <path d="M36 37 C29 34 21 35 17 39 C22 42.5 30 42.5 36 40 Z" />
+        <path d="M64 37 C71 34 79 35 83 39 C78 42.5 70 42.5 64 40 Z" />
+        <path d={FACE} />
+      </g>
+
+      {/* forehead wool */}
+      <g fill="var(--color-wool)">
+        {FRINGE.map(([cx, cy, r]) => (
+          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} />
+        ))}
+      </g>
+
+      {/* eyes, slanted up at the outer corners */}
+      <g fill="var(--color-wool)">
+        {l.closed ? (
+          <HappyEye x={42.4} size={l.sx} />
+        ) : (
+          <path d={EYE} transform={`translate(42.4 ${44.5 + l.dy}) rotate(${l.slant}) scale(${l.sx} ${l.sy})`} />
+        )}
+        {r.closed ? (
+          <HappyEye x={57.6} size={r.sx} />
+        ) : (
+          <path d={EYE} transform={`translate(57.6 ${44.5 + r.dy}) rotate(${-r.slant}) scale(${-r.sx} ${r.sy})`} />
+        )}
+      </g>
+      {/* nose: one bow, with a line down to the chin */}
+      <g fill="none" stroke="var(--color-wool)" strokeLinecap="round" opacity="0.9">
+        <path d="M46.2 59.6 Q50 63 53.8 59.6" strokeWidth="1.3" />
+        <path d="M50 61.3 L50 67.4" strokeWidth="1.1" />
+      </g>
+    </>
+  );
+}
+
 /**
  * The one shared sheep mark: a dark sheep face set in a round, scalloped
  * fleece. Two tones only — currentColor (outline, ears, face) and
@@ -66,37 +138,7 @@ export function Sheep({ className, size = 100, animate, decorative }: SheepProps
       {...(decorative ? { "aria-hidden": "true" } : { role: "img", "aria-label": "Sheep" })}
       className={classes}
     >
-      {/* fleece: outline pass (stroke around every puff), then the fill on top
-          hides the inner strokes so only the outer scalloped edge remains */}
-      <g fill="currentColor" stroke="currentColor" strokeWidth="6" strokeLinejoin="round">
-        <Fleece />
-      </g>
-      <g fill="var(--color-wool)">
-        <Fleece />
-      </g>
-
-      {/* ears and face */}
-      <g fill="currentColor">
-        <path d="M36 37 C29 34 21 35 17 39 C22 42.5 30 42.5 36 40 Z" />
-        <path d="M64 37 C71 34 79 35 83 39 C78 42.5 70 42.5 64 40 Z" />
-        <path d={FACE} />
-      </g>
-
-      <g fill="var(--color-wool)">
-        {/* forehead wool */}
-        {FRINGE.map(([cx, cy, r]) => (
-          <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r={r} />
-        ))}
-        {/* eyes, slanted up at the outer corners */}
-        <path d={EYE} transform={`translate(42.4 44.5) rotate(${EYE_SLANT})`} />
-        <path d={EYE} transform={`translate(57.6 44.5) rotate(${-EYE_SLANT}) scale(-1 1)`} />
-      </g>
-
-      {/* nose: one bow, with a line down to the chin */}
-      <g fill="none" stroke="var(--color-wool)" strokeLinecap="round" opacity="0.9">
-        <path d="M46.2 59.6 Q50 63 53.8 59.6" strokeWidth="1.3" />
-        <path d="M50 61.3 L50 67.4" strokeWidth="1.1" />
-      </g>
+      <SheepHead />
     </svg>
   );
 }

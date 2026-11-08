@@ -6,14 +6,14 @@ import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { getRemindersGlance } from "@/lib/data/reminders";
 import { budgetGlance, type BudgetGlance } from "@/lib/data/budgetGlance";
 import { getDueSubscriptions } from "@/lib/data/subscriptions";
-import { describeDue } from "@/lib/reminders/schedule";
+import { describeDue, weekdayOf } from "@/lib/reminders/schedule";
 import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { getFactOfTheDay } from "@/lib/funFacts";
 import { getDiaryGlance, memoryHeadline } from "@/lib/data/diary";
 import { describeYearsAgo, diaryBits, moodOf } from "@/lib/diary/onThisDay";
-import { BeerIcon, BudgetIcon, DiaryIcon, LessonsIcon, PeopleIcon, RecipesIcon, RemindersIcon, WardrobeIcon, WaypointIcon } from "@/components/home/FeatureIcons";
+import { Mascot, type MascotKind } from "@/components/icons/Mascot";
 import { getBeerGlance } from "@/lib/data/beer";
 import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
@@ -88,8 +88,29 @@ export default async function HomePage() {
           </div>
         </li>
 
+        {/* The weekly review: a card on Sundays only (the link under the tiles is always there). */}
+        {weekdayOf(todayKey) === 0 && (
+          <li>
+            <Link
+              href="/review"
+              className="tap flex h-full items-center gap-4 rounded-2xl border border-primary bg-surface p-5 hover:bg-surface-muted"
+            >
+              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-primary">
+                <Mascot size={44} decorative />
+              </span>
+              <span className="flex flex-1 flex-col">
+                <span className="text-xl font-semibold text-foreground">Your week</span>
+                <span className="text-sm text-ink-muted">This week, in a few taps.</span>
+              </span>
+              <span aria-hidden="true" className="text-xl text-ink-muted">
+                ›
+              </span>
+            </Link>
+          </li>
+        )}
+
         <li>
-          <FeatureTile href="/budget" name="Budget" icon={BudgetIcon}>
+          <FeatureTile href="/budget" name="Budget" kind="budget">
             <Suspense fallback={<TileSkeleton />}>
               <BudgetTileBody todayKey={todayKey} />
             </Suspense>
@@ -97,7 +118,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/lessons" name="Lessons" icon={LessonsIcon}>
+          <FeatureTile href="/lessons" name="Lessons" kind="lessons">
             <Suspense fallback={<TileSkeleton />}>
               <LessonsTileBody todayKey={todayKey} />
             </Suspense>
@@ -105,7 +126,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/reminders" name="Reminders" icon={RemindersIcon}>
+          <FeatureTile href="/reminders" name="Reminders" kind="reminders">
             <Suspense fallback={<TileSkeleton />}>
               <RemindersTileBody todayKey={todayKey} />
             </Suspense>
@@ -113,7 +134,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/diary" name="Diary" icon={DiaryIcon}>
+          <FeatureTile href="/diary" name="Diary" kind="diary">
             <Suspense fallback={<TileSkeleton />}>
               <DiaryTileBody todayKey={todayKey} />
             </Suspense>
@@ -121,7 +142,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/beer" name="Beer" icon={BeerIcon}>
+          <FeatureTile href="/beer" name="Beer" kind="beer">
             <Suspense fallback={<TileSkeleton />}>
               <BeerTileBody todayKey={todayKey} />
             </Suspense>
@@ -129,7 +150,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/wardrobe/items" name="Wardrobe" icon={WardrobeIcon}>
+          <FeatureTile href="/wardrobe/items" name="Wardrobe" kind="wardrobe">
             <Suspense fallback={<TileSkeleton />}>
               <WardrobeTileBody />
             </Suspense>
@@ -137,7 +158,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/people" name="People" icon={PeopleIcon}>
+          <FeatureTile href="/people" name="People" kind="people">
             <Suspense fallback={<TileSkeleton />}>
               <PeopleTileBody todayKey={todayKey} />
             </Suspense>
@@ -145,7 +166,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/waypoint" name="Waypoint" icon={WaypointIcon}>
+          <FeatureTile href="/waypoint" name="Waypoint" kind="waypoint">
             <Suspense fallback={<TileSkeleton />}>
               <WaypointTileBody />
             </Suspense>
@@ -153,7 +174,7 @@ export default async function HomePage() {
         </li>
 
         <li>
-          <FeatureTile href="/recipes" name="Recipes" icon={RecipesIcon}>
+          <FeatureTile href="/recipes" name="Recipes" kind="recipes">
             <Suspense fallback={<TileSkeleton />}>
               <RecipesTileBody />
             </Suspense>
@@ -162,6 +183,9 @@ export default async function HomePage() {
       </ul>
 
       <div className="flex justify-center gap-2">
+        <Link href="/review" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
+          Your week
+        </Link>
         <Link href="/settings" className="btn btn-ghost inline-flex min-h-11 px-5 text-sm">
           Settings
         </Link>
@@ -180,12 +204,12 @@ export default async function HomePage() {
 function FeatureTile({
   href,
   name,
-  icon: Icon,
+  kind,
   children,
 }: {
   href: string;
   name: string;
-  icon: (props: { className?: string }) => React.ReactNode;
+  kind: MascotKind;
   children: React.ReactNode;
 }) {
   return (
@@ -194,8 +218,8 @@ function FeatureTile({
       className="tap group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-primary"
     >
       <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <Icon className="h-6 w-6" />
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-primary">
+          <Mascot kind={kind} size={52} decorative />
         </span>
         <h2 className="flex-1 text-xl font-semibold text-foreground">{name}</h2>
         <span aria-hidden="true" className="text-xl text-ink-muted transition-transform group-hover:translate-x-0.5">

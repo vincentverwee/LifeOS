@@ -744,3 +744,10 @@ model DiaryEntry {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+/// The weekly review's "win of the week": one line per week, keyed by that week's Monday.
+model WeekReview {
+  weekStart DateTime @id @db.Date
+  win       String
+  updatedAt DateTime @updatedAt
+}

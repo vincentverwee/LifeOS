@@ -38,7 +38,7 @@ export function EmptyState({ variant, className }: EmptyStateProps) {
     <div
       className={`flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-6 py-10 text-center ${className ?? ""}`}
     >
-      <SheepIllustration />
+      <SheepIllustration kind="budget" />
       <p className="font-medium text-foreground">{copy.heading}</p>
       <p className="max-w-xs text-sm text-ink-muted">{copy.body}</p>
       {variant === "no-periods" && (

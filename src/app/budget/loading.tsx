@@ -9,8 +9,8 @@ export default function BudgetLoading() {
       aria-live="polite"
       className="flex min-h-[50vh] flex-col items-center justify-center gap-3"
     >
-      <SheepSpinner size={56} />
-      <SheepPhrase />
+      <SheepSpinner size={56} kind="budget" />
+      <SheepPhrase kind="budget" />
     </div>
   );
 }

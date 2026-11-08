@@ -17,8 +17,8 @@ function MapPlaceholder() {
       aria-live="polite"
       className="flex h-full min-h-48 w-full flex-col items-center justify-center gap-3 rounded-2xl bg-muted"
     >
-      <SheepSpinner size={48} />
-      <SheepPhrase />
+      <SheepSpinner size={48} kind="waypoint" />
+      <SheepPhrase kind="waypoint" />
     </div>
   );
 }

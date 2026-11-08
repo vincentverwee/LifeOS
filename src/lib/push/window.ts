@@ -42,7 +42,15 @@ export type BudgetRange = { budget: number; start: string; end: string };
  * covering it (pass trips before months, so a trip wins, as everywhere else).
  */
 export function weekBudget(monday: string, ranges: BudgetRange[]): number {
-  return Array.from({ length: 7 }, (_, i) => addDays(monday, i)).reduce((sum, day) => {
+  return budgetOfDays(
+    Array.from({ length: 7 }, (_, i) => addDays(monday, i)),
+    ranges
+  );
+}
+
+/** The budget of these days: each day's share of the first range covering it. */
+export function budgetOfDays(days: string[], ranges: BudgetRange[]): number {
+  return days.reduce((sum, day) => {
     const range = ranges.find((r) => r.start <= day && day <= r.end);
     return range ? sum + range.budget / (daysBetween(range.start, range.end) + 1) : sum;
   }, 0);

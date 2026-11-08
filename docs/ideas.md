@@ -18,6 +18,22 @@ Built 2026-11: clothes with photos (cut-outs kept see-through), the wash basket 
 
 Built 2026-11-03: one line a day with an optional mood, a Home tile, and "On this day" that puts earlier years' lines next to beers, trips, study, outfits and recipes from the same date. See CLAUDE.md ("Diary"). Possible follow-ups: an "On this day" line in the morning digest, a reminder push at night when nothing is written, keeping every recipe make (not just the last).
 
+## Done: Section mascots + Weekly review (/review)
+
+Built 2026-11-08 after looking at other "LifeOS" projects: every section's sheep/cat gets a prop and a name (tweaked on /mascots), and the week is told as tap-through cards narrated by them, ending on a "win of the week". Also a System/Light/Dark switch in Settings. See CLAUDE.md ("Mascots", "Weekly review").
+
+## Ideas from other LifeOS projects (2026-11-08)
+
+Looked at lifeos-app/lifeos (RPG habits, habit garden), manthanmtg/LifeOS (18 modules), Princeu3/LifeOS (body tracking, cross-domain insights), djaiss/journalOS (daily check-in modules), jontkaufman/LifeOS (weekly reviews, Wheel of Life), Aurboda (MCP access for Claude).
+
+- "What goes with a good day": diary mood next to pints, study hours, people seen, spend, weather (data is all there already).
+- One-tap energy + hours slept next to the diary mood (feeds the above).
+- Save the day's weather with each diary day, so On this day can say "3°, rain".
+- Mascot moods from your data (Budget sweats when spending ahead, Lessons sleeps until you studied…) and idle animations / tap reactions on the Home tiles.
+- Mascot names on the Home tiles.
+- Bookshelf / reading list; shopping list fed by the Fridge's "Buy 1–2 things"; gym / workouts; savings and net worth over time (`SavingsEntry` has no entry UI yet).
+- Ask Claude about your data (an MCP endpoint).
+
 ## Later: Year in Review ("Wrapped")
 
 - A swipeable story of tap-through cards for the year (or a semester), using existing data only: pints bought and how often, the most expensive day, study hours and the best week, km driven and the number of road trips, the recipe cooked most, Last done streaks.

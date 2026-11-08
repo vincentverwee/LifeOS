@@ -9,7 +9,8 @@ import { getRoutines } from "@/lib/data/routines";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { budgetGlance } from "@/lib/data/budgetGlance";
 import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
-import { computePeriodStats, dailyTotals } from "@/lib/lessons/stats";
+import { computePeriodStats } from "@/lib/lessons/stats";
+import { studyWeek } from "@/lib/review/week";
 import { isPushKind, parsePushTimes, type PushPayload } from "@/lib/push/kinds";
 import { isKindDueNow, minuteIn, rentDateIn, weekBudget } from "@/lib/push/window";
 import { sendPush } from "@/lib/push/send";
@@ -181,15 +182,12 @@ async function weekReview(todayKey: string): Promise<PushPayload | null> {
   }
 
   // Study: the daily goal for each day of the week inside the period, days off left out.
+  // (the same maths as the weekly review's Study card)
   if (period && period.startDate <= todayKey && monday <= period.endDate) {
-    const totals = dailyTotals(period);
-    const daysOff = new Set(period.entries.filter((e) => e.hours === 0 && e.note).map((e) => e.date));
-    const goalDays = days.filter((d) => d >= period.startDate && d <= period.endDate && !daysOff.has(d));
-    const hours = days.reduce((sum, d) => sum + (totals.get(d) ?? 0), 0);
-    const atGoal = goalDays.filter((d) => (totals.get(d) ?? 0) >= period.goalHours).length;
-    if (goalDays.length > 0) {
+    const study = studyWeek(days, period, period.entries);
+    if (study.goalDays > 0) {
       lines.push(
-        `Studied ${formatHours(Math.round(hours * 100) / 100)} of ${formatHours(goalDays.length * period.goalHours)} · goal met ${atGoal} of ${goalDays.length} days`
+        `Studied ${formatHours(study.hours)} of ${formatHours(study.goalDays * period.goalHours)} · goal met ${study.atGoal} of ${study.goalDays} days`
       );
     }
   }
@@ -213,7 +211,7 @@ async function weekReview(todayKey: string): Promise<PushPayload | null> {
   }
 
   if (lines.length === 0) return null;
-  return { title: "Your week", body: lines.join("\n"), url: "/", tag: "week" };
+  return { title: "Your week", body: lines.join("\n"), url: "/review", tag: "week" };
 }
 
 async function timerNudge(now: Date): Promise<{ key: string; payload: PushPayload } | null> {

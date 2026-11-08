@@ -1,6 +1,8 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import type { MascotKind } from "@/components/icons/mascotProps";
+import { mascotLines } from "@/lib/mascots";
 import { THEME } from "@/lib/theme";
 
 const SHEEP_PHRASES = [
@@ -83,17 +85,22 @@ const CAT_PHRASES = [
 
 const PHRASES = THEME === "cat" ? CAT_PHRASES : SHEEP_PHRASES;
 
-// Picked once per page load in the browser.
-const clientPhrase = PHRASES[Math.floor(Math.random() * PHRASES.length)];
+// One random pick per page load in the browser, shared by every list.
+const clientSeed = Math.random();
 const subscribe = () => () => {};
 
-// The server (and hydration) render the default so markup matches; React then
-// switches to the random phrase on the client.
-export function SheepPhrase() {
+/**
+ * A loading line. With a section `kind` it's that section mascot's own line
+ * ("Hops is pouring a pint…"), else a general sheep/cat pun. The server (and
+ * hydration) render the first line so markup matches; React then switches to
+ * the random one on the client.
+ */
+export function SheepPhrase({ kind = "plain" }: { kind?: MascotKind }) {
+  const list = kind === "plain" ? PHRASES : mascotLines(kind, THEME);
   const phrase = useSyncExternalStore(
     subscribe,
-    () => clientPhrase,
-    () => PHRASES[0]
+    () => list[Math.floor(clientSeed * list.length)],
+    () => list[0]
   );
 
   return <p className="text-sm text-ink-muted">{phrase}</p>;

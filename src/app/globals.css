@@ -78,8 +78,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Dark colours: when the phone is dark and Light wasn't picked in Settings, or when Dark was
+   (the root layout sets data-mode on <html> from the cookie in src/lib/colorMode.ts). Keep both copies the same. */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-mode="light"]) {
     --background: #0f120c;
     --foreground: #ededea;
 
@@ -112,6 +114,38 @@
   }
 }
 
+:root[data-mode="dark"] {
+  --background: #0f120c;
+  --foreground: #ededea;
+
+  --color-primary: #4c9a72;
+  --color-primary-foreground: #0b0f0b;
+
+  --color-surface: #171a14;
+  --color-surface-muted: #1e2419;
+  --color-border: rgba(255, 255, 255, 0.1);
+
+  --color-accent: #46b35c;
+  --color-good: #0ca30c;
+  --color-critical: #d03b3b;
+  --color-positive-text: #0ca30c;
+  --color-warning-text: #e0a33a;
+
+  --color-ink-muted: #898781;
+  --color-gridline: #2c2c2a;
+
+  --color-tag-blue: #3987e5;
+  --color-tag-orange: #d95926;
+  --color-tag-aqua: #199e70;
+  --color-tag-yellow: #c98500;
+  --color-tag-magenta: #d55181;
+  --color-tag-green: #008300;
+  --color-tag-violet: #9085e9;
+  --color-tag-red: #e66767;
+
+  --color-wool: #e9ece4;
+}
+
 /* Pink theme for NEXT_PUBLIC_THEME=cat (src/lib/theme.ts sets data-theme on <html>).
    Only the brand colours change: status colours (good/critical) and the tag palette keep
    their meaning. The accent leans orchid so a bar never reads as the red "over" state. */
@@ -126,7 +160,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root[data-theme="cat"] {
+  :root[data-theme="cat"]:not([data-mode="light"]) {
     --background: #130e11;
     --foreground: #eeeaec;
 
@@ -142,6 +176,31 @@
 
     --color-wool: #f1e7ec;
   }
+}
+
+:root[data-theme="cat"][data-mode="dark"] {
+  --background: #130e11;
+  --foreground: #eeeaec;
+
+  --color-primary: #e07aa8;
+  --color-primary-foreground: #160b11;
+
+  --color-surface: #1b1418;
+  --color-surface-muted: #271a21;
+  --color-border: rgba(255, 255, 255, 0.1);
+
+  --color-accent: #d47fc0;
+  --color-gridline: #2e2a2c;
+
+  --color-wool: #f1e7ec;
+}
+
+/* Native controls (date pickers, scrollbars) follow a picked mode too. */
+:root[data-mode="light"] {
+  color-scheme: light;
+}
+:root[data-mode="dark"] {
+  color-scheme: dark;
 }
 
 body {
@@ -430,8 +489,13 @@ textarea {
 }
 
 @media (prefers-color-scheme: dark) {
-  .cutout-glare {
+  :root:not([data-mode="light"]) .cutout-glare {
     --glare: rgb(255 255 255 / 0.4);
     --glare-mid: rgb(255 255 255 / 0.14);
   }
+}
+
+:root[data-mode="dark"] .cutout-glare {
+  --glare: rgb(255 255 255 / 0.4);
+  --glare-mid: rgb(255 255 255 / 0.14);
 }
