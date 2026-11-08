@@ -41,8 +41,8 @@ export default async function PreviewPage({ searchParams }: PageProps<"/preview"
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-semibold text-foreground">Home preview</h1>
         <p className="text-sm text-ink-muted">
-          Home as it is, plus a column to open a section quickly: swipe right anywhere (or tap the tab on the edge) to show it, swipe
-          left or tap outside to hide it. A red dot means something needs you.
+          Home as it is, plus a column to open a section quickly: swipe left anywhere (or tap the tab on the right edge) to show it, swipe
+          right or tap outside to hide it. A red dot means something needs you.
         </p>
         <div className="flex gap-1 rounded-full bg-surface-muted p-1 sm:max-w-sm">
           <Choice href="/preview?frame=phone" active={frame === "phone"}>

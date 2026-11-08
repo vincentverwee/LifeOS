@@ -21,9 +21,9 @@ function AlertDot({ kind, alerts }: { kind: MascotKind; alerts: Promise<MascotKi
 const SWIPE = 50;
 
 /**
- * A column of section mascots that slides in from the left: swipe right anywhere
- * on the page (or tap the edge tab) to show it, swipe left (or tap outside, Esc)
- * to hide it.
+ * A column of section mascots that slides in from the right (where the thumb
+ * is): swipe left anywhere on the page (or tap the edge tab) to show it, swipe
+ * right (or tap outside, Esc) to hide it.
  * Tapping a mascot opens its section, like tapping its tile.
  * `contained` keeps it inside its own box (the phone frame on /preview), with
  * the children scrolling in there; otherwise it covers the screen's left side.
@@ -61,7 +61,7 @@ export function QuickRail({
       if (Math.abs(dx) < SWIPE || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       // In the /preview phone frame only swipes inside the frame count.
       if (contained && (s.x < box.left || s.x > box.right || s.y < box.top || s.y > box.bottom)) return;
-      setOpen(dx > 0);
+      setOpen(dx < 0);
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") setOpen(false);
@@ -82,18 +82,18 @@ export function QuickRail({
     <div ref={root} className={contained ? "relative h-full overflow-hidden" : undefined}>
       {contained ? <div className="h-full overflow-y-auto px-4 py-4">{children}</div> : children}
 
-      {/* the tab on the left edge (laptops, and a hint on phones) */}
+      {/* the tab on the right edge (laptops, and a hint on phones) */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Show sections"
         aria-expanded={open}
-        className={`${place} top-1/2 left-0 z-30 flex h-20 w-5 -translate-y-1/2 items-center justify-center rounded-r-xl bg-primary/25 text-primary hover:bg-primary/40 ${
+        className={`${place} top-1/2 right-0 z-30 flex h-20 w-5 -translate-y-1/2 items-center justify-center rounded-l-xl bg-primary/25 text-primary hover:bg-primary/40 ${
           open ? "pointer-events-none opacity-0" : ""
         }`}
       >
         <span aria-hidden="true" className="text-sm">
-          ›
+          ‹
         </span>
       </button>
 
@@ -108,8 +108,8 @@ export function QuickRail({
         aria-label="Sections"
         aria-hidden={!open}
         inert={!open}
-        className={`${place} top-0 bottom-0 left-0 z-50 flex w-20 flex-col items-center gap-1 overflow-y-auto border-r border-border bg-surface py-3 shadow-xl transition-transform duration-200 ${
-          open ? "translate-x-0" : "-translate-x-full"
+        className={`${place} top-0 right-0 bottom-0 z-50 flex w-20 flex-col items-center gap-1 overflow-y-auto border-l border-border bg-surface py-3 shadow-xl transition-transform duration-200 ${
+          open ? "translate-x-0" : "translate-x-full"
         }`}
         style={
           contained
