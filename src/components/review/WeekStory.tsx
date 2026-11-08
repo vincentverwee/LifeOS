@@ -45,7 +45,8 @@ export function WeekStory({ cards, week, label, prevWeek, nextWeek, win }: Props
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement) return;
+      // Focused fields, buttons and links handle their own keys (Space on "‹ Back" must only go back).
+      if (e.target instanceof Element && e.target.closest("input, textarea, button, a")) return;
       if (e.key === "ArrowRight" || e.key === " ") go(1);
       else if (e.key === "ArrowLeft") go(-1);
       else if (e.key === "Escape") close();
@@ -68,7 +69,11 @@ export function WeekStory({ cards, week, label, prevWeek, nextWeek, win }: Props
         paddingTop: "max(env(safe-area-inset-top), 0.75rem)",
         paddingBottom: "max(env(safe-area-inset-bottom), 1rem)",
       }}
-      onTouchStart={(e) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })}
+      onTouchStart={(e) => {
+        // A card scrolled down gets the swipe down to scroll back up, not to close.
+        const scrolled = (e.target as HTMLElement).closest("[data-card-scroll]");
+        touch.current = scrolled && scrolled.scrollTop > 0 ? null : { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      }}
       onTouchEnd={(e) => {
         const start = touch.current;
         touch.current = null;
@@ -96,14 +101,19 @@ export function WeekStory({ cards, week, label, prevWeek, nextWeek, win }: Props
         <AnimatePresence mode="wait" initial={false} custom={direction}>
           <motion.section
             key={card.key}
-            className="flex flex-1 flex-col items-center justify-center gap-5 py-4 text-center"
+            // Scrolls when a card is taller than the screen (the last card on a small phone, or with the keyboard up).
+            data-card-scroll
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain text-center"
             initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 28 * direction }}
             animate={{ opacity: 1, x: 0 }}
             exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: -28 * direction }}
             transition={{ duration: 0.18 }}
             aria-live="polite"
           >
-            <CardBody card={card} week={week} win={win} prevWeek={prevWeek} nextWeek={nextWeek} />
+            {/* my-auto centres short cards; tall ones start at the top and scroll */}
+            <div className="my-auto flex flex-col items-center gap-5 py-4">
+              <CardBody card={card} week={week} win={win} prevWeek={prevWeek} nextWeek={nextWeek} />
+            </div>
           </motion.section>
         </AnimatePresence>
       </div>
@@ -143,7 +153,7 @@ function CardBody({
 }) {
   return (
     <>
-      <Mascot kind={card.kind} size={136} className="text-primary" decorative />
+      <Mascot kind={card.kind} size={card.outro ? 96 : 136} className="text-primary" decorative />
       <div className="flex flex-col items-center gap-2">
         {card.speaker && <p className="text-xs font-semibold tracking-wide text-primary uppercase">{card.speaker}</p>}
         <p className="rounded-2xl bg-surface-muted px-4 py-3 text-lg leading-snug text-foreground">{card.line}</p>

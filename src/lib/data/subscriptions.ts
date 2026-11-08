@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { dayKey } from "@/lib/format";
@@ -37,7 +38,7 @@ export async function getSubscriptions(): Promise<SubscriptionRow[]> {
 }
 
 /** Active subscriptions whose renewal is today or earlier and not yet logged or skipped. */
-export async function getDueSubscriptions(todayKey: string): Promise<SubscriptionRow[]> {
+async function loadDueSubscriptions(todayKey: string): Promise<SubscriptionRow[]> {
   const rows = await prisma.subscription.findMany({
     where: { isActive: true, nextDueOn: { lte: new Date(`${todayKey}T00:00:00Z`) } },
     include,
@@ -45,6 +46,9 @@ export async function getDueSubscriptions(todayKey: string): Promise<Subscriptio
   });
   return rows.map(toRow);
 }
+
+/** Per request, so Home's Budget tile and its alert dots share one query. */
+export const getDueSubscriptions = cache(loadDueSubscriptions);
 
 export type SubscriptionCharge = { id: string; date: string; amount: number };
 

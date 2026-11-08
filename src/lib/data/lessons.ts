@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
@@ -256,7 +257,7 @@ export async function getTrackedCourses() {
 }
 
 /** The running study timer with its courses (in course order), or null. */
-export async function getStudyTimer(): Promise<StudyTimerState | null> {
+async function loadStudyTimer(): Promise<StudyTimerState | null> {
   const timer = await prisma.studyTimer.findUnique({ where: { id: "current" } });
   if (!timer) return null;
   const courses = timer.courseIds.length
@@ -272,3 +273,6 @@ export async function getStudyTimer(): Promise<StudyTimerState | null> {
     courses: courses.map((c) => ({ ...c, color: isCategoryColorSlot(c.color) ? c.color : "blue" })),
   };
 }
+
+/** Per request, so Home's Lessons tile and its alert dots share one query. */
+export const getStudyTimer = cache(loadStudyTimer);

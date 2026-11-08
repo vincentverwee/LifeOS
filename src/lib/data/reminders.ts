@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { dayKeyIn } from "@/lib/today";
@@ -68,7 +69,7 @@ export type RemindersGlance = {
 };
 
 /** For the home tile: open reminders, Last done items past their "every N days" and people to catch up with. */
-export async function getRemindersGlance(todayKey: string): Promise<RemindersGlance> {
+async function loadRemindersGlance(todayKey: string): Promise<RemindersGlance> {
   const [{ open, upcoming }, routines, catchUps] = await Promise.all([
     getReminders(todayKey),
     getRoutines(todayKey),
@@ -87,3 +88,6 @@ export async function getRemindersGlance(todayKey: string): Promise<RemindersGla
       routines.filter((r) => r.lastDoneOn !== null).sort((a, b) => a.lastDoneOn!.localeCompare(b.lastDoneOn!))[0] ?? null,
   };
 }
+
+/** Per request, so Home's tile and its alert dots share one load. */
+export const getRemindersGlance = cache(loadRemindersGlance);

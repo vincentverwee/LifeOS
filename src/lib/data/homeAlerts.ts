@@ -8,8 +8,21 @@ import { getStudyTimer } from "@/lib/data/lessons";
 /** Birthdays this close get a dot on People. */
 const BIRTHDAY_DOT_DAYS = 7;
 
-/** Sections that need something from you today (a dot in the side column). */
+/**
+ * Sections that need something from you today (a dot in the side column).
+ * Never rejects: the dots are read with use() under Suspense and no error
+ * boundary, so a failed query would otherwise replace all of Home.
+ */
 export async function getHomeAlerts(todayKey: string): Promise<MascotKind[]> {
+  try {
+    return await loadAlerts(todayKey);
+  } catch (error) {
+    console.error("Home alerts failed", error);
+    return [];
+  }
+}
+
+async function loadAlerts(todayKey: string): Promise<MascotKind[]> {
   const [reminders, subscriptions, people, timer] = await Promise.all([
     getRemindersGlance(todayKey),
     getDueSubscriptions(todayKey),

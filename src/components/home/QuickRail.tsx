@@ -26,7 +26,7 @@ const SWIPE = 50;
  * right (or tap outside, Esc) to hide it.
  * Tapping a mascot opens its section, like tapping its tile.
  * `contained` keeps it inside its own box (the phone frame on /preview), with
- * the children scrolling in there; otherwise it covers the screen's left side.
+ * the children scrolling in there; otherwise it covers the screen's right side.
  */
 export function QuickRail({
   sections,
