@@ -12,7 +12,7 @@ export const MASCOT_NAMES: Record<SectionKind, Record<MascotAnimal, string>> = {
   wardrobe: { sheep: "Woolly", cat: "Mittens" },
   people: { sheep: "Buddy", cat: "Buddy" },
   waypoint: { sheep: "Scout", cat: "Scout" },
-  recipes: { sheep: "Chef Baa-tiste", cat: "Chef Purrcy" },
+  recipes: { sheep: "Chef Baa-tista", cat: "Chef Purrcy" },
 };
 
 /** What each mascot is busy with while its section loads; `{name}` is filled in. */
