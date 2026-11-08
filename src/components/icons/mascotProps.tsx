@@ -48,6 +48,8 @@ type Anchors = {
   front: Point;
   /** Up and to the right of the head, for the map pin. */
   pin: Point;
+  /** Just under the chin, for Penny's tie. */
+  chin: Point;
   /** The eye centres and lens radius, for glasses. */
   eyes: { lx: number; rx: number; y: number; r: number };
   /** Colour that shows on the face: the sheep's face is dark, the cat's light. */
@@ -60,6 +62,7 @@ const ANCHORS: Record<MascotAnimal, Anchors> = {
     cap: { x: 50, y: 22, s: 1.15 },
     front: { x: 77, y: 65, s: 1.35 },
     pin: { x: 81, y: 25, s: 1.25 },
+    chin: { x: 50, y: 69.5, s: 1.2 },
     eyes: { lx: 42.4, rx: 57.6, y: 44.5, r: 5.6 },
     faceInk: W,
   },
@@ -68,6 +71,7 @@ const ANCHORS: Record<MascotAnimal, Anchors> = {
     cap: { x: 50, y: 28, s: 1 },
     front: { x: 77, y: 67, s: 1.35 },
     pin: { x: 83, y: 32, s: 1.25 },
+    chin: { x: 50, y: 73, s: 1.02 },
     eyes: { lx: 39.5, rx: 60.5, y: 46, r: 6.8 },
     faceInk: O,
   },
@@ -112,6 +116,17 @@ function Coin() {
         <path d="M-6.5 -1.6 H1.5 M-6.5 1.6 H1.5" strokeWidth="1.6" />
       </g>
     </>
+  );
+}
+
+/** Penny's tie: a knot and a pointed blade with one stripe, hanging from the chin. */
+function Tie() {
+  return (
+    <g stroke={W} strokeWidth="1.2" strokeLinejoin="round">
+      <path d="M-3.4 -0.8 H3.4 L2.4 3.6 H-2.4 Z" fill={O} />
+      <path d="M-2.4 3.6 H2.4 L4.6 14 L0 18.5 L-4.6 14 Z" fill={O} />
+      <path d="M-3.2 9.4 L3.6 6.8" fill="none" strokeWidth="1.1" strokeLinecap="round" />
+    </g>
   );
 }
 
@@ -172,21 +187,6 @@ function Mortarboard() {
       <path d="M0 -8.5 Q12 -7 15 -4 L15 3" fill="none" stroke={O} strokeWidth="1.6" strokeLinecap="round" />
       <rect x="13.5" y="2" width="3" height="5.5" rx="1" fill={O} />
     </>
-  );
-}
-
-/** Penny's monocle on the left eye (viewer's left), with a short chain. */
-function Monocle({ a }: { a: Anchors }) {
-  const { lx, y, r } = a.eyes;
-  return (
-    <g fill="none" stroke={a.faceInk} strokeLinecap="round">
-      <circle cx={lx} cy={y} r={r + 0.3} strokeWidth="1.9" />
-      <path
-        d={`M${lx - r * 0.6} ${y + r * 0.85} Q${lx - r - 1.5} ${y + r + 3} ${lx - r - 0.5} ${y + r + 7}`}
-        strokeWidth="1.1"
-        strokeDasharray="1 1.4"
-      />
-    </g>
   );
 }
 
@@ -302,7 +302,9 @@ export function MascotProp({ kind, animal }: { kind: MascotKind; animal: MascotA
     case "budget":
       return (
         <>
-          <Monocle a={a} />
+          <At p={a.chin}>
+            <Tie />
+          </At>
           <At p={nudge(a.front, 3, 2)}>
             <Coin />
           </At>

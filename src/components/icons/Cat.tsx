@@ -11,12 +11,23 @@ const HEAD =
 const WHISKERS = ["M35 57.5 L13 53.5", "M35 61 L13 62.5", "M65 57.5 L87 53.5", "M65 61 L87 62.5"];
 
 /** One oval eye; the logo is { rx: 4, ry: 5.4, tilt: 0, dy: 0 }. `tilt` leans the top outwards;
- *  `closed` draws a happy ^ instead (Beer, the People wink). */
-export type CatEye = { rx: number; ry: number; tilt: number; dy: number; closed?: boolean };
+ *  `closed` draws a happy ^ instead (Beer, the People wink); `sleepy` a drooping ‿. */
+export type CatEye = { rx: number; ry: number; tilt: number; dy: number; closed?: boolean; sleepy?: boolean };
 export const LOGO_CAT_EYE: CatEye = { rx: 4, ry: 5.4, tilt: 0, dy: 0 };
 
 function CatEyeShape({ x, eye, side }: { x: number; eye: CatEye; side: 1 | -1 }) {
   const y = 46 + eye.dy;
+  if (eye.sleepy) {
+    return (
+      <path
+        d={`M${x - 4.4} ${y + 0.6} Q${x} ${y + 4.2} ${x + 4.4} ${y + 0.6}`}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    );
+  }
   if (eye.closed) {
     return (
       <path
@@ -59,9 +70,11 @@ export function CatHead({ eyes }: { eyes?: { l: CatEye; r: CatEye } }) {
         ))}
       </g>
 
-      {/* eyes with a light glint */}
-      <CatEyeShape x={39.5} eye={eyes?.l ?? LOGO_CAT_EYE} side={-1} />
-      <CatEyeShape x={60.5} eye={eyes?.r ?? LOGO_CAT_EYE} side={1} />
+      {/* eyes with a light glint (the group blinks on a live mascot) */}
+      <g className="mascot-eyes">
+        <CatEyeShape x={39.5} eye={eyes?.l ?? LOGO_CAT_EYE} side={-1} />
+        <CatEyeShape x={60.5} eye={eyes?.r ?? LOGO_CAT_EYE} side={1} />
+      </g>
       {/* mouth */}
       <g fill="none" stroke="currentColor" strokeLinecap="round">
         <path d="M50 59.3 Q50 63.6 45.6 64" strokeWidth="1.6" />

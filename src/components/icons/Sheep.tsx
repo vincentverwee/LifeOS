@@ -46,8 +46,8 @@ function Fleece() {
 }
 
 /** How one leaf eye is turned and sized; the logo is { slant: 22, sx: 1, sy: 1, dy: 0 }.
- *  `closed` draws a happy ^ instead (Beer, the People wink), sized by `sx`. */
-export type SheepEye = { slant: number; sx: number; sy: number; dy: number; closed?: boolean };
+ *  `closed` draws a happy ^ instead (Beer, the People wink), sized by `sx`; `sleepy` a drooping ‿. */
+export type SheepEye = { slant: number; sx: number; sy: number; dy: number; closed?: boolean; sleepy?: boolean };
 /** A closed, smiling eye: a ^ in wool. */
 function HappyEye({ x, size = 1 }: { x: number; size?: number }) {
   return (
@@ -57,6 +57,30 @@ function HappyEye({ x, size = 1 }: { x: number; size?: number }) {
       stroke="var(--color-wool)"
       strokeWidth="1.8"
       strokeLinecap="round"
+    />
+  );
+}
+
+/** A sleeping eye: a soft ‿ in wool. */
+function SleepyEye({ x }: { x: number }) {
+  return (
+    <path
+      d={`M${x - 4} 45.2 Q${x} 48.4 ${x + 4} 45.2`}
+      fill="none"
+      stroke="var(--color-wool)"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
+  );
+}
+
+function OneEye({ x, eye, side }: { x: number; eye: SheepEye; side: 1 | -1 }) {
+  if (eye.sleepy) return <SleepyEye x={x} />;
+  if (eye.closed) return <HappyEye x={x} size={eye.sx} />;
+  return (
+    <path
+      d={EYE}
+      transform={`translate(${x} ${44.5 + eye.dy}) rotate(${eye.slant * side}) scale(${eye.sx * side} ${eye.sy})`}
     />
   );
 }
@@ -95,18 +119,10 @@ export function SheepHead({ eyes }: { eyes?: { l: SheepEye; r: SheepEye } }) {
         ))}
       </g>
 
-      {/* eyes, slanted up at the outer corners */}
-      <g fill="var(--color-wool)">
-        {l.closed ? (
-          <HappyEye x={42.4} size={l.sx} />
-        ) : (
-          <path d={EYE} transform={`translate(42.4 ${44.5 + l.dy}) rotate(${l.slant}) scale(${l.sx} ${l.sy})`} />
-        )}
-        {r.closed ? (
-          <HappyEye x={57.6} size={r.sx} />
-        ) : (
-          <path d={EYE} transform={`translate(57.6 ${44.5 + r.dy}) rotate(${-r.slant}) scale(${-r.sx} ${r.sy})`} />
-        )}
+      {/* eyes, slanted up at the outer corners (the group blinks on a live mascot) */}
+      <g fill="var(--color-wool)" className="mascot-eyes">
+        <OneEye x={42.4} eye={l} side={1} />
+        <OneEye x={57.6} eye={r} side={-1} />
       </g>
       {/* nose: one bow, with a line down to the chin */}
       <g fill="none" stroke="var(--color-wool)" strokeLinecap="round" opacity="0.9">

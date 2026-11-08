@@ -15,7 +15,8 @@ import { authDisabled } from "@/lib/authToken";
  * phone frame on /preview lays out like a real phone.
  */
 export function HomeContent({ tz, todayKey }: { tz: string; todayKey: string }) {
-  const fact = getFactOfTheDay(todayKey, hourIn(tz) >= 12);
+  const hour = hourIn(tz);
+  const fact = getFactOfTheDay(todayKey, hour >= 12);
   const dateLabel = new Intl.DateTimeFormat("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -68,9 +69,9 @@ export function HomeContent({ tz, todayKey }: { tz: string; todayKey: string }) 
           </li>
         )}
 
-        {HOME_SECTIONS.map((s) => (
+        {HOME_SECTIONS.map((s, i) => (
           <li key={s.kind}>
-            <FeatureTile href={s.href} name={s.name} kind={s.kind}>
+            <FeatureTile href={s.href} name={s.name} kind={s.kind} todayKey={todayKey} hour={hour} index={i}>
               <Suspense fallback={<TileSkeleton />}>{s.render(todayKey)}</Suspense>
             </FeatureTile>
           </li>

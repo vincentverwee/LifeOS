@@ -1,6 +1,8 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
-import { getAllTripSummaries } from "@/lib/data/waypoint";
+import { Suspense, type ReactNode } from "react";
+import { getWaypointGlance } from "@/lib/data/waypoint";
+import { getSectionMood, type SectionKind } from "@/lib/data/homeMoods";
+import { LiveMascot } from "@/components/home/LiveMascot";
 import { getRecipesGlance } from "@/lib/data/recipes";
 import { getLessonsGlance, type LessonsGlance } from "@/lib/data/lessons";
 import { getRemindersGlance } from "@/lib/data/reminders";
@@ -11,7 +13,6 @@ import { describeSince } from "@/lib/reminders/routines";
 import { formatCurrencyShort, formatHours } from "@/lib/format";
 import { getDiaryGlance, memoryHeadline } from "@/lib/data/diary";
 import { describeYearsAgo, diaryBits, moodOf } from "@/lib/diary/onThisDay";
-import { Mascot, type MascotKind } from "@/components/icons/Mascot";
 import { getBeerGlance } from "@/lib/data/beer";
 import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
@@ -25,21 +26,6 @@ import { THEME } from "@/lib/theme";
  * that section's glance) and the list of sections in Home order. Shared by the
  * Home page and the layout preview on /preview.
  */
-
-type WaypointGlance = { totalKm: number; trips: number; latest: string | null; van: boolean };
-
-/** Van-first: the van's km and trips once any trip is in the van, else every trip. */
-async function waypointGlance(): Promise<WaypointGlance> {
-  const all = await getAllTripSummaries(); // newest first
-  const vanTrips = all.filter((t) => t.with_van);
-  const trips = vanTrips.length > 0 ? vanTrips : all;
-  return {
-    totalKm: trips.reduce((sum, t) => sum + (t.total_km ?? 0), 0),
-    trips: trips.length,
-    latest: trips[0]?.title ?? null,
-    van: vanTrips.length > 0,
-  };
-}
 
 export function hourIn(tz: string): number {
   return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
@@ -55,33 +41,58 @@ export function greeting(tz: string): string {
 
 const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 });
 
+/** The tile's mascot in today's mood; until that's known it rests (same look as /mascots' default). */
+async function TileMascot({ kind, todayKey, hour, delay }: { kind: SectionKind; todayKey: string; hour: number; delay: number }) {
+  const name = mascotName(kind, THEME);
+  const m = await getSectionMood(kind, todayKey, hour).catch(() => null);
+  return <LiveMascot kind={kind} name={name} mood={m?.mood} line={m?.line ?? `${name} says hi.`} delay={delay} />;
+}
+
+/**
+ * One Home tile. The whole card opens the section through a link stretched over it,
+ * so the mascot can be its own button on top (a tap makes it react instead of navigating).
+ */
 export function FeatureTile({
   href,
   name,
   kind,
+  todayKey,
+  hour,
+  index = 0,
   children,
 }: {
   href: string;
   name: string;
-  kind: MascotKind;
+  kind: SectionKind;
+  todayKey: string;
+  hour: number;
+  /** Position on Home, to keep the mascots out of step. */
+  index?: number;
   children: React.ReactNode;
 }) {
+  const mascot = mascotName(kind, THEME);
+  const delay = index * 0.9;
   return (
-    <Link
-      href={href}
-      className="tap group flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-primary"
-    >
+    <div className="tap group relative flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-primary">
+      <Link
+        href={href}
+        aria-label={name}
+        className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      />
       <div className="flex items-center gap-3">
-        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-primary">
-          <Mascot kind={kind} size={52} decorative />
-        </span>
-        <h2 className="flex-1 text-xl font-semibold text-foreground">{name}</h2>
+        <Suspense fallback={<LiveMascot kind={kind} name={mascot} line={`${mascot} says hi.`} delay={delay} />}>
+          <TileMascot kind={kind} todayKey={todayKey} hour={hour} delay={delay} />
+        </Suspense>
+        <div className="flex-1">
+          <h2 className="text-xl leading-tight font-semibold text-foreground">{name}</h2>
+          <p className="text-sm text-ink-muted">{mascot}</p>
+        </div>
         <span aria-hidden="true" className="text-xl text-ink-muted transition-transform group-hover:translate-x-0.5">
           ›
         </span>
       </div>
       <div className="mt-5 flex flex-1 flex-col">{children}</div>
-    </Link>
+    </div>
   );
 }
 
@@ -216,7 +227,7 @@ async function RemindersTileBody({ todayKey }: { todayKey: string }) {
 }
 
 async function WaypointTileBody() {
-  const waypoint = await waypointGlance();
+  const waypoint = await getWaypointGlance();
   return (
     <>
       <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
@@ -363,7 +374,7 @@ async function WardrobeTileBody() {
 
 
 export type HomeSection = {
-  kind: MascotKind;
+  kind: SectionKind;
   name: string;
   href: string;
   /** The card body for today. */
@@ -387,7 +398,7 @@ export const HOME_SECTIONS: HomeSection[] = [
 export function railSections() {
   return HOME_SECTIONS.map((s) => ({
     kind: s.kind,
-    name: s.kind === "plain" ? s.name : mascotName(s.kind, THEME),
+    name: mascotName(s.kind, THEME),
     section: s.name,
     href: s.href,
   }));

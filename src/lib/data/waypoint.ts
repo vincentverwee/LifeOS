@@ -1,4 +1,5 @@
 import 'server-only';
+import { cache } from 'react';
 import { prisma } from '@/lib/prisma';
 import { toLocation, toTrip, toTripSummary } from '@/lib/waypoint/rows';
 import { OVERVIEW_TOLERANCE, overviewOf, simplifyLine } from '@/lib/waypoint/simplify';
@@ -97,3 +98,19 @@ export async function getTripWithLocations(
   const { locations, ...trip } = row;
   return { trip: toTrip(trip), locations: locations.map(toLocation) };
 }
+
+export type WaypointGlance = { totalKm: number; trips: number; latest: string | null; van: boolean };
+
+/** The Home tile, van-first: the van's km and trips once any trip is in the van, else every trip.
+ *  Cached per request so the tile and its mascot's mood share one load. */
+export const getWaypointGlance = cache(async (): Promise<WaypointGlance> => {
+  const all = await getAllTripSummaries(); // newest first
+  const vanTrips = all.filter((t) => t.with_van);
+  const trips = vanTrips.length > 0 ? vanTrips : all;
+  return {
+    totalKm: trips.reduce((sum, t) => sum + (t.total_km ?? 0), 0),
+    trips: trips.length,
+    latest: trips[0]?.title ?? null,
+    van: vanTrips.length > 0,
+  };
+});

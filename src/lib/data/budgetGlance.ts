@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { computeMonthStats } from "@/lib/monthStats";
 import { formatCurrency } from "@/lib/format";
@@ -19,7 +20,7 @@ export type BudgetGlance = {
 };
 
 /** Today's allowance and the period's progress, from the period running today. */
-export async function budgetGlance(todayKey: string): Promise<BudgetGlance | null> {
+async function loadBudgetGlance(todayKey: string): Promise<BudgetGlance | null> {
   const running = getRunningPeriods(await getAllPeriods(), todayKey)[0];
   if (!running) return null;
   const data = await getPeriodData(running);
@@ -46,3 +47,5 @@ export async function budgetGlance(todayKey: string): Promise<BudgetGlance | nul
     ...progress,
   };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const budgetGlance = cache(loadBudgetGlance);

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import type { PubOption } from "@/lib/beer/types";
@@ -75,7 +76,7 @@ export async function getPubOptions(): Promise<PubOption[]> {
 export type BeerGlance = { pints: number; lastPub: string | null; lastVisit: string | null };
 
 /** The hub tile: pints this calendar month and the latest beer (with its pub, if any). */
-export async function getBeerGlance(todayKey: string): Promise<BeerGlance> {
+async function loadBeerGlance(todayKey: string): Promise<BeerGlance> {
   const [month, last] = await Promise.all([
     getBeerVisits({ from: monthStarts(todayKey).thisMonth }),
     prisma.expense.findFirst({
@@ -88,3 +89,5 @@ export async function getBeerGlance(todayKey: string): Promise<BeerGlance> {
   const pints = totals(month.filter((v) => v.date <= todayKey)).pints;
   return { pints, lastPub: last?.pub?.name ?? null, lastVisit: last ? dayKey(last.date) : null };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getBeerGlance = cache(loadBeerGlance);

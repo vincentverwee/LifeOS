@@ -479,6 +479,132 @@ textarea {
   }
 }
 
+/* Live mascots (LiveMascot): a gentle bob (slow breathing when asleep), a blink every few
+   seconds, a drifting "z" / trembling sweat drop, and a bounce or wobble on a tap.
+   --mascot-delay (negative) keeps tiles out of step. Reduced motion: still, tap included. */
+.mascot-live {
+  display: inline-flex;
+  animation: mascot-bob 3.6s ease-in-out var(--mascot-delay, 0s) infinite;
+}
+.mascot-live[data-mood="sleepy"] {
+  animation: mascot-breathe 4.8s ease-in-out var(--mascot-delay, 0s) infinite;
+}
+.mascot-live .mascot-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: mascot-blink 5.5s ease-in-out var(--mascot-delay, 0s) infinite;
+}
+.mascot-live[data-mood="sleepy"] .mascot-eyes,
+.mascot-live[data-mood="happy"] .mascot-eyes {
+  animation: none;
+}
+.mascot-live .mascot-mark {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mascot-live[data-mood="sleepy"] .mascot-mark {
+  animation: mascot-z 2.8s ease-in-out var(--mascot-delay, 0s) infinite;
+}
+.mascot-live[data-mood="worried"] .mascot-mark {
+  animation: mascot-drip 1.6s ease-in-out var(--mascot-delay, 0s) infinite;
+}
+.mascot-live.mascot-bounce {
+  animation: mascot-bounce 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.mascot-live.mascot-wobble {
+  animation: mascot-wobble 0.5s ease-in-out;
+}
+
+@keyframes mascot-bob {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(-2px) rotate(-2deg);
+  }
+}
+@keyframes mascot-breathe {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: scale(1.04, 0.97) translateY(1px);
+  }
+}
+@keyframes mascot-blink {
+  0%,
+  92%,
+  100% {
+    transform: none;
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes mascot-z {
+  0% {
+    opacity: 0;
+    transform: translate(2px, 3px) scale(0.7);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-2px, -4px) scale(1.1);
+  }
+}
+@keyframes mascot-drip {
+  0%,
+  100% {
+    transform: none;
+  }
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+@keyframes mascot-bounce {
+  0% {
+    transform: none;
+  }
+  35% {
+    transform: translateY(-6px) scale(1.08, 0.94);
+  }
+  70% {
+    transform: translateY(0) scale(0.96, 1.05);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes mascot-wobble {
+  0%,
+  100% {
+    transform: none;
+  }
+  20%,
+  60% {
+    transform: rotate(-8deg);
+  }
+  40%,
+  80% {
+    transform: rotate(8deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot-live,
+  .mascot-live[data-mood],
+  .mascot-live .mascot-eyes,
+  .mascot-live .mascot-mark,
+  .mascot-live[data-mood] .mascot-mark {
+    animation: none;
+  }
+}
+
 /* Wardrobe cut-outs (photo with its background removed): a soft white spotlight behind
    the clothing, over the card colour. Brighter on light cards, gentler on dark ones. */
 .cutout-glare {

@@ -1,7 +1,11 @@
 import type { CSSProperties } from "react";
 import { Mascot } from "@/components/icons/Mascot";
-import { MASCOT_LINES, MASCOT_NAMES } from "@/lib/mascots";
+import { LiveMascot } from "@/components/home/LiveMascot";
+import { MOODS } from "@/components/icons/mascotMoods";
+import { MASCOT_LINES, MASCOT_NAMES, mascotName } from "@/lib/mascots";
+import { moodFor, type MoodInput } from "@/lib/mascotMood";
 import { MASCOT_KINDS, type MascotAnimal, type MascotKind } from "@/components/icons/mascotProps";
+import { THEME } from "@/lib/theme";
 
 export const metadata = { title: "Mascots" };
 
@@ -29,6 +33,36 @@ const SWATCHES: { animal: MascotAnimal; mode: string; style: CSSProperties }[] =
 
 const TILE_KINDS = MASCOT_KINDS.filter((k) => k !== "plain");
 
+// Made-up data that puts each section's mascot in each of its moods (rules in src/lib/mascotMood.ts).
+const SAMPLE_TODAY = "2026-11-08";
+const budget = (spent: number, over = false): MoodInput => ({
+  kind: "budget",
+  budget: { over, spent, budget: 600, timeProgress: 0.5 },
+});
+const lessons = (todayHours: number, examInDays: number | null = null): MoodInput => ({
+  kind: "lessons",
+  lessons: { todayHours, goalHours: 4, examInDays, timerRunning: false },
+});
+const SAMPLES: Record<Exclude<MascotKind, "plain">, MoodInput[]> = {
+  budget: [budget(290), budget(180), budget(318)],
+  lessons: [lessons(2), lessons(5), lessons(0), lessons(1, 2)],
+  reminders: [{ kind: "reminders", open: 3, overdue: 0 }, { kind: "reminders", open: 0, overdue: 0 }, { kind: "reminders", open: 4, overdue: 2 }],
+  diary: [{ kind: "diary", wroteToday: false }, { kind: "diary", wroteToday: true }],
+  beer: [{ kind: "beer", lastVisit: "2026-11-05" }, { kind: "beer", lastVisit: SAMPLE_TODAY }, { kind: "beer", lastVisit: "2026-10-12" }],
+  wardrobe: [
+    { kind: "wardrobe", items: 30, wash: 3, lastWash: { coloured: "2026-11-06", white: "2026-11-02" } },
+    { kind: "wardrobe", items: 30, wash: 0, lastWash: { coloured: "2026-11-06", white: "2026-11-02" } },
+    { kind: "wardrobe", items: 30, wash: 2, lastWash: { coloured: "2026-11-06", white: "2026-10-27" } },
+  ],
+  people: [
+    { kind: "people", total: 24, birthdayToday: null, catchUp: 0 },
+    { kind: "people", total: 24, birthdayToday: "Anna", catchUp: 0 },
+    { kind: "people", total: 24, birthdayToday: null, catchUp: 2 },
+  ],
+  waypoint: [{ kind: "waypoint", latest: "Normandy" }],
+  recipes: [{ kind: "recipes", lastMade: "Dahl" }],
+};
+
 /** Not linked anywhere: a page to look at every section mascot while tweaking them. */
 export default function MascotsPage() {
   return (
@@ -39,6 +73,41 @@ export default function MascotsPage() {
           One per section, sheep and cat, light and dark. Drawn in <code>src/components/icons/mascotProps.tsx</code>.
         </p>
       </div>
+
+      <section className="flex flex-col gap-3">
+        <h2 className="text-lg font-semibold text-foreground">Alive</h2>
+        <p className="text-sm text-ink-muted">
+          Moods from made-up data (<code>src/lib/mascotMood.ts</code>). They bob and blink; tap one for its line. Between
+          midnight and 6 everyone who isn&apos;t worried is asleep.
+        </p>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {TILE_KINDS.map((kind, i) => {
+            const name = mascotName(kind, THEME);
+            return (
+              <li key={kind} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+                <div>
+                  <p className="text-xl font-semibold text-foreground">{NAMES[kind]}</p>
+                  <p className="text-sm text-ink-muted">{name}</p>
+                </div>
+                <ul className="flex flex-col gap-3">
+                  {SAMPLES[kind].map((input, j) => {
+                    const m = moodFor(input, name, SAMPLE_TODAY, 12);
+                    return (
+                      <li key={j} className="flex items-center gap-3">
+                        <LiveMascot kind={kind} mood={m.mood} name={name} line={m.line} delay={(i * 3 + j) * 0.7} />
+                        <span className="flex flex-col">
+                          <span className="text-xs font-medium tracking-wide text-ink-muted uppercase">{m.mood}</span>
+                          <span className="text-sm text-foreground">{m.line}</span>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
 
       <section className="flex flex-col gap-3">
         <h2 className="text-lg font-semibold text-foreground">On a Home tile</h2>
@@ -85,6 +154,11 @@ export default function MascotsPage() {
                 <div className="flex items-end gap-2">
                   <Mascot kind={kind} animal={sw.animal} size={52} decorative />
                   <Mascot kind={kind} animal={sw.animal} size={28} decorative />
+                </div>
+                <div className="flex items-end gap-1" title="happy · sleepy · worried">
+                  {MOODS.filter((m) => m !== "default").map((m) => (
+                    <Mascot key={m} kind={kind} mood={m} animal={sw.animal} size={40} decorative />
+                  ))}
                 </div>
                 <span className="text-xs font-medium opacity-80">
                   {sw.animal} · {sw.mode}

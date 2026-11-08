@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { wearDays } from "@/lib/wardrobe/logic";
@@ -198,9 +199,30 @@ export async function getLastWashOn(): Promise<string | null> {
   return log ? dayKey(log.doneOn) : null;
 }
 
+/** Each load's last wash day (its Last done item), or null when it was never washed in the app. */
+async function loadLastWashByLoad(): Promise<Record<WashGroup, string | null>> {
+  const logs = await prisma.routineLog.groupBy({
+    by: ["routineId"],
+    where: { routine: { source: { in: Object.values(WASH_ROUTINE_SOURCE) } } },
+    _max: { doneOn: true },
+  });
+  const routines = await prisma.routine.findMany({
+    where: { id: { in: logs.map((l) => l.routineId) } },
+    select: { id: true, source: true },
+  });
+  const last: Record<WashGroup, string | null> = { coloured: null, white: null };
+  for (const l of logs) {
+    const source = routines.find((r) => r.id === l.routineId)?.source;
+    const group = (Object.keys(WASH_ROUTINE_SOURCE) as WashGroup[]).find((g) => WASH_ROUTINE_SOURCE[g] === source);
+    if (group && l._max.doneOn) last[group] = dayKey(l._max.doneOn);
+  }
+  return last;
+}
+export const getLastWashByLoad = cache(loadLastWashByLoad);
+
 export type WardrobeGlance = { wash: number; drying: number; items: number; outfits: number };
 
-export async function getWardrobeGlance(): Promise<WardrobeGlance> {
+async function loadWardrobeGlance(): Promise<WardrobeGlance> {
   const [byStatus, outfits] = await Promise.all([
     prisma.clothingItem.groupBy({ by: ["status"], where: { isArchived: false }, _count: { _all: true } }),
     prisma.outfit.count(),
@@ -213,3 +235,5 @@ export async function getWardrobeGlance(): Promise<WardrobeGlance> {
     outfits,
   };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getWardrobeGlance = cache(loadWardrobeGlance);

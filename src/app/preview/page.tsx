@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { HomeContent } from "@/components/home/HomeContent";
 import { QuickRail } from "@/components/home/QuickRail";
-import { railSections } from "@/components/home/TileBodies";
+import { hourIn, railSections } from "@/components/home/TileBodies";
 import { getHomeAlerts } from "@/lib/data/homeAlerts";
+import { getHomeMoods } from "@/lib/data/homeMoods";
 import { dayKeyIn, getTimeZone } from "@/lib/today";
 
 export const metadata = { title: "Home preview" };
@@ -35,6 +36,7 @@ export default async function PreviewPage({ searchParams }: PageProps<"/preview"
   const todayKey = dayKeyIn(tz);
   const sections = railSections();
   const alerts = getHomeAlerts(todayKey);
+  const moods = getHomeMoods(sections.map((s) => s.kind), todayKey, hourIn(tz));
 
   return (
     <div className="flex flex-col gap-5">
@@ -57,12 +59,12 @@ export default async function PreviewPage({ searchParams }: PageProps<"/preview"
       {frame === "phone" ? (
         // An iPhone-sized screen; Home scrolls inside it like on the phone.
         <div className="mx-auto h-[796px] w-[390px] max-w-full overflow-hidden rounded-[2.5rem] border-8 border-foreground/80 bg-background shadow-xl">
-          <QuickRail sections={sections} alerts={alerts} contained>
+          <QuickRail sections={sections} alerts={alerts} moods={moods} contained>
             <HomeContent tz={tz} todayKey={todayKey} />
           </QuickRail>
         </div>
       ) : (
-        <QuickRail sections={sections} alerts={alerts}>
+        <QuickRail sections={sections} alerts={alerts} moods={moods}>
           <HomeContent tz={tz} todayKey={todayKey} />
         </QuickRail>
       )}

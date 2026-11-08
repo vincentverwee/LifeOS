@@ -167,7 +167,7 @@ export type LessonsGlance = {
 };
 
 /** For the home tile. */
-export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance | null> {
+async function loadLessonsGlance(todayKey: string): Promise<LessonsGlance | null> {
   const [{ period }, timer] = await Promise.all([loadStudyPeriods(undefined, todayKey), getStudyTimer()]);
   if (!period) return null;
   const stats = computePeriodStats(period, todayKey);
@@ -184,6 +184,8 @@ export async function getLessonsGlance(todayKey: string): Promise<LessonsGlance 
     timer,
   };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getLessonsGlance = cache(loadLessonsGlance);
 
 export type TrackedEntry = {
   id: string;

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import type { RecipeIngredient } from "@/lib/recipes/types";
@@ -64,7 +65,7 @@ export async function getSavedSpoonacularIds(): Promise<Set<number>> {
 export type RecipesGlance = { cookbook: number; toMake: number; lastMade: string | null };
 
 /** For the home tile. */
-export async function getRecipesGlance(): Promise<RecipesGlance> {
+async function loadRecipesGlance(): Promise<RecipesGlance> {
   const [cookbook, toMake, lastMade] = await Promise.all([
     prisma.myRecipe.count(),
     prisma.savedRecipe.count({ where: { madeOn: null } }),
@@ -76,6 +77,8 @@ export async function getRecipesGlance(): Promise<RecipesGlance> {
   ]);
   return { cookbook, toMake, lastMade: lastMade?.title ?? null };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getRecipesGlance = cache(loadRecipesGlance);
 
 export type PantryEntry = { id: string; name: string };
 

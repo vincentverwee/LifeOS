@@ -10,8 +10,8 @@ export const MASCOT_NAMES: Record<SectionKind, Record<MascotAnimal, string>> = {
   diary: { sheep: "Poppy", cat: "Poppy" },
   beer: { sheep: "Hops", cat: "Hops" },
   wardrobe: { sheep: "Woolly", cat: "Mittens" },
-  people: { sheep: "Buddy", cat: "Buddy" },
-  waypoint: { sheep: "Scout", cat: "Scout" },
+  people: { sheep: "Dolly", cat: "Dolly" },
+  waypoint: { sheep: "Ewe-lysses", cat: "Marco Purrlo" },
   recipes: { sheep: "Chef Baa-tista", cat: "Chef Purrcy" },
 };
 

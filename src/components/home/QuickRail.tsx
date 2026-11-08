@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { Suspense, use, useEffect, useRef, useState, type ReactNode } from "react";
 import { Mascot, type MascotKind } from "@/components/icons/Mascot";
+import type { MascotMood } from "@/lib/mascotMood";
+
+type Moods = Partial<Record<MascotKind, MascotMood>>;
 
 /** `name` is the mascot's (Penny, Hops…); `section` and `href` the page it opens. */
 export type QuickSection = { kind: MascotKind; name: string; section: string; href: string };
@@ -15,6 +18,11 @@ function AlertDot({ kind, alerts }: { kind: MascotKind; alerts: Promise<MascotKi
       <span className="sr-only">, needs attention</span>
     </span>
   );
+}
+
+/** A section's mascot in today's mood (the same as its Home tile), once the moods arrive. */
+function RailMascot({ kind, moods }: { kind: MascotKind; moods: Promise<Moods> }) {
+  return <Mascot kind={kind} mood={use(moods)[kind]?.mood} size={44} decorative />;
 }
 
 /** A swipe must travel this far sideways (and mostly sideways) to count. */
@@ -31,12 +39,15 @@ const SWIPE = 50;
 export function QuickRail({
   sections,
   alerts,
+  moods,
   contained = false,
   children,
 }: {
   sections: QuickSection[];
   /** Sections that need something today (red dots), loaded without holding up the page. */
   alerts: Promise<MascotKind[]>;
+  /** Each section mascot's mood today, loaded like the alerts. */
+  moods: Promise<Moods>;
   contained?: boolean;
   children: ReactNode;
 }) {
@@ -125,7 +136,9 @@ export function QuickRail({
             className="tap flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5"
           >
             <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-primary">
-              <Mascot kind={s.kind} size={44} decorative />
+              <Suspense fallback={<Mascot kind={s.kind} size={44} decorative />}>
+                <RailMascot kind={s.kind} moods={moods} />
+              </Suspense>
               <span className="sr-only">
                 {s.name}: {s.section}
               </span>

@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { STUDY_ENTRY_WHERE } from "@/lib/data/lessons";
 import { dayKey } from "@/lib/format";
@@ -191,7 +192,9 @@ export function memoryHeadline(m: Memory): string {
 
 export type DiaryGlance = { today: DiaryRow | null; memory: Memory | null };
 
-export async function getDiaryGlance(todayKey: string): Promise<DiaryGlance> {
+async function loadDiaryGlance(todayKey: string): Promise<DiaryGlance> {
   const [today, memories] = await Promise.all([getDiaryEntry(todayKey), getOnThisDay(todayKey)]);
   return { today, memory: memories[0] ?? null };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getDiaryGlance = cache(loadDiaryGlance);

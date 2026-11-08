@@ -22,6 +22,10 @@ Built 2026-11-03: one line a day with an optional mood, a Home tile, and "On thi
 
 Built 2026-11-08 after looking at other "LifeOS" projects: every section's sheep/cat gets a prop and a name (tweaked on /mascots), and the week is told as tap-through cards narrated by them, ending on a "win of the week". Also a System/Light/Dark switch in Settings. See CLAUDE.md ("Mascots", "Weekly review").
 
+## Done: Living mascots
+
+Built 2026-11-08: Home tile and quick-column mascots take a mood from your data (happy / sleepy / worried, see `src/lib/mascotMood.ts`), bob and blink, say a line when tapped, and show their name under the section. Penny traded the monocle for a tie; People is Dolly, Waypoint Ewe-lysses / Marco Purrlo.
+
 ## Ideas from other LifeOS projects (2026-11-08)
 
 Looked at lifeos-app/lifeos (RPG habits, habit garden), manthanmtg/LifeOS (18 modules), Princeu3/LifeOS (body tracking, cross-domain insights), djaiss/journalOS (daily check-in modules), jontkaufman/LifeOS (weekly reviews, Wheel of Life), Aurboda (MCP access for Claude).
@@ -29,8 +33,6 @@ Looked at lifeos-app/lifeos (RPG habits, habit garden), manthanmtg/LifeOS (18 mo
 - "What goes with a good day": diary mood next to pints, study hours, people seen, spend, weather (data is all there already).
 - One-tap energy + hours slept next to the diary mood (feeds the above).
 - Save the day's weather with each diary day, so On this day can say "3°, rain".
-- Mascot moods from your data (Budget sweats when spending ahead, Lessons sleeps until you studied…) and idle animations / tap reactions on the Home tiles.
-- Mascot names on the Home tiles.
 - Bookshelf / reading list; shopping list fed by the Fridge's "Buy 1–2 things"; gym / workouts; savings and net worth over time (`SavingsEntry` has no entry UI yet).
 - Ask Claude about your data (an MCP endpoint).
 

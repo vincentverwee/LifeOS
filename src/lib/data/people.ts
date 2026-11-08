@@ -252,7 +252,7 @@ export type PeopleGlance = {
   catchUp: PersonSummary[];
 };
 
-export async function getPeopleGlance(todayKey: string): Promise<PeopleGlance> {
+async function loadPeopleGlance(todayKey: string): Promise<PeopleGlance> {
   const people = await getPeople(todayKey);
   const birthdays = byNextBirthday(people);
   return {
@@ -262,6 +262,8 @@ export async function getPeopleGlance(todayKey: string): Promise<PeopleGlance> {
     catchUp: people.filter((p) => p.catchUp),
   };
 }
+/** Cached per request: the Home tile and its mascot's mood share one load. */
+export const getPeopleGlance = cache(loadPeopleGlance);
 
 /** People past their catch-up nudge, longest out of touch first: they show on Reminders' To do. */
 export async function getCatchUps(todayKey: string): Promise<PersonSummary[]> {
