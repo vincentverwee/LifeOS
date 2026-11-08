@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { BirthdayParty } from "@/components/home/BirthdayParty";
 import { HomeContent } from "@/components/home/HomeContent";
 import { QuickRail } from "@/components/home/QuickRail";
 import { hourIn, railSections } from "@/components/home/TileBodies";
+import { birthdayNote } from "@/lib/birthday";
 import { getHomeAlerts } from "@/lib/data/homeAlerts";
 import { getHomeMoods } from "@/lib/data/homeMoods";
 import { dayKeyIn, getTimeZone } from "@/lib/today";
@@ -31,7 +33,11 @@ function Choice({ href, active, children }: { href: string; active: boolean; chi
  * phone-sized box (390 wide), ?frame=full at full size.
  */
 export default async function PreviewPage({ searchParams }: PageProps<"/preview">) {
-  const frame: Frame = (await searchParams).frame === "full" ? "full" : "phone";
+  const params = await searchParams;
+  const frame: Frame = params.frame === "full" ? "full" : "phone";
+  // ?birthday=1 plays the cat deployment's birthday party (src/lib/birthday.ts) whatever the date.
+  const birthday = params.birthday === "1";
+  const q = (f: Frame, b: boolean) => `/preview?frame=${f}${b ? "&birthday=1" : ""}`;
   const tz = await getTimeZone();
   const todayKey = dayKeyIn(tz);
   const sections = railSections();
@@ -47,26 +53,38 @@ export default async function PreviewPage({ searchParams }: PageProps<"/preview"
           right or tap outside to hide it. A red dot means something needs you.
         </p>
         <div className="flex gap-1 rounded-full bg-surface-muted p-1 sm:max-w-sm">
-          <Choice href="/preview?frame=phone" active={frame === "phone"}>
+          <Choice href={q("phone", birthday)} active={frame === "phone"}>
             Phone frame
           </Choice>
-          <Choice href="/preview?frame=full" active={frame === "full"}>
+          <Choice href={q("full", birthday)} active={frame === "full"}>
             Full width
+          </Choice>
+        </div>
+        <div className="flex gap-1 rounded-full bg-surface-muted p-1 sm:max-w-sm">
+          <Choice href={q(frame, false)} active={!birthday}>
+            Normal day
+          </Choice>
+          <Choice href={q(frame, true)} active={birthday}>
+            Birthday 🎂
           </Choice>
         </div>
       </div>
 
       {frame === "phone" ? (
         // An iPhone-sized screen; Home scrolls inside it like on the phone.
-        <div className="mx-auto h-[796px] w-[390px] max-w-full overflow-hidden rounded-[2.5rem] border-8 border-foreground/80 bg-background shadow-xl">
+        <div className="mx-auto h-[796px] w-[390px] max-w-full overflow-hidden rounded-[2.5rem] border-8 border-foreground/80 bg-background shadow-xl relative">
+          {birthday && <BirthdayParty todayKey={todayKey} note={birthdayNote()} force contained />}
           <QuickRail sections={sections} alerts={alerts} moods={moods} contained>
             <HomeContent tz={tz} todayKey={todayKey} />
           </QuickRail>
         </div>
       ) : (
-        <QuickRail sections={sections} alerts={alerts} moods={moods}>
-          <HomeContent tz={tz} todayKey={todayKey} />
-        </QuickRail>
+        <>
+          {birthday && <BirthdayParty todayKey={todayKey} note={birthdayNote()} force />}
+          <QuickRail sections={sections} alerts={alerts} moods={moods}>
+            <HomeContent tz={tz} todayKey={todayKey} />
+          </QuickRail>
+        </>
       )}
     </div>
   );

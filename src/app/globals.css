@@ -605,6 +605,91 @@ textarea {
   }
 }
 
+/* Birthday party (src/components/home/BirthdayParty.tsx): falling confetti, dancing cats,
+   the title popping in and the note rising in after it. */
+.confetti-piece {
+  position: absolute;
+  top: -5%;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.35, 0.1, 0.6, 1);
+  animation-iteration-count: 3;
+}
+.cat-dance {
+  transform-origin: 50% 90%;
+  animation-name: cat-dance;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.party-pop {
+  animation: party-pop 0.7s cubic-bezier(0.3, 1.6, 0.5, 1) 0.15s both;
+}
+.party-rise {
+  animation: party-rise 0.6s ease-out 1.5s both;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translate(0, 0) rotate(0deg);
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift), 110vh) rotate(var(--spin));
+  }
+}
+@keyframes cat-dance {
+  0%,
+  100% {
+    transform: translateY(0) rotate(calc(var(--tilt) * -1));
+  }
+  25% {
+    transform: translateY(-18px) rotate(0deg) scale(1.04, 0.97);
+  }
+  50% {
+    transform: translateY(0) rotate(var(--tilt));
+  }
+  75% {
+    transform: translateY(-10px) rotate(0deg);
+  }
+}
+@keyframes party-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.3) rotate(-8deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes party-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confetti-piece {
+    animation: none;
+    opacity: 0.85;
+    top: var(--rest-y);
+  }
+  .cat-dance,
+  .party-pop,
+  .party-rise {
+    animation: none;
+  }
+}
+
 /* Wardrobe cut-outs (photo with its background removed): a soft white spotlight behind
    the clothing, over the card colour. Brighter on light cards, gentler on dark ones. */
 .cutout-glare {
