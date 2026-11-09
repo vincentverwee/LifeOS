@@ -11,7 +11,7 @@ import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 type CategoryOption = { id: string; name: string; color: CategoryColorSlot };
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const input = "field";
 const REPEAT_LABELS: Record<SubscriptionRepeat, string> = { monthly: "Monthly", yearly: "Yearly" };
 
 /** Add (no `subscription`) or edit one. The next charge date sets the day it renews on. */

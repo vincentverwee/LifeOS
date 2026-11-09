@@ -6,16 +6,7 @@ import { addPantryItems, clearPantry, removePantryItem } from "@/lib/actions/rec
 import type { PantryEntry } from "@/lib/data/recipes";
 import { COMMON_INGREDIENTS, suggestIngredients } from "@/lib/recipes/ingredients";
 import { Disclosure } from "@/components/Disclosure";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/waypoint/ui/alert-dialog";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 const ALL_COMMON = COMMON_INGREDIENTS.flatMap((g) => g.items);
 
@@ -101,24 +92,15 @@ export function PantryEditor({ pantry, suggestions }: { pantry: PantryEntry[]; s
               </li>
             ))}
           </ul>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <button type="button" disabled={pending} className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm text-ink-muted">
-                Clear all
-              </button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Clear all {pantry.length} ingredients?</AlertDialogTitle>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Keep them</AlertDialogCancel>
-                <AlertDialogAction destructive onClick={() => startTransition(async () => void (await clearPantry()))}>
-                  Clear all
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          <ConfirmButton
+            quiet
+            onConfirm={() => startTransition(async () => void (await clearPantry()))}
+            disabled={pending}
+            confirmLabel={`Tap again to clear all ${pantry.length}`}
+            className="-mx-3 inline-flex min-h-11 self-start px-3 text-sm"
+          >
+            Clear all
+          </ConfirmButton>
         </div>
       )}
 

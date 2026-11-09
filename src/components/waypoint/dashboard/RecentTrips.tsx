@@ -1,9 +1,6 @@
 import Link from 'next/link';
 import { Trip } from '@/lib/waypoint/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/waypoint/ui/card';
-import { Badge } from '@/components/waypoint/ui/badge';
-import { Button } from '@/components/waypoint/ui/button';
-import { CalendarDays, Navigation, ImageDown } from 'lucide-react';
+import { ImageDown } from 'lucide-react';
 
 interface RecentTripsProps {
   trips: Trip[];
@@ -19,50 +16,41 @@ function formatDate(dateStr: string) {
   });
 }
 
-export function RecentTrips({ trips, title = 'Recent Trips' }: RecentTripsProps) {
+export function RecentTrips({ trips, title = 'Recent trips' }: RecentTripsProps) {
   return (
-    <Card className="border-border/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {trips.length === 0 && <p className="py-4 text-center text-sm text-muted-foreground">No trips here yet.</p>}
-        {trips.map((trip, i) => (
-          // CSS keyframes rather than Framer Motion. The old timing also waited 300ms before
-          // the first row even started (then +70ms per row), so the list took ~0.9s to settle;
-          // now it starts immediately and staggers 30ms.
-          <div
-            key={trip.id}
-            className="animate-slide-in flex items-center justify-between rounded-xl bg-muted/50 pr-3 transition-colors hover:bg-muted"
-            style={{ animationDelay: `${i * 30}ms` }}
-          >
-            {/* The row opens the trip; export stays a separate button. */}
-            <Link href={`/waypoint/trips/${trip.id}`} className="tap min-w-0 flex-1 space-y-1 rounded-xl p-4">
-              <p className="truncate text-sm font-medium">{trip.title}</p>
-              {trip.start_date && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <CalendarDays size={12} />
-                  {formatDate(trip.start_date)}
-                </p>
-              )}
-            </Link>
-            <div className="ml-3 flex shrink-0 items-center gap-2">
-              {trip.total_km && (
-                <Badge variant="secondary" className="gap-1 text-xs">
-                  <Navigation size={10} />
-                  {trip.total_km.toLocaleString()} km
-                </Badge>
-              )}
-              <Button asChild variant="outline" size="icon">
-                <Link href={`/waypoint/trips/${trip.id}/export`} title={`Export ${trip.title} as an image`}>
-                  <ImageDown size={15} />
-                  <span className="sr-only">Export {trip.title}</span>
-                </Link>
-              </Button>
-            </div>
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <section className="flex min-w-0 flex-col gap-3">
+      <h2 className="section-title">{title}</h2>
+      {trips.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+          No trips here yet.
+        </p>
+      ) : (
+        <ul className="card-list">
+          {trips.map((trip) => (
+            <li key={trip.id} className="flex items-center gap-2 pr-2">
+              {/* The row opens the trip; export stays a separate button. */}
+              <Link href={`/waypoint/trips/${trip.id}`} className="tap min-w-0 flex-1 px-4 py-3">
+                <p className="truncate font-medium text-foreground">{trip.title}</p>
+                {(trip.start_date || trip.total_km) && (
+                  <p className="truncate text-sm text-ink-muted">
+                    {trip.start_date && formatDate(trip.start_date)}
+                    {trip.start_date && trip.total_km ? ' · ' : null}
+                    {trip.total_km ? <span className="tabular-nums">{trip.total_km.toLocaleString()} km</span> : null}
+                  </p>
+                )}
+              </Link>
+              <Link
+                href={`/waypoint/trips/${trip.id}/export`}
+                title={`Export ${trip.title} as an image`}
+                className="btn btn-ghost inline-flex h-11 w-11 shrink-0 text-ink-muted"
+              >
+                <ImageDown size={16} aria-hidden="true" />
+                <span className="sr-only">Export {trip.title}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

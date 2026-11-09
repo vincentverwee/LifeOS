@@ -23,6 +23,7 @@ import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
+import { getBeerWeek, getDiaryWeek, weekOf } from "@/lib/data/homeWeek";
 import { mascotName } from "@/lib/mascots";
 import { THEME } from "@/lib/theme";
 
@@ -33,7 +34,13 @@ import { THEME } from "@/lib/theme";
  */
 
 export function hourIn(tz: string): number {
-  return Number(new Intl.DateTimeFormat("en-GB", { hour: "numeric", hourCycle: "h23", timeZone: tz }).format(new Date()));
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: tz,
+    }).format(new Date()),
+  );
 }
 
 export function greeting(tz: string): string {
@@ -44,18 +51,23 @@ export function greeting(tz: string): string {
   return "Good evening";
 }
 
-const kmFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 0 });
+const kmFormatter = new Intl.NumberFormat("nl-BE", {
+  maximumFractionDigits: 0,
+});
 
 /** The tile's mascot in today's mood; until that's known it rests (same look as /mascots' default). */
 async function TileMascot({ kind, todayKey, hour, delay }: { kind: SectionKind; todayKey: string; hour: number; delay: number }) {
   const name = mascotName(kind, THEME);
   const m = await getSectionMood(kind, todayKey, hour).catch(() => null);
-  return <LiveMascot kind={kind} name={name} mood={m?.mood} line={m?.line ?? `${name} says hi.`} delay={delay} />;
+  return <LiveMascot kind={kind} name={name} mood={m?.mood} line={m?.line ?? `${name} says hi.`} delay={delay} size={42} badge />;
 }
 
 /**
- * One Home tile. The whole card opens the section through a link stretched over it,
- * so the mascot can be its own button on top (a tap makes it react instead of navigating).
+ * One Home tile: a frosted card with the section's stock photo faint behind it.
+ * The whole card opens the section through a link stretched over it; the content
+ * sits above that link but lets taps fall through to it, except the mascot, which is
+ * its own button (a tap makes it react instead of navigating).
+ * `wide` spans both columns (Budget, the diary) and puts the title beside the mascot.
  */
 export function FeatureTile({
   href,
@@ -64,6 +76,8 @@ export function FeatureTile({
   todayKey,
   hour,
   index = 0,
+  wide = false,
+  photo,
   children,
 }: {
   href: string;
@@ -73,30 +87,61 @@ export function FeatureTile({
   hour: number;
   /** Position on Home, to keep the mascots out of step. */
   index?: number;
+  wide?: boolean;
+  /** The section's stock photo (src/lib/homePhotos.ts). */
+  photo?: string;
   children: React.ReactNode;
 }) {
   const mascot = mascotName(kind, THEME);
   const delay = index * 0.9;
+  const title = (
+    <div className="min-w-0">
+      <h2 className="truncate text-[17px] leading-tight font-semibold text-foreground">{name}</h2>
+      <p className="truncate text-[13px] text-ink-muted">{mascot}</p>
+    </div>
+  );
   return (
-    <div className="tap group relative flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-primary">
+    <div className="glass-card group @container relative flex h-full min-h-[176px] flex-col overflow-hidden p-4 transition-transform active:scale-[0.99]">
+      {photo && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a small local stock photo, decorative */}
+          <img
+            src={photo}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover saturate-[0.85]"
+            style={{ opacity: "var(--photo-opacity)" }}
+          />
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: "linear-gradient(to bottom, transparent, color-mix(in oklab, var(--background) 92%, transparent) 75%)",
+            }}
+          />
+        </>
+      )}
       <Link
         href={href}
         aria-label={name}
-        className="absolute inset-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className="absolute inset-0 rounded-[28px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       />
-      <div className="flex items-center gap-3">
-        <Suspense fallback={<LiveMascot kind={kind} name={mascot} line={`${mascot} says hi.`} delay={delay} />}>
-          <TileMascot kind={kind} todayKey={todayKey} hour={hour} delay={delay} />
-        </Suspense>
-        <div className="flex-1">
-          <h2 className="text-xl leading-tight font-semibold text-foreground">{name}</h2>
-          <p className="text-sm text-ink-muted">{mascot}</p>
+      <div className="pointer-events-none relative flex flex-1 flex-col">
+        <div className={`flex gap-3 ${wide ? "items-center" : "items-start"}`}>
+          <span className="pointer-events-auto">
+            <Suspense fallback={<LiveMascot kind={kind} name={mascot} line={`${mascot} says hi.`} delay={delay} size={42} badge />}>
+              <TileMascot kind={kind} todayKey={todayKey} hour={hour} delay={delay} />
+            </Suspense>
+          </span>
+          {wide && title}
+          <span aria-hidden="true" className="ml-auto text-xl leading-none text-ink-muted transition-transform group-hover:translate-x-0.5">
+            ›
+          </span>
         </div>
-        <span aria-hidden="true" className="text-xl text-ink-muted transition-transform group-hover:translate-x-0.5">
-          ›
-        </span>
+        {!wide && <div className="mt-2">{title}</div>}
+        <div className="mt-4 flex flex-1 flex-col">{children}</div>
       </div>
-      <div className="mt-5 flex flex-1 flex-col">{children}</div>
     </div>
   );
 }
@@ -109,7 +154,7 @@ function BudgetBar({ glance }: { glance: BudgetGlance }) {
     <div className="mt-auto pt-4">
       <div className="relative h-2 rounded-full bg-surface-muted">
         <div
-          className={`h-full rounded-full ${glance.spent > glance.budget ? "bg-critical" : ahead ? "bg-tag-yellow" : "bg-good"}`}
+          className={`h-full rounded-full ${glance.spent > glance.budget ? "bg-critical" : ahead ? "bg-warning" : "bg-good"}`}
           style={{ width: `${spentShare * 100}%` }}
         />
         <div
@@ -118,7 +163,7 @@ function BudgetBar({ glance }: { glance: BudgetGlance }) {
           style={{ left: `calc(${glance.timeProgress * 100}% - 1px)` }}
         />
       </div>
-      <div className="mt-2 flex justify-between font-mono text-xs tabular-nums text-ink-muted">
+      <div className="mt-2 flex justify-between text-xs tabular-nums text-ink-muted">
         <span>
           {formatCurrencyShort(glance.spent)} / {formatCurrencyShort(glance.budget)}
         </span>
@@ -145,9 +190,30 @@ function LessonsWeek({ glance }: { glance: LessonsGlance }) {
           </div>
         ))}
       </div>
-      <div className="mt-2 flex justify-between font-mono text-xs tabular-nums text-ink-muted">
+      <div className="mt-2 flex justify-between text-xs tabular-nums text-ink-muted">
         <span>This week</span>
         <span>{formatHours(glance.weekHours)}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Seven small bars, Mon → Sun this week (days still to come stay empty), with a caption. */
+function WeekBars({ values, todayKey, left, right }: { values: number[]; todayKey: string; left: string; right: string }) {
+  const days = weekOf(todayKey);
+  const top = Math.max(1, ...values);
+  return (
+    <div className="mt-auto pt-4">
+      <div aria-hidden="true" className="flex h-8 items-end gap-1">
+        {values.map((v, i) => (
+          <div key={days[i].key} className={`flex h-full flex-1 items-end rounded-sm bg-surface-muted ${days[i].future ? "opacity-50" : ""}`}>
+            <div className="w-full rounded-sm bg-accent" style={{ height: `${(v / top) * 100}%` }} />
+          </div>
+        ))}
+      </div>
+      <div className="mt-2 flex justify-between text-xs tabular-nums text-ink-muted">
+        <span>{left}</span>
+        <span>{right}</span>
       </div>
     </div>
   );
@@ -167,12 +233,19 @@ async function BudgetTileBody({ todayKey }: { todayKey: string }) {
   if (!budget) return <p className="text-sm text-ink-muted">No period running today</p>;
   return (
     <>
-      <p className={`font-mono text-3xl font-semibold tabular-nums ${budget.over ? "text-critical" : "text-foreground"}`}>
+      <p
+        className={`text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums ${budget.over ? "text-critical" : "text-foreground"}`}
+      >
         {budget.amount}
       </p>
       <p className={`text-sm ${budget.over ? "text-critical" : "text-positive-text"}`}>
         {budget.label}
-        {due.length > 0 && <span className="text-ink-muted"> · {due.length} subscription{due.length === 1 ? "" : "s"} to log</span>}
+        {due.length > 0 && (
+          <span className="text-ink-muted">
+            {" "}
+            · {due.length} subscription{due.length === 1 ? "" : "s"} to log
+          </span>
+        )}
       </p>
       <BudgetBar glance={budget} />
     </>
@@ -184,8 +257,9 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
   if (!lessons) return <p className="text-sm text-ink-muted">No study period yet</p>;
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {formatHours(lessons.todayHours).replace(" h", "")} <span className="text-lg text-ink-muted">h today</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {formatHours(lessons.todayHours).replace(" h", "")}{" "}
+        <span className="text-[15px] font-medium tracking-normal text-ink-muted">h today</span>
       </p>
       <p className="text-sm text-ink-muted">
         {lessons.status}
@@ -222,10 +296,10 @@ async function WorkoutsTileBody({ todayKey }: { todayKey: string }) {
   );
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
         {week.done}
-        {week.goal !== null && <span className="text-lg text-ink-muted"> / {week.goal}</span>}
-        <span className="text-lg text-ink-muted"> this week</span>
+        {week.goal !== null && <span className="text-[15px] font-medium tracking-normal text-ink-muted"> / {week.goal}</span>}
+        <span className="text-[15px] font-medium tracking-normal text-ink-muted"> this week</span>
       </p>
       {(status || streak > 0) && (
         <p className={`text-sm ${week.met && !live ? "text-positive-text" : "text-ink-muted"}`}>
@@ -238,7 +312,7 @@ async function WorkoutsTileBody({ todayKey }: { todayKey: string }) {
         </p>
       )}
       {last && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Last · </span>
           {workoutHeadline(last)}
           <span className="text-ink-muted"> · {describeSince(last.date, todayKey).toLowerCase()}</span>
@@ -255,8 +329,8 @@ async function RemindersTileBody({ todayKey }: { todayKey: string }) {
   const reminders = await getRemindersGlance(todayKey);
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {reminders.open} <span className="text-lg text-ink-muted">open</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {reminders.open} <span className="text-[15px] font-medium tracking-normal text-ink-muted">open</span>
       </p>
       {reminders.overdue > 0 ? (
         <p className="text-sm text-critical">{reminders.overdue} overdue</p>
@@ -266,14 +340,14 @@ async function RemindersTileBody({ todayKey }: { todayKey: string }) {
         <p className="text-sm text-ink-muted">Nothing overdue</p>
       )}
       {reminders.next ? (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Next · </span>
           {reminders.next.title}
           <span className="text-ink-muted"> · {describeDue(reminders.next.dueOn, todayKey)}</span>
         </p>
       ) : (
         reminders.longest && (
-          <p className="mt-4 truncate text-sm text-foreground">
+          <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
             <span className="text-ink-muted">Longest · </span>
             {reminders.longest.name}
             <span className="text-ink-muted"> · {describeSince(reminders.longest.lastDoneOn, todayKey).toLowerCase()}</span>
@@ -288,15 +362,15 @@ async function WaypointTileBody() {
   const waypoint = await getWaypointGlance();
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {kmFormatter.format(waypoint.totalKm)} <span className="text-lg text-ink-muted">km</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {kmFormatter.format(waypoint.totalKm)} <span className="text-[15px] font-medium tracking-normal text-ink-muted">km</span>
       </p>
       <p className="text-sm text-ink-muted">
         {waypoint.trips} {waypoint.van ? "van " : ""}
         {waypoint.trips === 1 ? "trip" : "trips"}
       </p>
       {waypoint.latest && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Latest · </span>
           {waypoint.latest}
         </p>
@@ -309,15 +383,16 @@ async function RecipesTileBody() {
   const recipes = await getRecipesGlance();
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {recipes.cookbook} <span className="text-lg text-ink-muted">{recipes.cookbook === 1 ? "recipe" : "recipes"}</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {recipes.cookbook}{" "}
+        <span className="text-[15px] font-medium tracking-normal text-ink-muted">{recipes.cookbook === 1 ? "recipe" : "recipes"}</span>
       </p>
       <p className="text-sm text-ink-muted">
         {recipes.cookbook === 0 ? "Add your own" : "In your cookbook"}
         {recipes.toMake > 0 && ` · ${recipes.toMake} saved to make`}
       </p>
       {recipes.lastMade && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Last made · </span>
           {recipes.lastMade}
         </p>
@@ -332,11 +407,11 @@ async function PeopleTileBody({ todayKey }: { todayKey: string }) {
   const next = nextBirthday?.next;
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {total} <span className="text-lg text-ink-muted">{total === 1 ? "person" : "people"}</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {total} <span className="text-[15px] font-medium tracking-normal text-ink-muted">{total === 1 ? "person" : "people"}</span>
       </p>
       {catchUp.length > 0 ? (
-        <p className="truncate text-sm text-critical">
+        <p className="truncate text-sm text-warning-text">
           Catch up with {catchUp.length === 1 ? catchUp[0].name : `${catchUp.length} people`}
         </p>
       ) : (
@@ -345,7 +420,7 @@ async function PeopleTileBody({ todayKey }: { todayKey: string }) {
         </p>
       )}
       {nextBirthday && next && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Next birthday · </span>
           {next.daysUntil === 0 ? "🎂 " : ""}
           {nextBirthday.name}
@@ -363,15 +438,16 @@ async function PeopleTileBody({ todayKey }: { todayKey: string }) {
 }
 
 async function BeerTileBody({ todayKey }: { todayKey: string }) {
-  const beer = await getBeerGlance(todayKey);
+  const [beer, week] = await Promise.all([getBeerGlance(todayKey), getBeerWeek(todayKey)]);
+  const weekPints = week.reduce((a, b) => a + b, 0);
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {beer.pints} <span className="text-lg text-ink-muted">{beer.pints === 1 ? "pint" : "pints"}</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {beer.pints} <span className="text-[15px] font-medium tracking-normal text-ink-muted">{beer.pints === 1 ? "pint" : "pints"}</span>
       </p>
       <p className="text-sm text-ink-muted">This month</p>
       {beer.lastVisit && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Last beer · </span>
           {beer.lastPub ? (
             <>
@@ -383,33 +459,53 @@ async function BeerTileBody({ todayKey }: { todayKey: string }) {
           )}
         </p>
       )}
+      <WeekBars values={week} todayKey={todayKey} left="This week" right={`${weekPints} ${weekPints === 1 ? "pint" : "pints"}`} />
     </>
   );
 }
 
 async function DiaryTileBody({ todayKey }: { todayKey: string }) {
-  const { today, memory } = await getDiaryGlance(todayKey);
+  const [{ today, memory }, week] = await Promise.all([getDiaryGlance(todayKey), getDiaryWeek(todayKey)]);
+  const days = weekOf(todayKey);
   const mood = moodOf(today?.mood);
   const headline = memory && memoryHeadline(memory);
   return (
     <>
       {today ? (
-        <p className="line-clamp-3 text-base leading-snug text-foreground">
+        <p className="line-clamp-3 font-[family-name:var(--font-fraunces)] text-lg leading-snug text-foreground">
           {mood && <span className="mr-1.5">{mood.face}</span>}
           {diaryBits(today.text).at(-1)}
         </p>
       ) : (
         <>
-          <p className="text-lg font-semibold text-foreground">Add to today</p>
+          <p className="font-[family-name:var(--font-fraunces)] text-xl leading-snug text-foreground">Add to today</p>
           <p className="text-sm text-ink-muted">A few words, any time of day</p>
         </>
       )}
       {memory && headline && (
-        <p className="mt-4 truncate text-sm text-foreground">
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">{describeYearsAgo(memory.yearsAgo)} · </span>
           {headline}
         </p>
       )}
+      {/* this week: each written day's mood (a dot when no mood was picked), empty circles for the rest */}
+      <div className="mt-auto flex justify-between gap-1 pt-4" aria-label={`Written on ${week.filter((m) => m !== null).length} of 7 days this week`}>
+        {days.map((d, i) => {
+          const m = week[i];
+          return (
+            <span key={d.key} className="flex flex-col items-center gap-1 text-[11px] text-ink-muted">
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-full text-base ${
+                  m === null ? `border border-border ${d.future ? "opacity-50" : ""}` : "bg-surface-muted"
+                }`}
+              >
+                {m ? moodOf(m)?.face : m === 0 ? <span className="h-2 w-2 rounded-full bg-accent" /> : null}
+              </span>
+              {d.label}
+            </span>
+          );
+        })}
+      </div>
     </>
   );
 }
@@ -419,8 +515,8 @@ async function WardrobeTileBody() {
   if (wardrobe.items === 0) return <p className="text-sm text-ink-muted">Clothes, outfits and the wash</p>;
   return (
     <>
-      <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
-        {wardrobe.wash} <span className="text-lg text-ink-muted">in the wash</span>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {wardrobe.wash} <span className="text-[15px] font-medium tracking-normal text-ink-muted">in the wash</span>
       </p>
       <p className="text-sm text-ink-muted">
         {wardrobe.drying > 0 && `${wardrobe.drying} drying · `}
@@ -429,7 +525,6 @@ async function WardrobeTileBody() {
     </>
   );
 }
-
 
 export type HomeSection = {
   kind: SectionKind;
@@ -441,16 +536,66 @@ export type HomeSection = {
 
 /** Every section, in Home order. */
 export const HOME_SECTIONS: HomeSection[] = [
-  { kind: "budget", name: "Budget", href: "/budget", render: (t) => <BudgetTileBody todayKey={t} /> },
-  { kind: "lessons", name: "Lessons", href: "/lessons", render: (t) => <LessonsTileBody todayKey={t} /> },
-  { kind: "reminders", name: "Reminders", href: "/reminders", render: (t) => <RemindersTileBody todayKey={t} /> },
-  { kind: "diary", name: "Diary", href: "/diary", render: (t) => <DiaryTileBody todayKey={t} /> },
-  { kind: "beer", name: "Beer", href: "/beer", render: (t) => <BeerTileBody todayKey={t} /> },
-  { kind: "workouts", name: "Workouts", href: "/workouts", render: (t) => <WorkoutsTileBody todayKey={t} /> },
-  { kind: "wardrobe", name: "Wardrobe", href: "/wardrobe/items", render: () => <WardrobeTileBody /> },
-  { kind: "people", name: "People", href: "/people", render: (t) => <PeopleTileBody todayKey={t} /> },
-  { kind: "waypoint", name: "Waypoint", href: "/waypoint", render: () => <WaypointTileBody /> },
-  { kind: "recipes", name: "Recipes", href: "/recipes", render: () => <RecipesTileBody /> },
+  {
+    kind: "budget",
+    name: "Budget",
+    href: "/budget",
+    render: (t) => <BudgetTileBody todayKey={t} />,
+  },
+  {
+    kind: "lessons",
+    name: "Lessons",
+    href: "/lessons",
+    render: (t) => <LessonsTileBody todayKey={t} />,
+  },
+  {
+    kind: "reminders",
+    name: "Reminders",
+    href: "/reminders",
+    render: (t) => <RemindersTileBody todayKey={t} />,
+  },
+  {
+    kind: "diary",
+    name: "Diary",
+    href: "/diary",
+    render: (t) => <DiaryTileBody todayKey={t} />,
+  },
+  {
+    kind: "beer",
+    name: "Beer",
+    href: "/beer",
+    render: (t) => <BeerTileBody todayKey={t} />,
+  },
+  {
+    kind: "workouts",
+    name: "Workouts",
+    href: "/workouts",
+    render: (t) => <WorkoutsTileBody todayKey={t} />,
+  },
+  {
+    kind: "wardrobe",
+    name: "Wardrobe",
+    href: "/wardrobe/items",
+    render: () => <WardrobeTileBody />,
+  },
+  {
+    kind: "people",
+    name: "People",
+    href: "/people",
+    render: (t) => <PeopleTileBody todayKey={t} />,
+  },
+  {
+    kind: "waypoint",
+    name: "Waypoint",
+    href: "/waypoint",
+    render: () => <WaypointTileBody />,
+  },
+  {
+    kind: "recipes",
+    name: "Recipes",
+    href: "/recipes",
+    render: () => <RecipesTileBody />,
+  },
 ];
 
 /** The quick column's entries: each section's mascot by name (Penny, Hops…), opening its page. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { THEME_COLORS } from "@/lib/theme";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import maplibregl from "maplibre-gl";
@@ -11,7 +12,7 @@ const SOURCE = "pubs";
 
 /** The theme's primary colour (green for Meadow, pink for the cat theme). */
 function primary(): string {
-  return getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim() || "#1f5c3b";
+  return getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim() || THEME_COLORS.primary;
 }
 
 /**

@@ -7,6 +7,7 @@ import { groupSets, LIMITS, type Activity, type ExerciseRow, type WorkoutView } 
 import { ActivityDot, FIELD } from "@/components/workouts/ui";
 import { SetsEditor } from "@/components/workouts/SetsEditor";
 import { HowItWent } from "@/components/workouts/HowItWent";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 const QUICK_MINUTES = [15, 30, 45, 60, 90];
 
@@ -145,8 +146,17 @@ export function WorkoutForm({
           {state.error}
         </p>
       )}
-      <button type="submit" disabled={pending || !activity} className="btn btn-primary min-h-12 px-5 font-semibold">
-        {pending ? "Saving…" : workout ? "Save changes" : "Log workout"}
+      <button type="submit" disabled={pending || !activity} className="btn btn-primary flex w-full px-4 py-3 text-base font-semibold">
+        {pending ? (
+          <span className="inline-flex items-center justify-center gap-2">
+            <SheepSpinner size={20} />
+            Saving…
+          </span>
+        ) : workout ? (
+          "Save changes"
+        ) : (
+          "Log workout"
+        )}
       </button>
     </form>
   );

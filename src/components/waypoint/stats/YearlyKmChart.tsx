@@ -13,10 +13,10 @@ export function YearlyKmChart({ data, split = true }: YearlyKmChartProps) {
   const anyVan = split && data.some((d) => d.vanKm > 0);
 
   return (
-    <Card className="border-border/50">
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base font-semibold">Km per Year</CardTitle>
+          <CardTitle>Km per year</CardTitle>
           {anyVan && (
             <span className="flex items-center gap-3 text-xs text-muted-foreground">
               <span className="flex items-center gap-1.5">

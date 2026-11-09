@@ -51,7 +51,7 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
         </span>
       </button>
       {open && (
-        <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-3">
+        <div className="flex flex-wrap items-center gap-2 card p-3">
           {options.map((option) => (
             <button
               key={option}
@@ -79,7 +79,7 @@ export function LabelChip({ cycleId, label, options }: LabelChipProps) {
               onChange={(e) => setCustom(e.target.value)}
               placeholder="New label"
               maxLength={24}
-              className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 text-foreground"
+              className="min-w-0 flex-1 field py-2"
             />
             <button
               type="submit"

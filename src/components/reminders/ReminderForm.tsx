@@ -113,7 +113,7 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
             setShowAdded(false);
           }}
           placeholder="e.g. Pay rent, call grandma"
-          className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="field"
         />
       </label>
 
@@ -170,7 +170,7 @@ export function ReminderForm({ reminder, todayKey }: { reminder?: Reminder; toda
               setDate(e.target.value);
               setAutoDate(false);
             }}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+            className="min-w-0 flex-1 field"
           />
           {repeat === "once" && date && (
             <button

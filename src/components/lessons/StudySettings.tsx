@@ -19,8 +19,9 @@ import { CATEGORY_COLOR_SLOTS, type CategoryColorSlot } from "@/lib/categoryPale
 import { formatDate, parseHours } from "@/lib/format";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { Sheet } from "@/components/recipes/Sheet";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
+const input = "field";
 const label = "text-xs text-ink-muted";
 
 /** Runs a server action and shows its error (on success the action re-renders the page itself). */
@@ -125,22 +126,27 @@ export function StudyPeriodForm({ period }: { period?: StudyPeriod }) {
 export function DeletePeriodButton({ period }: { period: StudyPeriod }) {
   const router = useRouter();
   const { error, isPending, run } = useAction();
+  const entryCount = period.entries.length + period.trackedEntries.length;
   return (
     <div className="flex flex-col gap-1">
-      <button
-        type="button"
-        disabled={isPending}
-        onClick={() => {
-          if (!window.confirm(`Delete ${period.name} with its ${period.entries.length + period.trackedEntries.length} entries, courses and exams? This can't be undone.`)) return;
-          run(
-            () => deleteStudyPeriod(period.id),
-            () => router.push("/lessons/settings")
-          );
-        }}
-        className="btn btn-destructive self-start px-4 py-2.5 text-sm"
-      >
-        Delete period
-      </button>
+      <div className="self-start">
+        <ConfirmButton
+          disabled={isPending}
+          onConfirm={() =>
+            run(
+              () => deleteStudyPeriod(period.id),
+              () => router.push("/lessons/settings")
+            )
+          }
+          className="px-4 py-2.5 text-sm"
+        >
+          Delete period
+        </ConfirmButton>
+      </div>
+      <p className="text-xs text-ink-muted">
+        Deletes {period.name} with its {entryCount} {entryCount === 1 ? "entry" : "entries"}, courses and exams. This
+        can&apos;t be undone.
+      </p>
       {error && <p className="text-sm text-critical">{error}</p>}
     </div>
   );
@@ -256,9 +262,9 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
     <div className="flex flex-col gap-3">
       {error && <p className="text-sm text-critical">{error}</p>}
       {allCourses.length > 0 && (
-        <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ul className="card-list">
           {allCourses.map((course) => (
-            <li key={course.id} className="border-b border-border p-3 last:border-b-0">
+            <li key={course.id} className="p-3">
               {editingId === course.id ? (
                 <CourseForm course={course} periodId={period.id} nextColor={nextColor} onDone={() => setEditingId(null)} />
               ) : (
@@ -275,27 +281,27 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                   <button type="button" onClick={() => setEditingId(course.id)} className="btn btn-ghost min-h-11 px-4 text-sm">
                     Edit
                   </button>
-                  <button
-                    type="button"
+                  <ConfirmButton
                     disabled={isPending}
-                    onClick={() => {
-                      const message = course.countsAsStudy
-                        ? `Delete ${course.name}? Its logged hours stay, without a course; its exams and lesson marks go.`
-                        : `Delete ${course.name} and all its tracked time? This can't be undone.`;
-                      if (!window.confirm(message)) return;
-                      run(() => deleteStudyCourse(course.id));
-                    }}
-                    className="btn min-h-11 px-4 text-sm text-critical hover:bg-critical/10 active:bg-critical/15"
+                    confirmLabel={course.countsAsStudy ? "Tap again to delete" : "Delete with its time?"}
+                    onConfirm={() => run(() => deleteStudyCourse(course.id))}
+                    className="min-h-11 shrink-0 px-4 text-sm"
                   >
                     Delete
-                  </button>
+                  </ConfirmButton>
                 </div>
               )}
             </li>
           ))}
         </ul>
       )}
-      <div className="rounded-xl border border-border bg-surface p-4">
+      {allCourses.length > 0 && (
+        <p className="text-xs text-ink-muted">
+          Deleting a course keeps its logged hours (without a course) but removes its exams and lesson marks. A
+          tracked-time course takes all its tracked time with it; that can&apos;t be undone.
+        </p>
+      )}
+      <div className="card">
         <h3 className="mb-3 text-sm font-medium text-foreground">New course</h3>
         <CourseForm periodId={period.id} nextColor={nextColor} />
       </div>
@@ -396,16 +402,16 @@ export function ExamManager({ period }: { period: StudyPeriod }) {
       {period.courses.length === 0 ? (
         <p className="px-1 text-sm text-ink-muted">Add a course first.</p>
       ) : (
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <div className="card">
           <ExamForm courses={period.courses} />
         </div>
       )}
       {period.exams.length > 0 && (
-        <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ul className="card-list">
           {period.exams.map((exam) => {
             const course = courseById.get(exam.courseId);
             return (
-              <li key={exam.id} className="border-b border-border last:border-b-0">
+              <li key={exam.id}>
                 <button
                   type="button"
                   onClick={() => setEditing(exam)}

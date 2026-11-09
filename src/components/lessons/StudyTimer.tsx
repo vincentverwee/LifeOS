@@ -20,7 +20,7 @@ type StudyTimerProps = {
 };
 
 const STICKY =
-  "sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none";
+  "sticky bottom-tabbar z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none";
 
 export function StudyTimer({ periodId, courses, timer }: StudyTimerProps) {
   const [selected, setSelected] = useState<string[]>([]);

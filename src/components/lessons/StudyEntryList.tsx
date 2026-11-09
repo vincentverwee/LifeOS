@@ -7,7 +7,7 @@ import { Sheet } from "@/components/recipes/Sheet";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { formatHours, parseHours, toDateInputValue } from "@/lib/format";
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
+const input = "field";
 
 const dayFormatter = new Intl.DateTimeFormat("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
@@ -72,7 +72,7 @@ export function StudyEntryList({
       {groupByDay ? (
         <div className="flex flex-col gap-3">
           {[...days].map(([date, rows]) => (
-            <section key={date} className="overflow-hidden rounded-xl border border-border bg-surface">
+            <section key={date} className="overflow-hidden rounded-2xl border border-border bg-surface">
               <div className="flex items-baseline justify-between bg-surface-muted px-4 py-2 text-sm">
                 <span className="font-medium text-foreground">{dayFormatter.format(new Date(`${date}T00:00:00Z`))}</span>
                 <span className="font-mono tabular-nums text-ink-muted">

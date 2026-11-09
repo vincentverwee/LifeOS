@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getActivities, getExercises, getTemplate } from "@/lib/data/workouts";
 import { TemplateForm } from "@/components/workouts/TemplateForm";
@@ -10,13 +10,8 @@ export default async function EditTemplatePage({ params }: PageProps<"/workouts/
   const [template, activities, exercises] = await Promise.all([getTemplate(id), getActivities(), getExercises()]);
   if (!template) notFound();
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <Link href="/workouts/settings" className="btn btn-ghost -ml-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Settings
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{template.name}</h1>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader title={template.name} back={{ href: "/workouts/settings", label: "Settings" }} />
       <TemplateForm template={template} activities={activities} exercises={exercises} />
     </div>
   );

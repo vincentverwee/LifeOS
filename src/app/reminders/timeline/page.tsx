@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getFinishedReminders, getReminders } from "@/lib/data/reminders";
 import { getRoutineHistory, type RoutineHistoryEntry } from "@/lib/data/routines";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -22,8 +23,8 @@ export default async function ReminderTimelinePage() {
   ]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-foreground">Timeline</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Timeline" back={{ href: "/reminders", label: "Reminders" }} />
 
       <Disclosure title="Last done" defaultOpen>
         {history.length === 0 ? (

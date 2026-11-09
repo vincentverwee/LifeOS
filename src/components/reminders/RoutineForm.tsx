@@ -61,7 +61,7 @@ export function RoutineForm({ routine, todayKey }: { routine?: Routine; todayKey
           enterKeyHint="done"
           defaultValue={routine?.name}
           placeholder="e.g. Wash (coloured), Bedsheets, Training"
-          className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="field"
         />
       </label>
 
@@ -90,7 +90,7 @@ export function RoutineForm({ routine, todayKey }: { routine?: Routine; todayKey
               required
               max={todayKey}
               aria-label="Last done on"
-              className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+              className="field"
             />
           )}
         </div>
@@ -106,7 +106,7 @@ export function RoutineForm({ routine, todayKey }: { routine?: Routine; todayKey
           max={365}
           defaultValue={routine?.everyDays ?? ""}
           placeholder="e.g. 14"
-          className="w-32 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="w-32 field"
         />
         <span className="text-sm text-ink-muted">After that many days it turns red and shows up in To do.</span>
       </label>

@@ -21,7 +21,7 @@ export function RunningTimerBadge({ timer, card = false }: { timer: StudyTimerSt
   return (
     <Link
       href="/lessons/add"
-      className="tap flex min-h-11 items-center justify-between gap-2 rounded-xl border border-primary bg-surface px-4 py-3 text-foreground"
+      className="tap flex min-h-11 items-center justify-between gap-2 rounded-2xl border border-primary bg-surface px-4 py-3 text-foreground"
     >
       <span className="font-medium">{text}</span>
       <span className="text-sm text-ink-muted">Stop ›</span>

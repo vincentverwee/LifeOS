@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getRoutine } from "@/lib/data/routines";
 import { getTodayKey } from "@/lib/today";
@@ -18,16 +19,16 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/reminders/last-done" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Last done
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{routine.name}</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Last done: {describeSince(routine.lastDoneOn, todayKey).toLowerCase()}
-          {rhythm && ` · ${rhythm}`}
-        </p>
-      </div>
+      <PageHeader
+        title={routine.name}
+        subtitle={
+          <>
+            Last done: {describeSince(routine.lastDoneOn, todayKey).toLowerCase()}
+            {rhythm && ` · ${rhythm}`}
+          </>
+        }
+        back={{ href: "/reminders/last-done", label: "Last done" }}
+      />
 
       {link ? (
         <p className="flex items-center justify-between gap-3 rounded-2xl bg-surface-muted py-1 pr-1 pl-4 text-sm text-foreground">
@@ -42,8 +43,8 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
 
       {routine.logs.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-foreground">History</h2>
-          <ul className="mt-2 flex flex-col divide-y divide-border rounded-2xl border border-border bg-surface">
+          <h2 className="section-title">History</h2>
+          <ul className="mt-2 card-list">
             {routine.logs.map((log) => (
               <li key={log.id} className="flex items-center justify-between gap-3 py-1 pr-1 pl-4">
                 <span className="text-foreground">
@@ -63,7 +64,7 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Edit</h2>
+        <h2 className="section-title">Edit</h2>
         <RoutineForm routine={routine} todayKey={todayKey} />
       </section>
 

@@ -28,9 +28,9 @@ export function CountryBreakdown({ data }: CountryBreakdownProps) {
   );
 
   return (
-    <Card className="border-border/50">
+    <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Countries</CardTitle>
+        <CardTitle>Countries</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {data.length === 0 ? (

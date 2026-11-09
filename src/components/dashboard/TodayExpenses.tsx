@@ -12,7 +12,7 @@ type TodayExpensesProps = {
 /** What went out today, newest first. */
 export function TodayExpenses({ expenses, total, href }: TodayExpensesProps) {
   return (
-    <section className="rounded-xl border border-border bg-surface">
+    <section className="rounded-2xl border border-border bg-surface">
       <div className="flex items-baseline justify-between gap-2 px-4 pt-4 pb-2">
         <h2 className="font-medium text-foreground">Spent today</h2>
         <span className="font-mono text-sm tabular-nums text-ink-muted">{formatCurrency(total)}</span>

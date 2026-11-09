@@ -26,7 +26,7 @@ export function AppearanceSettings() {
 
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold text-foreground">Appearance</h2>
+      <h2 className="section-title">Appearance</h2>
       <p className="text-sm text-ink-muted">Light or dark on this device. System follows your phone.</p>
       <div className="flex gap-1 rounded-full bg-surface-muted p-1 sm:max-w-sm">
         {OPTIONS.map(({ value, label }) => (

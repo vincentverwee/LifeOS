@@ -33,7 +33,7 @@ type SavingsTrendChartProps = {
 export function SavingsTrendChart({ entries }: SavingsTrendChartProps) {
   if (entries.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
+      <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
         No savings entries logged yet.
       </p>
     );

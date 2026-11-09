@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getGroups, getPerson } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
@@ -13,12 +13,7 @@ export default async function EditPersonPage({ params }: PageProps<"/people/[id]
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href={`/people/${person.id}`} className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ {person.name}
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">Edit</h1>
-      </div>
+      <PageHeader title="Edit" back={{ href: `/people/${person.id}`, label: person.name }} />
 
       <PersonForm person={person} groups={groups} />
 

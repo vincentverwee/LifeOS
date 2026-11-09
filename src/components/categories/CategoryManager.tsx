@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/categories";
 import { CATEGORY_COLOR_SLOTS, type CategoryColorSlot } from "@/lib/categoryPalette";
 import { formatCurrency, parseAmount } from "@/lib/format";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 type CategoryManagerProps = {
   categories: Category[];
@@ -48,11 +49,11 @@ export function CategoryManager({ categories }: CategoryManagerProps) {
       <CategoryCreateForm onCreate={(name, color) => run(() => createCategory({ name, color }))} />
 
       {/* Tap a row to open its editor; all actions live there as full-size buttons. */}
-      <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+      <ul className="card-list">
         {categories.map((category, index) => (
           <li
             key={category.id}
-            className={`border-b border-border last:border-b-0 ${
+            className={`${
               category.isArchived ? "opacity-60" : ""
             }`}
           >
@@ -160,7 +161,7 @@ function CategoryCreateForm({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-3">
+    <div className="card p-3">
       <div className="flex gap-2">
         <input
           type="text"
@@ -169,7 +170,7 @@ function CategoryCreateForm({
           onKeyDown={(e) => e.key === "Enter" && submit()}
           enterKeyHint="done"
           placeholder="New category"
-          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="min-w-0 flex-1 field"
         />
         <button
           type="button"
@@ -223,7 +224,7 @@ function CategoryEditRow({
         value={name}
         onChange={(e) => setName(e.target.value)}
         aria-label="Name"
-        className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+        className="field"
       />
       <ColorDots value={color} onChange={setColor} />
       <label className="flex items-center justify-between gap-2 text-sm text-ink-muted">
@@ -250,14 +251,13 @@ function CategoryEditRow({
         <button type="button" onClick={onArchiveToggle} disabled={busy} className={secondary}>
           {category.isArchived ? "Unarchive" : "Archive"}
         </button>
-        <button
-          type="button"
-          onClick={() => window.confirm(`Delete "${category.name}"?`) && onDelete()}
+        <ConfirmButton
+          onConfirm={onDelete}
           disabled={category.expenseCount > 0 || busy}
-          className="btn btn-danger px-4 py-2.5 text-sm"
+          className="px-4 py-2.5 text-sm"
         >
           Delete
-        </button>
+        </ConfirmButton>
       </div>
       {category.expenseCount > 0 && (
         <p className="text-xs text-ink-muted">

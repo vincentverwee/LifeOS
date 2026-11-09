@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getCategories, getItems } from "@/lib/data/wardrobe";
 import { CategoryManager } from "@/components/wardrobe/CategoryManager";
@@ -11,17 +12,17 @@ export default async function WardrobeSettingsPage() {
   const archived = items.filter((i) => i.isArchived);
 
   return (
-    <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Settings" back={{ href: "/wardrobe/items", label: "Wardrobe" }} />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Categories</h2>
+        <h2 className="section-title">Categories</h2>
         <CategoryManager categories={categories} />
       </section>
 
       <section id="archived" className="flex scroll-mt-4 flex-col gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Archived clothes</h2>
+          <h2 className="section-title">Archived clothes</h2>
           <p className="text-sm text-ink-muted">Hidden from Items and the wash; they stay in their outfits.</p>
         </div>
         {archived.length === 0 ? (

@@ -239,7 +239,7 @@ export function PubPicker({
               }
             }}
             placeholder="Type a name or tap Nearby"
-            className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 pr-11 text-foreground"
+            className="w-full field pr-11"
           />
           {name && (
             <button

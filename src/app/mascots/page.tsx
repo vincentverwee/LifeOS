@@ -87,7 +87,7 @@ const SAMPLES: Record<Exclude<MascotKind, "plain">, MoodInput[]> = {
 /** Not linked anywhere: a page to look at every section mascot while tweaking them. */
 export default function MascotsPage() {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold text-foreground">Mascots</h1>
         <p className="mt-1 text-sm text-ink-muted">
@@ -96,7 +96,7 @@ export default function MascotsPage() {
       </div>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Alive</h2>
+        <h2 className="section-title">Alive</h2>
         <p className="text-sm text-ink-muted">
           Moods from made-up data (<code>src/lib/mascotMood.ts</code>). They bob and blink; tap one for its line. Between
           midnight and 6 everyone who isn&apos;t worried is asleep.
@@ -105,7 +105,7 @@ export default function MascotsPage() {
           {TILE_KINDS.map((kind, i) => {
             const name = mascotName(kind, THEME);
             return (
-              <li key={kind} className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+              <li key={kind} className="flex flex-col gap-3 card p-5">
                 <div>
                   <p className="text-xl font-semibold text-foreground">{NAMES[kind]}</p>
                   <p className="text-sm text-ink-muted">{name}</p>
@@ -131,10 +131,10 @@ export default function MascotsPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">On a Home tile</h2>
+        <h2 className="section-title">On a Home tile</h2>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {TILE_KINDS.map((kind) => (
-            <li key={kind} className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-5">
+            <li key={kind} className="flex items-center gap-3 card p-5">
               <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-primary">
                 <Mascot kind={kind} size={52} decorative />
               </span>
@@ -149,7 +149,7 @@ export default function MascotsPage() {
 
       {[...TILE_KINDS, "plain" as const].map((kind) => (
         <section key={kind} className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-foreground">
+          <h2 className="section-title">
             {NAMES[kind]}
             {kind !== "plain" && (
               <span className="ml-2 text-sm font-normal text-ink-muted">
@@ -191,7 +191,7 @@ export default function MascotsPage() {
       ))}
 
       <section className="flex flex-col items-center gap-2 pb-6">
-        <h2 className="text-lg font-semibold text-foreground">Loading spinner</h2>
+        <h2 className="section-title">Loading spinner</h2>
         <Mascot kind="beer" size={56} animate className="text-primary" />
       </section>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { UndoBar } from "@/components/ui/UndoBar";
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { completeReminder, undoCompleteReminder } from "@/lib/actions/reminders";
@@ -221,19 +222,7 @@ export function ReminderList({
         </ul>
       )}
 
-      <div aria-live="polite" className="min-h-11">
-        {undo && (
-          <p className="flex items-center justify-between gap-3 rounded-full bg-surface-muted py-1 pr-1 pl-4 text-sm text-foreground">
-            <span className="min-w-0 truncate">
-              ✓ {undo.label}: {undo.title}
-            </span>
-            <button type="button" onClick={() => undoTick(undo)} className="btn btn-ghost inline-flex min-h-11 shrink-0 px-4">
-              Undo
-            </button>
-          </p>
-        )}
-        {error && <p className="text-sm text-critical">{error}</p>}
-      </div>
+      <UndoBar message={undo && `${undo.label}: ${undo.title}`} onUndo={undo ? () => undoTick(undo) : undefined} error={error} />
     </div>
   );
 }

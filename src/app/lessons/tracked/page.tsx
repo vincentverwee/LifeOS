@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getStudyDays, getTrackedCourses, getTrackedEntries } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { addDays } from "@/lib/reminders/schedule";
@@ -56,12 +57,11 @@ export default async function TrackedTimePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Tracked time</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Courses with “Counts as study” off. Log them with Log time; they stay out of your study numbers. The weekly bars show school next to them.
-        </p>
-      </div>
+      <PageHeader
+        title="Tracked time"
+        subtitle="Courses with “Counts as study” off. Log them with Log time; they stay out of your study numbers. The weekly bars show school next to them."
+        back={{ href: "/lessons", label: "Lessons" }}
+      />
 
       {courses.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
@@ -89,7 +89,7 @@ export default async function TrackedTimePage() {
           </div>
 
           {byName.length > 0 && (
-            <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+            <section className="flex flex-col gap-3 card">
               <h2 className="font-semibold text-foreground">Since 1 Sep</h2>
               <ul className="flex flex-col gap-3">
                 {byName.map((b) => (
@@ -113,7 +113,7 @@ export default async function TrackedTimePage() {
             </section>
           )}
 
-          <section className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+          <section className="flex flex-col gap-3 card">
             <div className="flex flex-col gap-1">
               <h2 className="font-semibold text-foreground">Last {WEEKS} weeks</h2>
               {weekKeys.length > 0 && (
@@ -156,7 +156,7 @@ export default async function TrackedTimePage() {
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="font-semibold text-foreground">Latest</h2>
+            <h2 className="section-title">Latest</h2>
             <StudyEntryList entries={listEntries.slice(0, LATEST)} courses={courses} tracked empty="Nothing logged yet." />
             {listEntries.length > LATEST && (
               <Disclosure title={`All ${listEntries.length} since ${shortDate.format(new Date(`${since}T00:00:00Z`))}`}>

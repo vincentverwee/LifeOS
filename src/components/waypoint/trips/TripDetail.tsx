@@ -8,9 +8,8 @@ import { TripStickers } from '@/components/waypoint/trips/TripStickers';
 import type { Sticker } from '@/lib/waypoint/stickers';
 import { TripDialog } from '@/components/waypoint/trips/TripDialog';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
-import { Button } from '@/components/waypoint/ui/button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Badge } from '@/components/waypoint/ui/badge';
-import { Separator } from '@/components/waypoint/ui/separator';
 import { Trip, Location } from '@/lib/waypoint/types';
 import {
   updateTrip,
@@ -24,7 +23,7 @@ import {
   setLegByPlane,
 } from '@/lib/actions/waypoint';
 import { flownKm } from '@/lib/waypoint/routing/lines';
-import { CalendarDays, Caravan, Navigation, Pencil, ArrowLeft, MapPin, ImageDown, Plane } from 'lucide-react';
+import { Caravan, Pencil, ImageDown, Plane } from 'lucide-react';
 
 const dayFormatter = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -174,73 +173,61 @@ export function TripDetail({
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-6">
-        {/* Back + header */}
-        <div className="flex items-start gap-2 sm:gap-4">
-          <Button asChild variant="ghost" size="icon" className="-ml-3 shrink-0 sm:mt-1 sm:ml-0">
-            <Link href="/waypoint/trips" aria-label="All trips">
-              <ArrowLeft size={18} />
-            </Link>
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="truncate text-2xl font-semibold text-foreground">{trip.title}</h2>
-                {trip.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">{trip.description}</p>
-                )}
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  {trip.start_date && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <CalendarDays size={12} />
-                      {formatDate(trip.start_date)}
-                      {trip.end_date && ` – ${formatDate(trip.end_date)}`}
-                    </span>
-                  )}
-                  {!!trip.total_km && locations.length >= 2 && (
-                    <Badge variant="secondary" className="gap-1 text-xs">
-                      <Navigation size={10} />
-                      {trip.total_km.toLocaleString()} km
-                    </Badge>
-                  )}
-                  {trip.with_van && (
-                    <Badge variant="secondary" className="gap-1 text-xs">
-                      <Caravan size={10} />
-                      Van
-                    </Badge>
-                  )}
-                  {flown > 0 && (
-                    <Badge variant="secondary" className="gap-1 text-xs" title="Flown, not counted in the km driven">
-                      <Plane size={10} />
-                      {flown.toLocaleString()} km
-                    </Badge>
-                  )}
-                </div>
-              </div>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <PageHeader
+            title={<span className="block truncate">{trip.title}</span>}
+            subtitle={trip.description}
+            back={{ href: '/waypoint/trips', label: 'Trips' }}
+            action={
               <div className="flex shrink-0 gap-2">
                 {/* Icon-only on phones, so the trip title keeps its room. */}
-                <Button asChild variant="outline" size="sm" className="w-11 gap-2 px-0 sm:w-auto sm:px-4">
-                  <Link href={`/waypoint/trips/${id}/export`} aria-label="Export">
-                    <ImageDown size={16} />
-                    <span className="hidden sm:inline">Export</span>
-                  </Link>
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-11 gap-2 px-0 sm:w-auto sm:px-4"
+                <Link
+                  href={`/waypoint/trips/${id}/export`}
+                  aria-label="Export"
+                  className="btn btn-outline inline-flex h-11 w-11 text-sm sm:w-auto sm:px-4"
+                >
+                  <ImageDown size={16} aria-hidden="true" />
+                  <span className="hidden sm:inline">Export</span>
+                </Link>
+                <button
+                  type="button"
                   onClick={() => setEditOpen(true)}
                   aria-label="Edit"
+                  className="btn btn-outline inline-flex h-11 w-11 text-sm sm:w-auto sm:px-4"
                 >
-                  <Pencil size={16} />
+                  <Pencil size={16} aria-hidden="true" />
                   <span className="hidden sm:inline">Edit</span>
-                </Button>
+                </button>
               </div>
+            }
+          />
+          {(trip.start_date || (!!trip.total_km && locations.length >= 2) || trip.with_van || flown > 0) && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
+              {trip.start_date && (
+                <span>
+                  {formatDate(trip.start_date)}
+                  {trip.end_date && ` – ${formatDate(trip.end_date)}`}
+                </span>
+              )}
+              {!!trip.total_km && locations.length >= 2 && (
+                <span className="tabular-nums">{trip.total_km.toLocaleString()} km</span>
+              )}
+              {flown > 0 && (
+                <span className="flex items-center gap-1 tabular-nums" title="Flown, not counted in the km driven">
+                  <Plane size={12} aria-hidden="true" />
+                  {flown.toLocaleString()} km flown
+                </span>
+              )}
+              {trip.with_van && (
+                <Badge variant="secondary" className="gap-1">
+                  <Caravan size={12} aria-hidden="true" />
+                  Van
+                </Badge>
+              )}
             </div>
-          </div>
+          )}
         </div>
-
-        <Separator />
 
         {people}
 
@@ -252,20 +239,17 @@ export function TripDetail({
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: locations */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <MapPin size={16} className="text-primary" />
-              <h3 className="font-semibold">
-                Locations
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({locations.length})
-                </span>
-              </h3>
-            </div>
+          <section className="flex min-w-0 flex-col gap-3">
+            <h2 className="section-title">
+              Stops
+              {locations.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-ink-muted tabular-nums">{locations.length}</span>
+              )}
+            </h2>
 
             <LocationSearch tripId={id} onAdd={addLocation} />
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <p className="text-sm text-critical">{error}</p>}
 
             <div>
               <LocationList
@@ -283,34 +267,32 @@ export function TripDetail({
                 }, {})}
               />
             </div>
-          </div>
+          </section>
 
           {/* Right: map */}
-          <div className="space-y-3">
-            <h3 className="font-semibold">
+          <section className="flex min-w-0 flex-col gap-3">
+            <h2 className="section-title">
               Route
               {routing && (
-                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                <span className="ml-2 text-xs font-normal text-ink-muted">
                   Calculating…
                 </span>
               )}
               {!routing && routeFailed && (
-                <span className="ml-2 text-xs font-normal text-destructive">
+                <span className="ml-2 text-xs font-normal text-critical">
                   Couldn&apos;t calculate the route; it updates after the next change.
                 </span>
               )}
-            </h3>
+            </h2>
             <MapWrapper
               className="h-[min(400px,55svh)] lg:h-[500px]"
               locations={locations}
               routeGeometry={displayedRouteGeometry}
             />
             {locations.length < 2 && (
-              <p className="text-center text-xs text-muted-foreground">
-                Add at least 2 locations to see the route
-              </p>
+              <p className="text-center text-sm text-ink-muted">Add at least 2 stops to see the route.</p>
             )}
-          </div>
+          </section>
         </div>
       </div>
 

@@ -71,23 +71,23 @@ export function TripDialog({ open, onOpenChange, trip, onSave, defaultVan = fals
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{trip ? 'Edit Trip' : 'New Trip'}</DialogTitle>
+          <DialogTitle>{trip ? 'Edit trip' : 'New trip'}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Title *</Label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="title">Title</Label>
             <Input
               id="title"
-              placeholder="e.g. Summer Roadtrip 2026"
+              placeholder="e.g. Summer road trip 2026"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="description">Description (optional)</Label>
             <Textarea
               id="description"
               placeholder="A short description of this trip"
@@ -98,7 +98,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave, defaultVan = fals
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="start_date">Start date</Label>
               <Input
                 id="start_date"
@@ -107,7 +107,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave, defaultVan = fals
                 onChange={(e) => setForm({ ...form, start_date: e.target.value })}
               />
             </div>
-            <div className="space-y-1.5">
+            <div className="flex flex-col gap-1">
               <Label htmlFor="end_date">End date</Label>
               <Input
                 id="end_date"
@@ -138,7 +138,7 @@ export function TripDialog({ open, onOpenChange, trip, onSave, defaultVan = fals
               />
             </span>
             <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Caravan size={16} className="text-primary" />
+              <Caravan size={16} className="text-ink-muted" aria-hidden="true" />
               With the van
             </span>
           </button>

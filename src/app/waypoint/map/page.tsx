@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { TripFilter } from '@/components/waypoint/map/TripFilter';
-import { Button } from '@/components/waypoint/ui/button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getAllLocations, getAllTrips } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
@@ -41,13 +41,14 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
   const subtitle = filter.kind === 'all' ? 'Explore your routes' : describeTripFilter(filter, trips.length);
 
   return (
-    <>
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Map</h2>
-            <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{subtitle}</p>
-          </div>
+    // data-waypoint widens the root <main>: the map gets the whole desktop width.
+    <div data-waypoint className="flex flex-col gap-3 sm:gap-6">
+      <PageHeader
+        title="Map"
+        // No back link: the tab bar is the way out, and every pixel goes to the map.
+        back={null}
+        subtitle={<span className="hidden sm:inline">{subtitle}</span>}
+        action={
           <div className="flex min-w-0 items-center gap-2">
             <TripFilter
               companions={companions}
@@ -56,31 +57,34 @@ export default async function MapPage({ searchParams }: PageProps<'/waypoint/map
               basePath="/waypoint/map"
             />
             {/* Icon-only on phones when the dropdown needs the room. */}
-            <Button asChild variant="outline" size="sm" className={`shrink-0 gap-1.5 ${hasFilter ? 'w-11 px-0 sm:w-auto sm:px-3' : ''}`}>
-              <Link href={`/waypoint/map/export${tripFilterQuery(filter)}`} title="Export this map as an image" aria-label="Export map">
-                <ImageDown size={15} />
-                <span className={hasFilter ? 'hidden sm:inline' : undefined}>Export map</span>
-              </Link>
-            </Button>
+            <Link
+              href={`/waypoint/map/export${tripFilterQuery(filter)}`}
+              title="Export this map as an image"
+              aria-label="Export map"
+              className={`btn btn-outline inline-flex min-h-11 shrink-0 text-sm ${hasFilter ? 'w-11 px-0 sm:w-auto sm:px-4' : 'px-4'}`}
+            >
+              <ImageDown size={15} aria-hidden="true" />
+              <span className={hasFilter ? 'hidden sm:inline' : undefined}>Export map</span>
+            </Link>
           </div>
-        </div>
-        <MapWrapper
-          // A fresh map per filter, so it zooms to the trips shown.
-          key={tripFilterValue(filter)}
-          // Phones: exactly the space between the header and the tab bar, so the page itself
-          // doesn't scroll and every swipe goes to the map.
-          className="h-[calc(100svh-14rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[360px] sm:h-[70dvh] sm:min-h-[420px]"
-          cooperativeGestures={false}
-          locations={locations}
-          routes={routes}
-          tripLabels={tripLabels}
-          tripColors={tripColors}
-          // Small trip-coloured dots, like the dashboard: numbered pins for every stop of every
-          // trip buried the routes. Numbers stay on a single trip's page.
-          markerStyle="dot"
-          selectable
-        />
-      </div>
-    </>
+        }
+      />
+      <MapWrapper
+        // A fresh map per filter, so it zooms to the trips shown.
+        key={tripFilterValue(filter)}
+        // Phones: exactly the space between the header and the tab bar, so the page itself
+        // doesn't scroll and every swipe goes to the map.
+        className="h-[calc(100svh-14rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] min-h-[360px] sm:h-[70dvh] sm:min-h-[420px]"
+        cooperativeGestures={false}
+        locations={locations}
+        routes={routes}
+        tripLabels={tripLabels}
+        tripColors={tripColors}
+        // Small trip-coloured dots, like the dashboard: numbered pins for every stop of every
+        // trip buried the routes. Numbers stay on a single trip's page.
+        markerStyle="dot"
+        selectable
+      />
+    </div>
   );
 }

@@ -7,6 +7,8 @@ import { deleteTemplate, saveTemplate, type WorkoutFormState } from "@/lib/actio
 import { DEFAULT_REST_SECONDS, LIMITS, type Activity, type ExerciseRow, type TemplateView } from "@/lib/workouts/types";
 import { Stepper } from "@/components/workouts/Stepper";
 import { FIELD } from "@/components/workouts/ui";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 type Row = { key: number; exerciseId: string; sets: number; target: number; restSeconds: number };
 const RESTS = [0, 30, 45, 60, 90, 120, 180];
@@ -17,7 +19,6 @@ export function TemplateForm({ template, activities, exercises }: { template?: T
   const router = useRouter();
   const [state, action, pending] = useActionState<WorkoutFormState, FormData>(saveTemplate, null);
   const [deleting, startDelete] = useTransition();
-  const [confirm, setConfirm] = useState(false);
   const byId = new Map(exercises.map((e) => [e.id, e]));
   const [rows, setRows] = useState<Row[]>(
     template?.exercises.map((e, key) => ({ key, exerciseId: e.exerciseId, sets: e.sets, target: e.target, restSeconds: e.restSeconds })) ?? [],
@@ -133,26 +134,32 @@ export function TemplateForm({ template, activities, exercises }: { template?: T
           {state.error}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={pending} className="btn btn-primary min-h-12 flex-1 px-5 font-semibold">
-          {pending ? "Saving…" : template ? "Save template" : "Create template"}
+      <div className="flex flex-col gap-3">
+        <button type="submit" disabled={pending} className="btn btn-primary flex w-full px-4 py-3 text-base font-semibold">
+          {pending ? (
+            <span className="inline-flex items-center justify-center gap-2">
+              <SheepSpinner size={20} />
+              Saving…
+            </span>
+          ) : template ? (
+            "Save template"
+          ) : (
+            "Create template"
+          )}
         </button>
         {template && (
-          <button
-            type="button"
+          <ConfirmButton
             disabled={deleting}
-            onBlur={() => setConfirm(false)}
-            onClick={() => {
-              if (!confirm) return setConfirm(true);
+            onConfirm={() =>
               startDelete(async () => {
                 await deleteTemplate(template.id);
                 router.push("/workouts/settings");
-              });
-            }}
-            className={`btn min-h-12 px-5 text-sm ${confirm ? "btn-destructive" : "btn-danger"}`}
+              })
+            }
+            className="min-h-12 self-start px-5 text-sm"
           >
-            {confirm ? "Tap again to delete" : "Delete"}
-          </button>
+            Delete
+          </ConfirmButton>
         )}
       </div>
     </form>

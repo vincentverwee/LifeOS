@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getTodayKey } from "@/lib/today";
 import { ReminderForm } from "@/components/reminders/ReminderForm";
 import { RoutineForm } from "@/components/reminders/RoutineForm";
@@ -15,7 +16,7 @@ export default async function AddPage({ searchParams }: PageProps<"/reminders/ad
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Add</h1>
+      <PageHeader title="Add" back={{ href: "/reminders", label: "Reminders" }} />
 
       <nav aria-label="What to add" className="flex gap-1 rounded-full bg-surface-muted p-1">
         {KINDS.map((kind) => {

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getStudyTimer, getTrackedEntries, loadStudyPeriods } from "@/lib/data/lessons";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { getTodayKey } from "@/lib/today";
@@ -7,7 +8,7 @@ import { StudyHero, StudyPace, UpcomingExams } from "@/components/lessons/TodayC
 import { StudyEntryList } from "@/components/lessons/StudyEntryList";
 import { WeekLessons } from "@/components/lessons/LessonGrid";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
-import { formatHours } from "@/lib/format";
+import { formatHours, formatLongDay } from "@/lib/format";
 import { formatMinutes, trackedTotals, weekStart } from "@/lib/lessons/tracked";
 
 export default async function LessonsTodayPage({ searchParams }: PageProps<"/lessons">) {
@@ -19,23 +20,17 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
     // Across semesters, so the card is right whichever period is shown.
     getTrackedEntries(weekStart(todayKey)),
   ]);
-  const dateLabel = new Intl.DateTimeFormat("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: "UTC",
-  }).format(new Date(`${todayKey}T00:00:00Z`));
+  const dateLabel = formatLongDay(todayKey);
 
   if (!period) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Today</h1>
-        <p className="text-sm text-ink-muted">
+      <div className="flex flex-col gap-6">
+        <PageHeader section="lessons" title="Lessons" subtitle={dateLabel} />
+        <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
           No study period yet.{" "}
-          <Link href="/lessons/settings" className="text-primary">
+          <Link href="/lessons/settings" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
             Create one in Settings
           </Link>
-          .
         </p>
       </div>
     );
@@ -57,19 +52,19 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
   ];
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold text-foreground">Today</h1>
-          <p className="mt-1 text-sm text-ink-muted">{dateLabel}</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <StudyPeriodSwitcher periods={periods} activeId={period.id} />
-          <Link href={`/lessons/add${query}`} className="btn btn-primary hidden px-4 py-2.5 text-sm font-semibold sm:inline-flex">
-            + Log time
-          </Link>
-        </div>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader section="lessons"
+        title="Lessons"
+        subtitle={dateLabel}
+        action={
+          <div className="flex items-center gap-2">
+            <StudyPeriodSwitcher periods={periods} activeId={period.id} />
+            <Link href={`/lessons/add${query}`} className="btn btn-primary hidden px-4 py-2.5 text-sm font-semibold sm:inline-flex">
+              + Log time
+            </Link>
+          </div>
+        }
+      />
 
       {timer && <RunningTimerBadge timer={timer} card />}
 
@@ -79,7 +74,7 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
 
       {pace && stats.phase.kind !== "over" && <StudyPace pace={pace} insightsHref={`/lessons/insights${query}`} />}
 
-      <section className="rounded-xl border border-border bg-surface">
+      <section className="rounded-2xl border border-border bg-surface">
         <div className="flex items-baseline justify-between gap-2 px-4 pt-4 pb-2">
           <h2 className="font-medium text-foreground">Studied today</h2>
           <span className="font-mono text-sm tabular-nums text-ink-muted">{formatHours(stats.todayHours ?? 0)}</span>
@@ -93,7 +88,7 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
       {trackedNames.length > 0 && (
         <Link
           href="/lessons/tracked"
-          className="tap flex min-h-12 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+          className="tap flex min-h-12 items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3"
         >
           <span className="min-w-0">
             <span className="block font-medium text-foreground">Tracked time</span>
@@ -106,7 +101,7 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
       )}
 
       {showWeekLessons && (
-        <section className="rounded-xl border border-border bg-surface">
+        <section className="rounded-2xl border border-border bg-surface">
           <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1">
             <h2 className="font-medium text-foreground">Lessons · week {week}</h2>
             <Link href={`/lessons/grid${query}`} className="btn btn-ghost -mr-3 inline-flex min-h-11 px-3 text-sm">

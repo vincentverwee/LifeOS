@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getMyRecipes } from "@/lib/data/recipes";
 import { Cookbook } from "@/components/recipes/Cookbook";
@@ -10,7 +11,7 @@ export default async function CookbookPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Cookbook</h1>
+      <PageHeader section="recipes" title="Recipes" />
       {recipes.length > 0 ? (
         <Cookbook recipes={recipes} />
       ) : (

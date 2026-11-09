@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getTodayKey } from "@/lib/today";
 import { getBeerVisits } from "@/lib/data/beer";
 import { pricesByMonth, totals } from "@/lib/beer/stats";
@@ -27,7 +28,7 @@ const shortMonth = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="min-w-0 rounded-xl border border-border bg-surface p-4">
+    <section className="min-w-0 card">
       <h2 className="mb-3 font-medium text-foreground">{title}</h2>
       {children}
     </section>
@@ -40,8 +41,8 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
 
   if (visits.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Insights" back={{ href: "/beer", label: "Beer" }} />
         <p className="text-sm text-ink-muted">Nothing to show yet: log a beer first.</p>
         <Link href={LOG_BEER_HREF} className="btn btn-primary inline-flex self-start px-5 py-2.5 text-sm font-semibold">
           Log a beer
@@ -83,9 +84,11 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
   const months = everyMonth(visits, current);
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Insights"
+        back={{ href: "/beer", label: "Beer" }}
+        action={
         <nav aria-label="Month" className="flex items-center">
           {month > first ? (
             <Link href={href(shiftMonth(month, -1))} aria-label="Previous month" className="btn btn-ghost flex h-11 w-11 text-lg">
@@ -103,9 +106,10 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
             <span className="h-11 w-11" />
           )}
         </nav>
-      </div>
+        }
+      />
 
-      <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+      <section className="card sm:p-5">
         <p className="text-sm text-ink-muted">{finished ? "Pints in total" : `Pints so far · day ${day} of ${length}`}</p>
         <p className="mt-1 font-mono text-3xl font-semibold tabular-nums text-foreground">
           {sum.pints} <span className="text-base text-ink-muted">{sum.pints === 1 ? "pint" : "pints"}</span>

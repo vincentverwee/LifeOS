@@ -1,5 +1,6 @@
 "use client";
 
+import { THEME_COLORS } from "@/lib/theme";
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -40,7 +41,7 @@ export default function PositionPicker({
   useEffect(() => {
     if (!containerRef.current) return;
     const start = initialRef.current;
-    const color = getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim() || "#1f5c3b";
+    const color = getComputedStyle(document.documentElement).getPropertyValue("--color-primary").trim() || THEME_COLORS.primary;
     const map = new maplibregl.Map({
       container: containerRef.current,
       style: "https://tiles.openfreemap.org/styles/liberty",
@@ -117,16 +118,16 @@ export default function PositionPicker({
           enterKeyHint="search"
           placeholder="Search a town or street"
           aria-label="Search a place"
-          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="min-w-0 flex-1 field"
         />
         <button type="submit" disabled={searching} className="btn btn-outline min-h-11 px-4 text-sm">
           {searching ? "…" : "Search"}
         </button>
       </form>
       {results.length > 0 && (
-        <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ul className="card-list">
           {results.map((r) => (
-            <li key={`${r.lat},${r.lon}`} className="border-b border-border last:border-b-0">
+            <li key={`${r.lat},${r.lon}`}>
               <button type="button" onClick={() => go(r)} className="tap flex min-h-11 w-full items-center px-3 py-2 text-left text-sm text-foreground">
                 <span className="line-clamp-2">{r.display_name}</span>
               </button>

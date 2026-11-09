@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { useActionState, useState, useSyncExternalStore } from "react";
 import {
   addLink,
@@ -18,8 +19,7 @@ import { GroupDot } from "./GroupDot";
 import { keepInput } from "./keepInput";
 import { useQuickAction } from "./useQuickAction";
 
-const FIELD =
-  "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 type LinkRow = LinkView & { otherName: string; otherGroup: string | null };
 type Choice = {
@@ -190,17 +190,16 @@ function LinkItem({
             >
               Cancel
             </button>
-            <button
-              type="button"
+            <ConfirmButton
+              quiet
               disabled={saving || pending}
-              onClick={() => {
-                if (window.confirm(`Unlink ${name} and ${link.otherName}?`))
-                  run(() => deleteLink(link.id));
-              }}
-              className="btn btn-ghost ml-auto inline-flex min-h-11 px-3 text-sm"
+              onConfirm={() => run(() => deleteLink(link.id))}
+              confirmLabel="Tap again to unlink"
+              aria-label={`Unlink ${name} and ${link.otherName}`}
+              className="ml-auto inline-flex min-h-11 px-3 text-sm"
             >
               Unlink
-            </button>
+            </ConfirmButton>
           </div>
         </form>
       </li>

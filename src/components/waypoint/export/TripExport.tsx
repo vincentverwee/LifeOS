@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { THEME_COLORS } from '@/lib/theme';
 import { useImageExport, isIOS } from '@/lib/waypoint/useImageExport';
 import { useElementWidth } from '@/lib/waypoint/useElementWidth';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
@@ -18,10 +19,11 @@ import {
   SANS_STACK,
   slugify,
 } from '@/lib/waypoint/exportFormats';
-import { ArrowLeft, Download, Sun, Moon, ImageDown, Check, RotateCcw, Share2, X } from 'lucide-react';
+import { Download, Sun, Moon, ImageDown, Check, RotateCcw, Share2, X } from 'lucide-react';
 
 const FORMATS = EXPORT_FORMATS;
-const DEFAULT_ACCENT = '#4f46e5';
+// The app's primary colour (a build-time hex, so the colour picker can show it).
+const DEFAULT_ACCENT = THEME_COLORS.primary;
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return null;
@@ -246,22 +248,11 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
   if (locations.length < 2) {
     return (
       <>
-        <div className="mx-auto max-w-5xl space-y-4">
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon">
-              <Link href={`/waypoint/trips/${id}`}>
-                <ArrowLeft size={18} />
-              </Link>
-            </Button>
-            <h2 className="text-2xl font-semibold text-foreground">Export</h2>
-          </div>
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
-            <ImageDown size={48} className="mb-4 text-muted-foreground/40" />
-            <p className="font-medium text-muted-foreground">Not enough stops yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/60">
-              Add at least 2 locations on the trip page before exporting a post
-            </p>
-          </div>
+        <div className="flex flex-col gap-6">
+          <PageHeader title="Export" back={{ href: `/waypoint/trips/${id}`, label: 'Trip' }} />
+          <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+            Add at least 2 stops on the trip page before exporting a post.
+          </p>
         </div>
       </>
     );
@@ -358,26 +349,22 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon">
-            <Link href={`/waypoint/trips/${id}`}>
-              <ArrowLeft size={18} />
-            </Link>
-          </Button>
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Export — {trip.title}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Export"
+          back={{ href: `/waypoint/trips/${id}`, label: 'Trip' }}
+          subtitle={
+            <>
               The whole trip is always shown — tick the stops to feature. Featured stops get a name
               label, stack equally in the caption, and count toward the “+km added”. Edit each
               featured stop’s name and add a comment (arrival day, a note) inline.
-            </p>
-          </div>
-        </div>
+            </>
+          }
+        />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
           <div className="space-y-4">
-            <Card className="border-border/50">
+            <Card>
               <CardContent className="space-y-5 p-5">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -405,7 +392,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border/60 p-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border p-1">
                     {/* Displayed latest-stop-first (reversed), but the number badge still shows
                         each stop's true visit order (1 = trip start). */}
                     {locations
@@ -551,7 +538,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="accent-color">Accent color</Label>
+                  <Label htmlFor="accent-color">Accent colour</Label>
                   <div className="flex items-center gap-2">
                     <input
                       id="accent-color"
@@ -588,7 +575,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                 )}
 
                 {rendered && (
-                  <div className="space-y-2 rounded-xl border border-border/60 p-3">
+                  <div className="space-y-2 rounded-xl border border-border p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium">
                         Ready — {format.width}×{format.height}
@@ -606,7 +593,7 @@ export function TripExport({ trip, locations }: { trip: Trip; locations: Locatio
                     <img
                       src={rendered.url}
                       alt={`${trip.title} export preview`}
-                      className="w-full rounded-lg border border-border/60"
+                      className="w-full rounded-lg border border-border"
                     />
                     <Button className="w-full gap-2" onClick={handleSave}>
                       {isIOS() ? <Share2 size={16} /> : <Download size={16} />}

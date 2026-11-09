@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getBodyWeights, getGoal, getSetLites, getWorkoutLites, getWorkouts } from "@/lib/data/workouts";
 import { getTodayKey } from "@/lib/today";
 import { addDays, formatDay } from "@/lib/reminders/schedule";
@@ -35,8 +36,8 @@ export default async function WorkoutInsightsPage() {
 
   if (past.length === 0 && weights.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Insights" back={{ href: "/workouts", label: "Workouts" }} />
         <p className="text-sm text-ink-muted">Nothing to look at yet. Log a few workouts first.</p>
         <Link href={ADD_HREF} className="btn btn-primary inline-flex min-h-11 self-start px-5 text-sm font-semibold">
           Log a workout
@@ -70,9 +71,9 @@ export default async function WorkoutInsightsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+      <PageHeader title="Insights" back={{ href: "/workouts", label: "Workouts" }} />
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
+      <section className="card p-5">
         <p className="text-sm text-ink-muted">This month</p>
         <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-foreground">
           {thisMonth.sessions} <span className="text-lg text-ink-muted">{thisMonth.sessions === 1 ? "workout" : "workouts"}</span>
@@ -84,7 +85,7 @@ export default async function WorkoutInsightsPage() {
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Last 12 weeks</h2>
+        <h2 className="section-title">Last 12 weeks</h2>
         <WeeksChart weeks={weeks} goal={goal} />
         {goal !== null && (
           <p className="text-sm text-ink-muted">
@@ -95,7 +96,7 @@ export default async function WorkoutInsightsPage() {
 
       {activities.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="text-lg font-semibold text-foreground">What you did</h2>
+          <h2 className="section-title">What you did</h2>
           <ul className="flex flex-col divide-y divide-border">
             {activities.map((a) => (
               <li key={a.activityId} className="flex min-h-12 items-center gap-3">

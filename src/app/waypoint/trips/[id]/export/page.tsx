@@ -6,5 +6,10 @@ export default async function ExportPage({ params }: PageProps<'/waypoint/trips/
   const { id } = await params;
   const data = await getTripWithLocations(id);
   if (!data) notFound();
-  return <TripExport trip={data.trip} locations={data.locations} />;
+  // data-waypoint widens the root <main>: room for the controls beside the preview.
+  return (
+    <div data-waypoint>
+      <TripExport trip={data.trip} locations={data.locations} />
+    </div>
+  );
 }

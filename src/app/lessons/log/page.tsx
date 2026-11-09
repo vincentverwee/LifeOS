@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { formatHours } from "@/lib/format";
@@ -12,14 +13,13 @@ export default async function StudyLogPage({ searchParams }: PageProps<"/lessons
   const total = period ? Math.round(period.entries.reduce((s, e) => s + e.hours, 0) * 100) / 100 : 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Study log</h1>
-          {period && <p className="mt-1 font-mono text-sm tabular-nums text-ink-muted">{formatHours(total)} in total</p>}
-        </div>
-        {period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Study log"
+        subtitle={period && <span className="font-mono tabular-nums">{formatHours(total)} in total</span>}
+        back={{ href: typeof requested === "string" ? `/lessons?period=${encodeURIComponent(requested)}` : "/lessons", label: "Lessons" }}
+        action={period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
+      />
       {period ? (
         <StudyEntryList entries={period.entries} courses={period.courses} groupByDay />
       ) : (

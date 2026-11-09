@@ -10,10 +10,11 @@ import {
   reorderCategories,
   type CategoryResult,
 } from "@/lib/actions/wardrobe";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 type Category = { id: string; name: string; itemCount: number };
 
-const FIELD = "min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field min-w-0 flex-1";
 
 /** Wardrobe categories: add at the top, tap one to rename, move or delete it. */
 export function CategoryManager({ categories }: { categories: Category[] }) {
@@ -49,11 +50,6 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
   }
 
   function remove(category: Category) {
-    const what =
-      category.itemCount === 0
-        ? `Delete "${category.name}"?`
-        : `Delete "${category.name}"? Its ${category.itemCount} ${category.itemCount === 1 ? "item stays" : "items stay"}, without a category.`;
-    if (!window.confirm(what)) return;
     run(() => deleteCategory(category.id), () => setEditingId(null));
   }
 
@@ -86,9 +82,9 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
           No categories. Everything is listed under “No category”.
         </p>
       ) : (
-        <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
+        <ul className="card-list">
           {categories.map((category, index) => (
-            <li key={category.id} className="border-b border-border last:border-b-0">
+            <li key={category.id}>
               {editingId === category.id ? (
                 <form
                   onSubmit={(e) => {
@@ -116,9 +112,15 @@ export function CategoryManager({ categories }: { categories: Category[] }) {
                       Cancel
                     </button>
                   </div>
-                  <button type="button" onClick={() => remove(category)} disabled={pending} className="btn btn-danger min-h-11 px-4 text-sm">
+                  <ConfirmButton onConfirm={() => remove(category)} disabled={pending} className="min-h-11 px-4 text-sm">
                     Delete category
-                  </button>
+                  </ConfirmButton>
+                  {category.itemCount > 0 && (
+                    <p className="text-xs text-ink-muted">
+                      Its {category.itemCount} {category.itemCount === 1 ? "item stays" : "items stay"}, without a
+                      category.
+                    </p>
+                  )}
                 </form>
               ) : (
                 <div className="flex items-center gap-1 py-1 pr-1 pl-3">

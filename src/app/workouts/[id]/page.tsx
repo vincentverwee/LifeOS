@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound, redirect } from "next/navigation";
 import { getSetLites, getWorkout } from "@/lib/data/workouts";
 import { getTodayKey } from "@/lib/today";
@@ -37,24 +38,26 @@ export default async function WorkoutPage({ params }: PageProps<"/workouts/[id]"
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/workouts/log" className="btn btn-ghost -ml-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Log
-        </Link>
-        <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold text-foreground">
-          <ActivityDot activity={workout.activity} className="h-3 w-3" />
-          {workout.activity.name}
-          {feel && (
-            <span aria-label={feel.label} title={feel.label}>
-              {feel.face}
-            </span>
-          )}
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          {describeDoneOn(workout.date, todayKey)} · {partOfDay(workout.time).toLowerCase()} at {workout.time}
-          {workout.templateName && ` · ${workout.templateName}`}
-        </p>
-      </div>
+      <PageHeader
+        title={
+          <span className="flex items-center gap-2">
+            <ActivityDot activity={workout.activity} className="h-3 w-3" />
+            {workout.activity.name}
+            {feel && (
+              <span aria-label={feel.label} title={feel.label}>
+                {feel.face}
+              </span>
+            )}
+          </span>
+        }
+        subtitle={
+          <>
+            {describeDoneOn(workout.date, todayKey)} · {partOfDay(workout.time).toLowerCase()} at {workout.time}
+            {workout.templateName && ` · ${workout.templateName}`}
+          </>
+        }
+        back={{ href: "/workouts/log", label: "Log" }}
+      />
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {workout.durationMin && <Stat label="Time" value={formatMinutes(workout.durationMin)} />}
@@ -65,7 +68,7 @@ export default async function WorkoutPage({ params }: PageProps<"/workouts/[id]"
 
       {workout.sets.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Exercises</h2>
+          <h2 className="section-title">Exercises</h2>
           <ul className="flex flex-col gap-2">
             {groupSets(workout.sets).map((group) => {
               const best = earlierBest(group[0].exerciseId);

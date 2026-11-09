@@ -36,7 +36,7 @@ function Line({ icon, href, children }: { icon: string; href?: string; children:
 function MemoryCard({ memory: m }: { memory: Memory }) {
   const mood = moodOf(m.entry?.mood);
   return (
-    <li className="rounded-2xl border border-border bg-surface p-4">
+    <li className="card">
       <Link href={`/diary/${m.date}`} className="tap -mx-2 -mt-1 flex min-h-11 items-baseline justify-between gap-3 rounded-lg px-2">
         <span className="font-semibold text-foreground">{describeYearsAgo(m.yearsAgo)}</span>
         <span className="text-sm text-ink-muted">{fullDate.format(new Date(`${m.date}T00:00:00Z`))}</span>

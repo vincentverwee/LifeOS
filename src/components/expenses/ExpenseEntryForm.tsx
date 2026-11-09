@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState, useSyncExternalStore, type MouseEvent } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import type { Period } from "@/lib/data/periods";
 import type { Category } from "@/lib/data/categories";
@@ -99,6 +100,9 @@ export function ExpenseEntryForm({
         : (otherDate ?? today);
 
   const online = useSyncExternalStore(...onlineStore);
+  const router = useRouter();
+  /** Came from Beer's + (#beer): a beer saved online goes back to /beer, like every other section's +. */
+  const fromBeer = useRef(false);
 
   function resetAfterSave(message: string) {
     setSavedMessage(message);
@@ -164,6 +168,7 @@ export function ExpenseEntryForm({
 
       if (result?.ok) {
         resetAfterSave(`Saved ${label}` + (result.movedTo ? ` · in ${result.movedTo}` : ""));
+        if (fromBeer.current && category?.pintPrice != null) router.push("/beer");
       } else {
         setSavedMessage(null);
       }
@@ -185,6 +190,7 @@ export function ExpenseEntryForm({
     if (beerHashApplied.current) return;
     beerHashApplied.current = true;
     if (window.location.hash !== "#beer") return;
+    fromBeer.current = true;
     const beer = initialCategories.find((c) => c.pintPrice !== null);
     if (beer) setSelectedCategoryId(beer.id);
   }, [initialCategories]);
@@ -448,7 +454,7 @@ export function ExpenseEntryForm({
 
       {/* Sticky on phones so it stays reachable above the tab bar; the backing strip keeps
           fields scrolling underneath from showing around the button. */}
-      <div className="sticky bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
+      <div className="sticky bottom-tabbar z-30 -mx-4 bg-background/95 px-4 py-2 backdrop-blur sm:static sm:mx-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
         <SubmitButton
           label={
             parsedAmount !== null && parsedAmount > 0

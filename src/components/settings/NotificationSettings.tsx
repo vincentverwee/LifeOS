@@ -20,7 +20,7 @@ export type Device = {
   lastSent: Partial<Record<PushKind, string>>;
 };
 
-const timeInput = "rounded-lg border border-border bg-surface px-2 py-2 text-sm text-foreground";
+const timeInput = "field px-2 py-2";
 
 /** "today 08:07", "yesterday 21:02", "Mon 27 Oct 08:15" in this phone's time. */
 function describeSent(iso: string): string {
@@ -143,7 +143,7 @@ export function NotificationSettings({
     );
   }
 
-  const note = (text: string) => <p className="rounded-xl border border-border bg-surface p-4 text-sm text-ink-muted">{text}</p>;
+  const note = (text: string) => <p className="card text-sm text-ink-muted">{text}</p>;
 
   if (status.kind === "unsupported") {
     return note(
@@ -159,7 +159,7 @@ export function NotificationSettings({
   return (
     <div className="flex flex-col gap-4">
       {device ? (
-        <section className="rounded-xl border border-border bg-surface">
+        <section className="rounded-2xl border border-border bg-surface">
           <h2 className="px-4 pt-4 pb-1 font-medium text-foreground">On this device</h2>
           <ul>
             {PUSH_KINDS.map((k) => {

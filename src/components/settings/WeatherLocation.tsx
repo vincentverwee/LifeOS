@@ -63,7 +63,7 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
 
   if (status.kind === "checking") return null;
 
-  const note = (text: string) => <p className="rounded-xl border border-border bg-surface p-4 text-sm text-ink-muted">{text}</p>;
+  const note = (text: string) => <p className="card text-sm text-ink-muted">{text}</p>;
   if (!device) {
     return note(
       "The weather appears in the morning digest, which is a push notification. Turn on notifications on this device first, then pick a place here."
@@ -111,7 +111,7 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex min-h-11 flex-wrap items-center gap-x-2 rounded-xl border border-border bg-surface px-4 py-2">
+      <div className="flex min-h-11 flex-wrap items-center gap-x-2 rounded-2xl border border-border bg-surface px-4 py-2">
         <span className="text-ink-muted">Weather for:</span>
         <span className="font-medium text-foreground">{device.placeLabel ?? "Not set"}</span>
         {device.locationSource === "gps" && <span className="text-sm text-ink-muted">(follows you)</span>}
@@ -143,7 +143,7 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
               placeholder="Galway"
               autoComplete="off"
               enterKeyHint="search"
-              className="min-h-11 rounded-xl border border-border bg-surface px-4 text-foreground"
+              className="field min-h-11"
             />
           </label>
 
@@ -154,9 +154,9 @@ export function WeatherLocation({ status, devices }: { status: DeviceStatus; dev
           )}
           {results && results.length === 0 && !error && <p className="text-sm text-ink-muted">No places found.</p>}
           {results && results.length > 0 && (
-            <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+            <ul className="card-list">
               {results.map((place) => (
-                <li key={place.id} className="border-b border-border last:border-b-0">
+                <li key={place.id}>
                   <button
                     type="button"
                     disabled={pending}

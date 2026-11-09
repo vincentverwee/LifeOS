@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { LogTimePanel } from "@/components/lessons/LogTimePanel";
@@ -14,20 +15,21 @@ export default async function AddStudyTimePage({ searchParams }: PageProps<"/les
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Log study time</h1>
-          {period && (
+      <PageHeader
+        title="Log study time"
+        subtitle={
+          period && (
             <Link
               href={typeof requested === "string" ? `/lessons/log?period=${encodeURIComponent(requested)}` : "/lessons/log"}
               className="btn btn-ghost -ml-3 inline-flex min-h-11 px-3 text-sm"
             >
               Full log ›
             </Link>
-          )}
-        </div>
-        {period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
-      </div>
+          )
+        }
+        back={{ href: typeof requested === "string" ? `/lessons?period=${encodeURIComponent(requested)}` : "/lessons", label: "Lessons" }}
+        action={period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
+      />
       {period ? (
         <LogTimePanel
           key={period.id}

@@ -2,14 +2,13 @@
 
 import Link from 'next/link';
 import { useState, useTransition } from 'react';
-import { Users } from 'lucide-react';
 import { addTripPerson, removeTripPerson } from '@/lib/actions/people';
 import { groupColor } from '@/lib/people/family';
 import { GroupDot } from '@/components/people/GroupDot';
 
 type Person = { id: string; name: string; groupName: string | null };
 
-const FIELD = 'rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground';
+const FIELD = 'field';
 const FAILED = "Couldn't save that. Check your connection and try again.";
 
 /** "Who came along": People tagged on this trip (they get it under Trips together), add or remove them. */
@@ -63,11 +62,8 @@ export function TripPeople({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <Users size={16} className="text-primary" />
-        <h3 className="font-semibold">Who came along</h3>
-      </div>
+    <section className="flex flex-col gap-3">
+      <h2 className="section-title">Who came along</h2>
       <ul className={`flex flex-wrap gap-2 ${pending ? 'opacity-60' : ''}`}>
         {people.map((p) => (
           <li key={p.id} className="flex items-center rounded-full bg-surface-muted pl-3">
@@ -134,7 +130,7 @@ export function TripPeople({
           </div>
         </div>
       )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
+      {error && <p className="text-sm text-critical">{error}</p>}
+    </section>
   );
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getActivities, getExercises, getGoal, getTemplates } from "@/lib/data/workouts";
 import { ActivityManager, ExerciseManager, GoalPicker } from "@/components/workouts/SettingsParts";
 
@@ -7,17 +8,17 @@ export const metadata = { title: "Workout settings" };
 export default async function WorkoutSettingsPage() {
   const [goal, templates, activities, exercises] = await Promise.all([getGoal(), getTemplates(), getActivities(), getExercises()]);
   return (
-    <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Settings" back={{ href: "/workouts", label: "Workouts" }} />
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Weekly goal</h2>
+        <h2 className="section-title">Weekly goal</h2>
         <GoalPicker goal={goal} />
       </section>
 
       <section className="flex flex-col gap-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-lg font-semibold text-foreground">Templates</h2>
+          <h2 className="section-title">Templates</h2>
           <Link href="/workouts/settings/templates/new" className="btn btn-ghost -mr-3 inline-flex min-h-11 px-3 text-sm">
             + New
           </Link>
@@ -49,13 +50,13 @@ export default async function WorkoutSettingsPage() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Activities</h2>
+        <h2 className="section-title">Activities</h2>
         <p className="-mt-2 text-sm text-ink-muted">Cardio asks for a distance, bodyweight for exercises, a sport just for the time.</p>
         <ActivityManager activities={activities} />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Exercises</h2>
+        <h2 className="section-title">Exercises</h2>
         <ExerciseManager exercises={exercises} />
       </section>
     </div>

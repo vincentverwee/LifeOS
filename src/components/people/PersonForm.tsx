@@ -21,8 +21,7 @@ type Person = {
   trackContact: boolean;
 };
 
-const FIELD =
-  "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (

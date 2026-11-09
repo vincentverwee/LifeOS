@@ -19,7 +19,7 @@ export function LogPastDate({ routineId, todayKey }: { routineId: string; todayK
           type="date"
           required
           max={todayKey}
-          className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="min-w-0 flex-1 field"
         />
         <button type="submit" disabled={pending} className="btn btn-outline inline-flex min-h-11 px-5 text-sm">
           Log

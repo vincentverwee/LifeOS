@@ -23,6 +23,7 @@ import { Stepper } from "@/components/workouts/Stepper";
 import { ElapsedClock } from "@/components/workouts/ElapsedClock";
 import { HowItWent } from "@/components/workouts/HowItWent";
 import { FIELD } from "@/components/workouts/ui";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 const FAILED = "Couldn't save that. Check your connection and try again.";
 const SAVE_DELAY_MS = 600;
@@ -143,7 +144,6 @@ export function LiveSession({
   const [done, setDone] = useState<Record<string, boolean>>({});
   const [rest, setRestLocal] = useState<string | null>(restUntil);
   const [finishing, setFinishing] = useState(false);
-  const [confirmDiscard, setConfirmDiscard] = useState(false);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   // A refresh (this device or another) brings the truth: drop local edits it now matches, and
@@ -201,7 +201,6 @@ export function LiveSession({
   }
 
   function discard() {
-    if (!confirmDiscard) return setConfirmDiscard(true);
     run(async () => {
       await discardWorkout();
       void clearSessionNotification();
@@ -235,7 +234,7 @@ export function LiveSession({
       {groups.map((group) => {
         const first = group[0];
         return (
-          <section key={first.exerciseId} className="rounded-2xl border border-border bg-surface p-4">
+          <section key={first.exerciseId} className="card">
             <h2 className="font-semibold text-foreground">{first.exerciseName}</h2>
             <ol className="mt-2 flex flex-col gap-2">
               {group.map((s, i) => {
@@ -296,15 +295,14 @@ export function LiveSession({
         <button type="button" onClick={() => setFinishing(true)} className="btn btn-primary min-h-12 flex-1 px-5 font-semibold">
           Finish
         </button>
-        <button
-          type="button"
-          onClick={discard}
-          onBlur={() => setConfirmDiscard(false)}
+        <ConfirmButton
+          onConfirm={discard}
           disabled={pending}
-          className={`btn min-h-12 px-5 text-sm ${confirmDiscard ? "btn-destructive" : "btn-danger"}`}
+          confirmLabel="Tap again to throw it away"
+          className="min-h-12 px-5 text-sm"
         >
-          {confirmDiscard ? "Tap again to throw it away" : "Discard"}
-        </button>
+          Discard
+        </ConfirmButton>
       </div>
 
       <Sheet open={finishing} onOpenChange={setFinishing} title="How did it go?">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getSettingsData } from "@/lib/data";
 import { NewTripForm } from "@/components/settings/NewTripForm";
@@ -12,16 +13,15 @@ export default async function SettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Months are created automatically. Add a trip when you want a separate budget for it.
-        </p>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Months are created automatically. Add a trip when you want a separate budget for it."
+        back={{ href: "/budget", label: "Budget" }}
+      />
 
       <Link
         href="/budget/subscriptions"
-        className="tap flex min-h-14 items-center justify-between gap-3 rounded-xl border border-border bg-surface px-4 py-3"
+        className="tap flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-4 py-3"
       >
         <span className="flex flex-col">
           <span className="font-medium text-foreground">Subscriptions</span>
@@ -36,14 +36,14 @@ export default async function SettingsPage() {
 
       {trips.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="px-1 font-medium text-foreground">Trips</h2>
+          <h2 className="section-title px-1">Trips</h2>
           <TripList trips={trips} />
         </section>
       )}
 
       <section className="flex flex-col gap-2">
         <div className="px-1">
-          <h2 className="font-medium text-foreground">Months</h2>
+          <h2 className="section-title">Months</h2>
           <p className="text-sm text-ink-muted">
             Each month&apos;s budget, and which months it&apos;s compared with in Insights.
           </p>

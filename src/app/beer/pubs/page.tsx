@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getTodayKey } from "@/lib/today";
 import { getBeerVisits, getPubs } from "@/lib/data/beer";
 import { pubStats, type PubStats } from "@/lib/beer/stats";
@@ -27,14 +28,17 @@ export default async function PubsPage(props: PageProps<"/beer/pubs">) {
   const untagged = visits.filter((v) => !v.pubId).length;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Pubs</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          {stats.length} {stats.length === 1 ? "pub" : "pubs"}
-          {untagged > 0 && ` · ${untagged} ${untagged === 1 ? "beer" : "beers"} without a pub`}
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Pubs"
+        subtitle={
+          <>
+            {stats.length} {stats.length === 1 ? "pub" : "pubs"}
+            {untagged > 0 && ` · ${untagged} ${untagged === 1 ? "beer" : "beers"} without a pub`}
+          </>
+        }
+        back={{ href: "/beer", label: "Beer" }}
+      />
 
       <div className="flex gap-1 rounded-full bg-surface-muted p-1" role="group" aria-label="Sort">
         {(Object.keys(SORTS) as Sort[]).map((key) => (
@@ -54,9 +58,9 @@ export default async function PubsPage(props: PageProps<"/beer/pubs">) {
       {stats.length === 0 ? (
         <p className="text-sm text-ink-muted">No pubs yet. Pick one when you log a beer.</p>
       ) : (
-        <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+        <ul className="card-list">
           {stats.map((p) => (
-            <li key={p.id} className="border-b border-border last:border-b-0">
+            <li key={p.id}>
               <Link href={`/beer/pubs/${p.id}`} className="tap flex min-h-14 items-center justify-between gap-3 px-4 py-2">
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate font-medium text-foreground">{p.name}</span>

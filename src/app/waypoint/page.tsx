@@ -5,7 +5,7 @@ import { StatsGrid } from '@/components/waypoint/dashboard/StatsGrid';
 import { RecentTrips } from '@/components/waypoint/dashboard/RecentTrips';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { TripFilter } from '@/components/waypoint/map/TripFilter';
-import { Button } from '@/components/waypoint/ui/button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getAllTrips, getAllLocations } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { getDashboardStats } from '@/lib/waypoint/stats';
@@ -47,62 +47,56 @@ export default async function DashboardPage({ searchParams }: PageProps<'/waypoi
   const hasFilter = companions.length > 0 || anyVan;
 
   return (
-    <>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-semibold text-foreground">Dashboard</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {filter.kind === 'van' ? 'Your van at a glance' : 'Your travel journey at a glance'} ·{' '}
-              {describeTripFilter(filter, trips.length)}
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5">
-            <Link href="/waypoint/stickers">
-              <Sticker size={15} />
-              Stickers{stickerCount > 0 && <span className="text-muted-foreground tabular-nums">{stickerCount}</span>}
-            </Link>
-          </Button>
-        </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader section="waypoint"
+        title="Waypoint"
+        subtitle={`${filter.kind === 'van' ? 'Your van at a glance' : 'Your travels at a glance'} · ${describeTripFilter(filter, trips.length)}`}
+        action={
+          <Link href="/waypoint/stickers" className="btn btn-outline inline-flex min-h-11 shrink-0 px-4 text-sm">
+            <Sticker size={15} aria-hidden="true" />
+            Stickers{stickerCount > 0 && <span className="text-ink-muted tabular-nums">{stickerCount}</span>}
+          </Link>
+        }
+      />
 
-        <StatsGrid stats={stats} van={filter.kind === 'van'} />
+      <StatsGrid stats={stats} van={filter.kind === 'van'} />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-          <div className="flex min-w-0 flex-col gap-3">
-            <div className="flex items-center justify-between gap-3">
-              {hasFilter ? (
-                <TripFilter
-                  companions={companions}
-                  value={tripFilterValue(filter)}
-                  showVan={anyVan}
-                  basePath="/waypoint"
-                />
-              ) : (
-                <p className="text-sm font-medium text-muted-foreground">All trips</p>
-              )}
-              {/* Exports what the map shows as one post. */}
-              <Button asChild variant="outline" size="sm" className="shrink-0 gap-1.5">
-                <Link href={`/waypoint/map/export${tripFilterQuery(filter)}`} title="Export this map as an image">
-                  <ImageDown size={15} />
-                  Export map
-                </Link>
-              </Button>
-            </div>
-            <MapWrapper
-              // A fresh map per filter, so it zooms to the trips shown.
-              key={tripFilterValue(filter)}
-              className="h-[min(400px,60svh)] lg:h-[500px]"
-              locations={locations}
-              routes={routes}
-              tripLabels={tripLabels}
-              tripColors={tripColors}
-              markerStyle="dot"
-              selectable
+      <section className="flex min-w-0 flex-col gap-3">
+        <div className="flex items-center justify-between gap-3">
+          {hasFilter ? (
+            <TripFilter
+              companions={companions}
+              value={tripFilterValue(filter)}
+              showVan={anyVan}
+              basePath="/waypoint"
             />
-          </div>
-          <RecentTrips trips={recentTrips} title={filter.kind === 'van' ? 'Recent van trips' : undefined} />
+          ) : (
+            <h2 className="section-title">All trips</h2>
+          )}
+          {/* Exports what the map shows as one post. */}
+          <Link
+            href={`/waypoint/map/export${tripFilterQuery(filter)}`}
+            title="Export this map as an image"
+            className="btn btn-outline inline-flex min-h-11 shrink-0 px-4 text-sm"
+          >
+            <ImageDown size={15} aria-hidden="true" />
+            Export map
+          </Link>
         </div>
-      </div>
-    </>
+        <MapWrapper
+          // A fresh map per filter, so it zooms to the trips shown.
+          key={tripFilterValue(filter)}
+          className="h-[min(400px,60svh)]"
+          locations={locations}
+          routes={routes}
+          tripLabels={tripLabels}
+          tripColors={tripColors}
+          markerStyle="dot"
+          selectable
+        />
+      </section>
+
+      <RecentTrips trips={recentTrips} title={filter.kind === 'van' ? 'Recent van trips' : undefined} />
+    </div>
   );
 }

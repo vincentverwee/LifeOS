@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getActivities, getWorkouts } from "@/lib/data/workouts";
 import { getTodayKey } from "@/lib/today";
 import { parseDateKey } from "@/lib/format";
@@ -35,8 +36,8 @@ export default async function WorkoutLogPage({ searchParams }: PageProps<"/worko
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-semibold text-foreground">Log</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Log" back={{ href: "/workouts", label: "Workouts" }} />
 
       {used.length > 1 && (
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">

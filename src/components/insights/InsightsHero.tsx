@@ -18,7 +18,7 @@ export function InsightsHero({ month, stats, baseline, day }: InsightsHeroProps)
   const finished = stats.daysElapsed >= stats.daysInMonth;
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 sm:p-5">
+    <section className="card sm:p-5">
       <p className="text-sm text-ink-muted">
         {finished ? "Spent in total" : `Spent so far · day ${day} of ${stats.daysInMonth}`}
       </p>

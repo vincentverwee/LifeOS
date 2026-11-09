@@ -259,7 +259,7 @@ function Outro({ week, win, prevWeek, nextWeek }: { week: string; win: string | 
           maxLength={WIN_MAX}
           placeholder="Finally finished that essay…"
           aria-label="Win of the week"
-          className="min-h-11 rounded-xl border border-border bg-surface px-3 text-foreground"
+          className="field min-h-11"
         />
         <button type="submit" disabled={pending} className="btn btn-primary inline-flex min-h-11 justify-center px-5 text-sm font-semibold">
           {pending ? "Saving…" : "Save the win"}

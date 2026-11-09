@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { addGift, type PeopleFormState } from "@/lib/actions/people";
 import { keepInput } from "@/components/people/keepInput";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 function SubmitButton({ pending }: { pending: boolean }) {
   return (

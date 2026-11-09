@@ -36,7 +36,7 @@ export function EmptyState({ variant, className }: EmptyStateProps) {
 
   return (
     <div
-      className={`flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border px-6 py-10 text-center ${className ?? ""}`}
+      className={`flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border px-6 py-10 text-center ${className ?? ""}`}
     >
       <SheepIllustration kind="budget" />
       <p className="font-medium text-foreground">{copy.heading}</p>

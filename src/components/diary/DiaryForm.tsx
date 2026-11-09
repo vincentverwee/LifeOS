@@ -10,6 +10,8 @@ import {
 } from "@/lib/actions/diary";
 import { diaryBits, MAX_BIT_LENGTH, MOODS } from "@/lib/diary/onThisDay";
 import type { DiaryRow } from "@/lib/data/diary";
+import { SheepSpinner } from "@/components/icons/SheepSpinner";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 /**
  * One day of the diary: its bits so far, a quick box that adds another one to the end,
@@ -119,7 +121,7 @@ function AddBit({ date, entry, placeholder }: { date: string; entry: DiaryRow | 
               placeholder={placeholder}
               autoComplete="off"
               enterKeyHint="send"
-              className="min-h-11 w-full rounded-lg border border-border bg-surface px-3 py-2.5 pr-10 text-foreground"
+              className="min-h-11 w-full field pr-10"
             />
             {left < 40 && (
               <span
@@ -175,26 +177,28 @@ function EditDay({ date, entry, bits, onDone }: { date: string; entry: DiaryRow;
         value={text}
         onChange={(e) => setText(e.target.value)}
         aria-label="This day, one bit per line"
-        className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+        className="w-full field"
       />
       <p className="-mt-1 text-xs text-ink-muted">One bit per line.</p>
       <MoodPicker mood={mood} onPick={setMood} />
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
+      <button type="submit" disabled={saving || !text.trim()} className="btn btn-primary flex w-full px-4 py-3 text-base font-semibold">
+        {saving ? (
+          <span className="inline-flex items-center justify-center gap-2">
+            <SheepSpinner size={20} />
+            Saving…
+          </span>
+        ) : (
+          "Save"
+        )}
+      </button>
       <div className="flex items-center gap-2">
-        <button type="submit" disabled={saving || !text.trim()} className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <button type="button" onClick={onDone} className="btn btn-ghost inline-flex min-h-11 px-4 text-sm">
+        <button type="button" onClick={onDone} className="btn btn-ghost -ml-4 inline-flex min-h-11 px-4 text-sm">
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={remove}
-          disabled={deleting}
-          className="btn btn-ghost ml-auto inline-flex min-h-11 px-4 text-sm"
-        >
+        <ConfirmButton quiet onConfirm={remove} disabled={deleting} className="-mr-4 ml-auto inline-flex min-h-11 px-4 text-sm">
           {deleting ? "Deleting…" : "Delete day"}
-        </button>
+        </ConfirmButton>
       </div>
     </form>
   );

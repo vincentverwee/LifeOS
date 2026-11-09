@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, countdownChart } from "@/lib/lessons/stats";
@@ -12,7 +13,7 @@ import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-4">
+    <section className="card">
       <h2 className="font-medium text-foreground">{title}</h2>
       {hint && <p className="mt-0.5 text-sm text-ink-muted">{hint}</p>}
       <div className="mt-3">{children}</div>
@@ -29,8 +30,8 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
 
   if (!period) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Insights" back={{ href: typeof requested === "string" ? `/lessons?period=${encodeURIComponent(requested)}` : "/lessons", label: "Lessons" }} />
         <p className="text-sm text-ink-muted">No study period yet.</p>
       </div>
     );
@@ -51,11 +52,12 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
     .reverse();
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
-        <StudyPeriodSwitcher periods={periods} activeId={period.id} />
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Insights"
+        back={{ href: typeof requested === "string" ? `/lessons?period=${encodeURIComponent(requested)}` : "/lessons", label: "Lessons" }}
+        action={<StudyPeriodSwitcher periods={periods} activeId={period.id} />}
+      />
 
       <SummaryCards
         cards={[

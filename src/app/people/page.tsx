@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { byNextBirthday, getGroups, getPeople, getPeopleWeb } from "@/lib/data/people";
 import { getTodayKey } from "@/lib/today";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
@@ -13,17 +14,14 @@ export default async function PeoplePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Home
-        </Link>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">People</h1>
+      <PageHeader section="people"
+        title="People"
+        action={
           <Link href="/people/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
             + Add
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {birthdays.length > 0 && (
         <section className="rounded-2xl bg-primary p-4 text-primary-foreground">

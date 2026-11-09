@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getDiaryEntry, getMoodStrip, getOnThisDay, getRecentDiary } from "@/lib/data/diary";
 import { getTodayKey } from "@/lib/today";
 import { parseDateKey } from "@/lib/format";
@@ -23,20 +24,15 @@ export default async function DiaryPage({ searchParams }: PageProps<"/diary">) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Home
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">Diary</h1>
-      </div>
+      <PageHeader section="diary" title="Diary" />
 
-      <section className="rounded-2xl border border-border bg-surface p-4">
+      <section className="card">
         <h2 className="mb-3 font-semibold text-foreground">Today</h2>
         <DiaryForm key={todayKey} date={todayKey} entry={entry} placeholder="Add something…" />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">On this day</h2>
+        <h2 className="section-title">On this day</h2>
         <OnThisDay memories={memories} emptyText="Nothing from earlier years yet. It fills up as the years go by." />
       </section>
 
@@ -44,7 +40,7 @@ export default async function DiaryPage({ searchParams }: PageProps<"/diary">) {
 
       {(recent.rows.length > 0 || before) && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-foreground">{before ? "Older days" : "Timeline"}</h2>
+          <h2 className="section-title">{before ? "Older days" : "Timeline"}</h2>
           {recent.rows.length > 0 ? (
             <DiaryTimeline rows={recent.rows} />
           ) : (

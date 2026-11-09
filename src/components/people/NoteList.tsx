@@ -6,8 +6,9 @@ import { formatDay } from "@/lib/reminders/schedule";
 import type { NoteRow } from "@/lib/data/people";
 import { keepInput } from "@/components/people/keepInput";
 import { useQuickAction } from "@/components/people/useQuickAction";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 /** Notes shown before "Show all". */
 const SHOWN = 5;
 
@@ -68,16 +69,14 @@ function NoteItem({ note, todayKey }: { note: NoteRow; todayKey: string }) {
             <button type="button" onClick={() => setEditing(false)} className="btn btn-ghost inline-flex min-h-11 px-4 text-sm">
               Cancel
             </button>
-            <button
-              type="button"
+            <ConfirmButton
+              quiet
               disabled={saving || pending}
-              onClick={() => {
-                if (window.confirm("Delete this note?")) run(() => deleteNote(note.id));
-              }}
-              className="btn btn-ghost ml-auto inline-flex min-h-11 px-3 text-sm"
+              onConfirm={() => run(() => deleteNote(note.id))}
+              className="ml-auto inline-flex min-h-11 px-3 text-sm"
             >
               Delete
-            </button>
+            </ConfirmButton>
           </div>
         </form>
       </li>
@@ -127,7 +126,11 @@ export function NoteList({ personId, notes, todayKey }: { personId: string; note
         </ul>
       )}
       {notes.length > SHOWN && (
-        <button type="button" onClick={() => setShowAll((v) => !v)} className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm">
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm"
+        >
           {showAll ? "Show fewer" : `Show all ${notes.length}`}
         </button>
       )}

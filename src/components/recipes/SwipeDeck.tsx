@@ -1,5 +1,6 @@
 "use client";
 
+import { UndoBar } from "@/components/ui/UndoBar";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -184,14 +185,7 @@ export function SwipeDeck({ filters }: { filters: DeckFilters }) {
         </Sheet>
       )}
 
-      {toast && (
-        <div
-          role="status"
-          className="fixed inset-x-4 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-50 mx-auto max-w-sm rounded-xl bg-foreground px-4 py-3 text-sm text-background shadow-lg sm:bottom-6"
-        >
-          {toast}
-        </div>
-      )}
+      <UndoBar message={toast} />
     </div>
   );
 }
@@ -264,7 +258,7 @@ function DeckCard({
       </header>
 
       <section className="flex min-h-0 flex-1 flex-col px-4 pt-3">
-        <h3 className="text-xs font-semibold tracking-wide text-ink-muted uppercase">
+        <h3 className="text-sm text-ink-muted">
           {main.length + staples.length} ingredients
         </h3>
         {/* Fades out at the bottom when the list is longer than the card; the full list is behind "Full recipe". */}

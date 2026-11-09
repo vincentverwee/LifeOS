@@ -8,14 +8,14 @@ type DebtsListProps = {
 export function DebtsList({ debts }: DebtsListProps) {
   if (debts.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
+      <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-sm text-ink-muted">
         No debts on record.
       </p>
     );
   }
 
   return (
-    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+    <ul className="card-list">
       {debts.map((debt) => {
         const isOwedToUser = debt.amount >= 0;
         return (

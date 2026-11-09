@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import {
   getAllCategories,
   getAllPeriods,
@@ -26,7 +27,7 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
   if (!activePeriod) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold text-foreground">Expenses</h1>
+        <PageHeader title="Expenses" back={{ href: "/budget", label: "Budget" }} />
         <EmptyState variant="no-periods" />
       </div>
     );
@@ -54,16 +55,13 @@ export default async function ExpensesPage(props: PageProps<"/budget/expenses">)
   const periodParam = `period=${encodeURIComponent(encodePeriodKey(activePeriod))}`;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-6">
-      <div className="flex items-center justify-between gap-3 sm:items-end">
-        <div>
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Expenses</h1>
-          <p className="mt-1 text-sm text-ink-muted">
-            {shown.length} · {formatCurrency(total)}
-          </p>
-        </div>
-        <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Expenses"
+        subtitle={`${shown.length} · ${formatCurrency(total)}`}
+        back={{ href: "/budget", label: "Budget" }}
+        action={<PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />}
+      />
 
       <CategoryFilter
         chips={chips}

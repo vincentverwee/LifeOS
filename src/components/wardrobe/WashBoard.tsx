@@ -1,5 +1,6 @@
 "use client";
 
+import { UndoBar } from "@/components/ui/UndoBar";
 import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { WashingMachine } from "lucide-react";
@@ -98,7 +99,7 @@ function Heading({
   return (
     <div className="flex min-h-11 items-center justify-between gap-3">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">
+        <h2 className="section-title">
           {title}{" "}
           <span className="text-base font-normal text-ink-muted tabular-nums">{count}</span>
         </h2>
@@ -288,32 +289,7 @@ export function WashBoard({ items }: { items: Item[] }) {
         {drying.length === 0 ? <Empty>Nothing drying.</Empty> : rows(drying, STEPS.drying)}
       </section>
 
-      {/* Floats above the tab bar, so it's in view wherever the tick was. */}
-      <div
-        aria-live="polite"
-        className="pointer-events-none fixed inset-x-0 bottom-[calc(4.75rem+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md flex-col gap-2 px-4 sm:bottom-6"
-      >
-        {undo && (
-          <p className="pointer-events-auto flex items-center justify-between gap-3 rounded-full border border-border bg-surface py-1 pr-1 pl-4 text-sm text-foreground shadow-lg">
-            <span className="min-w-0 truncate">✓ {undo.label}</span>
-            <button
-              type="button"
-              onClick={() => undoMove(undo)}
-              className="btn btn-ghost inline-flex min-h-11 shrink-0 px-4 font-semibold"
-            >
-              Undo
-            </button>
-          </p>
-        )}
-        {error && (
-          <p
-            role="alert"
-            className="pointer-events-auto rounded-2xl border border-critical bg-surface px-4 py-3 text-sm text-critical shadow-lg"
-          >
-            {error}
-          </p>
-        )}
-      </div>
+      <UndoBar message={undo?.label} onUndo={undo ? () => undoMove(undo) : undefined} error={error} />
 
       <details
         open={cleanOpen}
@@ -342,7 +318,7 @@ export function WashBoard({ items }: { items: Item[] }) {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search clean clothes"
               aria-label="Search clean clothes"
-              className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+              className="field"
             />
           )}
           {clean.length === 0 ? (

@@ -19,6 +19,7 @@ export function LiveMascot({
   animal,
   size = 52,
   delay = 0,
+  badge = false,
 }: {
   kind: MascotKind;
   mood?: Mood;
@@ -27,15 +28,20 @@ export function LiveMascot({
   animal?: MascotAnimal;
   size?: number;
   delay?: number;
+  /** Home's look: a round badge with the mascot as a line mark (its wool the badge colour). */
+  badge?: boolean;
 }) {
   const [talking, setTalking] = useState(false);
   const [taps, setTaps] = useState(0);
   const [reacting, setReacting] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => {
-    if (timer.current) clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
 
   function onTap(e: MouseEvent) {
     e.preventDefault();
@@ -53,7 +59,16 @@ export function LiveMascot({
         type="button"
         onClick={onTap}
         aria-label={`${name}: ${line}`}
-        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-surface-muted text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+        className={`flex shrink-0 items-center justify-center bg-surface-muted text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+          badge ? "h-12 w-12 rounded-full" : "h-14 w-14 rounded-2xl"
+        }`}
+        style={
+          badge
+            ? ({
+                "--color-wool": "var(--color-surface-muted)",
+              } as CSSProperties)
+            : undefined
+        }
       >
         <span
           key={taps}

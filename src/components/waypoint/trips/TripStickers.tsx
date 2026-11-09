@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { Plus, Sticker as StickerIcon } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
 import { Sheet } from '@/components/recipes/Sheet';
 import { PhotoField } from '@/components/images/PhotoField';
 import { StickerImage } from '@/components/waypoint/StickerImage';
@@ -13,8 +14,6 @@ type Stop = { id: string; name: string; city: string | null };
 /** Longest side of a sticker cut-out (also `prisma/shrink-photos.ts`). */
 const STICKER_SIDE = 500;
 
-const FIELD = 'rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground';
-
 /**
  * The trip page's stickers: a row of cut-outs and a "+ Sticker" tile. Tapping one (or +)
  * opens the form: photo (Wardrobe's camera / library + shrink), name, the stop it was
@@ -25,14 +24,11 @@ export function TripStickers({ tripId, stickers, stops }: { tripId: string; stic
   const [editing, setEditing] = useState<Sticker | 'new' | null>(null);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <StickerIcon size={16} className="text-primary" />
-        <h3 className="font-semibold">
-          Stickers
-          {stickers.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">({stickers.length})</span>}
-        </h3>
-      </div>
+    <section className="flex flex-col gap-3">
+      <h2 className="section-title">
+        Stickers
+        {stickers.length > 0 && <span className="ml-2 text-sm font-normal text-ink-muted tabular-nums">{stickers.length}</span>}
+      </h2>
       <ul className="flex flex-wrap gap-3">
         {stickers.map((s) => (
           <li key={s.id} className="w-24">
@@ -45,7 +41,7 @@ export function TripStickers({ tripId, stickers, stops }: { tripId: string; stic
               <StickerImage photoId={s.photoId} cutout={s.cutout} name={s.name ?? 'Sticker'} className="aspect-square w-full rounded-xl" />
               {s.name && <p className="mt-1 truncate text-xs text-foreground">{s.name}</p>}
               {s.locationId && (
-                <p className={`truncate text-xs text-muted-foreground ${s.name ? '' : 'mt-1'}`}>
+                <p className={`truncate text-xs text-ink-muted ${s.name ? '' : 'mt-1'}`}>
                   {stops.find((stop) => stop.id === s.locationId)?.name}
                 </p>
               )}
@@ -56,14 +52,14 @@ export function TripStickers({ tripId, stickers, stops }: { tripId: string; stic
           <button
             type="button"
             onClick={() => setEditing('new')}
-            className="tap flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-sm text-muted-foreground"
+            className="tap flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border text-sm text-ink-muted"
           >
             <Plus size={20} aria-hidden="true" />
             Sticker
           </button>
         </li>
       </ul>
-      {stickers.length === 0 && <p className="text-sm text-muted-foreground">Add the sticker from this trip.</p>}
+      {stickers.length === 0 && <p className="text-sm text-ink-muted">Add the sticker from this trip.</p>}
 
       {/* A bottom sheet on phones (the form is taller than the screen; a centred dialog scrolls badly there). */}
       <Sheet open={editing !== null} onOpenChange={(open) => !open && setEditing(null)} title={editing === 'new' ? 'New sticker' : 'Sticker'}>
@@ -78,7 +74,7 @@ export function TripStickers({ tripId, stickers, stops }: { tripId: string; stic
           />
         )}
       </Sheet>
-    </div>
+    </section>
   );
 }
 
@@ -97,7 +93,6 @@ function StickerForm({
   const [shrinking, setShrinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -153,13 +148,13 @@ function StickerForm({
 
       <label className="flex flex-col gap-1">
         <span className="text-sm text-ink-muted">Name (optional)</span>
-        <input name="name" type="text" maxLength={80} defaultValue={sticker?.name ?? ''} placeholder="e.g. Mont Ventoux" className={FIELD} />
+        <input name="name" type="text" maxLength={80} defaultValue={sticker?.name ?? ''} placeholder="e.g. Mont Ventoux" className="field" />
       </label>
 
       {stops.length > 0 && (
         <label className="flex flex-col gap-1">
           <span className="text-sm text-ink-muted">Bought at</span>
-          <select name="locationId" defaultValue={sticker?.locationId ?? ''} className={FIELD}>
+          <select name="locationId" defaultValue={sticker?.locationId ?? ''} className="field">
             <option value="">No stop</option>
             {stops.map((s) => (
               <option key={s.id} value={s.id}>
@@ -172,7 +167,7 @@ function StickerForm({
 
       <label className="flex flex-col gap-1">
         <span className="text-sm text-ink-muted">Note (optional)</span>
-        <textarea name="note" rows={2} maxLength={500} defaultValue={sticker?.note ?? ''} placeholder="Where you found it, what it cost…" className={FIELD} />
+        <textarea name="note" rows={2} maxLength={500} defaultValue={sticker?.note ?? ''} placeholder="Where you found it, what it cost…" className="field" />
       </label>
 
       {error && <p className="text-sm text-critical">{error}</p>}
@@ -181,21 +176,11 @@ function StickerForm({
         {pending ? 'Saving…' : 'Save'}
       </button>
 
-      {sticker &&
-        (confirmDelete ? (
-          <div className="flex gap-2">
-            <button type="button" onClick={() => setConfirmDelete(false)} className="btn btn-outline flex min-h-11 flex-1 px-4 text-sm">
-              Keep it
-            </button>
-            <button type="button" disabled={pending} onClick={remove} className="btn btn-destructive flex min-h-11 flex-1 px-4 text-sm">
-              Delete sticker
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="btn btn-danger flex min-h-11 w-full px-4 text-sm">
-            Delete
-          </button>
-        ))}
+      {sticker && (
+        <ConfirmButton onConfirm={remove} disabled={pending} className="flex min-h-11 w-full px-4 text-sm">
+          Delete sticker
+        </ConfirmButton>
+      )}
     </form>
   );
 }

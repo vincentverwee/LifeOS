@@ -38,7 +38,7 @@ export function StudyHero({
   const today = stats.todayHours ?? 0;
   const inBlok = stats.phase.kind === "blok";
   return (
-    <section className="rounded-xl border border-border bg-surface p-5">
+    <section className="card p-5">
       <p className="text-sm font-medium text-ink-muted">{status}</p>
       <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-foreground">
         {formatHours(today)} <span className="text-lg font-normal text-ink-muted">today</span>
@@ -72,7 +72,7 @@ export function StudyHero({
 export function UpcomingExams({ exams }: { exams: UpcomingExam[] }) {
   if (exams.length === 0) return null;
   return (
-    <section className="rounded-xl border border-border bg-surface p-4">
+    <section className="card">
       <h2 className="font-medium text-foreground">Coming up</h2>
       <ul className="mt-2 flex flex-col divide-y divide-border">
         {exams.slice(0, 4).map(({ exam, course, daysUntil }) => (
@@ -112,7 +112,7 @@ export function StudyPace({ pace, insightsHref }: { pace: Pace; insightsHref: st
     ...pace.peers,
   ];
   return (
-    <section className="rounded-xl border border-border bg-surface p-4">
+    <section className="card">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="font-medium text-foreground">
           {pace.daysToEnd} days <span className="font-normal text-ink-muted">before the last exam</span>

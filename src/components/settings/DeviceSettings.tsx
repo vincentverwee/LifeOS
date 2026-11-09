@@ -24,11 +24,11 @@ export function DeviceSettings({
   return (
     <>
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+        <h2 className="section-title">Notifications</h2>
         <NotificationSettings devices={devices} publicKey={publicKey} status={status} setStatus={setStatus} />
       </section>
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">Weather location</h2>
+        <h2 className="section-title">Weather location</h2>
         <WeatherLocation status={status} devices={devices} />
       </section>
     </>

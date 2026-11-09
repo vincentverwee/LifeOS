@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getItems, getLastWashOn } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
@@ -12,13 +13,16 @@ export default async function WardrobePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Wash</h1>
-        <p className="text-sm text-ink-muted">
-          {items.length === 0 ? "No clothes yet." : `${clean} of ${items.length} ${items.length === 1 ? "item" : "items"} clean`}
-          {lastWashOn && ` · last wash ${describeSince(lastWashOn, todayKey).toLowerCase()}`}
-        </p>
-      </div>
+      <PageHeader
+        title="Wash"
+        subtitle={
+          <>
+            {items.length === 0 ? "No clothes yet." : `${clean} of ${items.length} ${items.length === 1 ? "item" : "items"} clean`}
+            {lastWashOn && ` · last wash ${describeSince(lastWashOn, todayKey).toLowerCase()}`}
+          </>
+        }
+        back={{ href: "/wardrobe/items", label: "Wardrobe" }}
+      />
 
       {items.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">

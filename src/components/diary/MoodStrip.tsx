@@ -9,7 +9,7 @@ export function MoodStrip({ days }: { days: { date: string; mood: number | null 
   const face = moodOf(Math.round(average));
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-4">
+    <section className="card">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="font-semibold text-foreground">Mood · last {days.length} days</h2>
         {face && (

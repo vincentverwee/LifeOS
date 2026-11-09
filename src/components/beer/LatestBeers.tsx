@@ -25,7 +25,6 @@ export function LatestBeers({
   const [, startTransition] = useTransition();
 
   function remove(beer: ListExpense) {
-    if (!window.confirm(`Delete ${formatCurrency(beer.amount)} · ${beer.categoryName}?`)) return;
     setError(null);
     startTransition(async () => {
       const result = await deleteExpense(beer.id);
@@ -40,12 +39,12 @@ export function LatestBeers({
   return (
     <>
       {error && <p className="text-sm text-critical">{error}</p>}
-      <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+      <ul className="card-list">
         {beers.map((b) => {
           const pintPrice = categories.find((c) => c.id === b.categoryId)?.pintPrice ?? 0;
           const pints = pintsOf({ amount: b.amount, pintPrice, pints: b.pints });
           return (
-            <li key={b.id} className="border-b border-border last:border-b-0">
+            <li key={b.id}>
               {editingId === b.id ? (
                 <div className="p-3">
                   <EditRow

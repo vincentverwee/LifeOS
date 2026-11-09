@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getActiveCategories } from "@/lib/data";
 import { getSubscription, type SubscriptionCharge } from "@/lib/data/subscriptions";
@@ -13,12 +13,12 @@ const SHOWN_CHARGES = 6;
 /** Charges latest first; one that cost something else than the charge before it shows the change. */
 function ChargeList({ charges, limit = charges.length }: { charges: SubscriptionCharge[]; limit?: number }) {
   return (
-    <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+    <ul className="card-list">
       {charges.slice(0, limit).map((c, i) => {
         const before = charges[i + 1];
         const changed = before && before.amount !== c.amount;
         return (
-          <li key={c.id} className="flex min-h-11 items-center justify-between gap-3 border-b border-border px-4 py-2 text-sm last:border-b-0">
+          <li key={c.id} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2 text-sm">
             <span className="text-foreground">{formatDate(c.date)}</span>
             <span className="font-mono tabular-nums text-foreground">
               {changed && <span className="text-ink-muted">{formatCurrency(before.amount)} → </span>}
@@ -44,20 +44,15 @@ export default async function SubscriptionPage({ params }: PageProps<"/budget/su
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/budget/subscriptions" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Subscriptions
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{subscription.name}</h1>
-      </div>
+      <PageHeader title={subscription.name} back={{ href: "/budget/subscriptions", label: "Subscriptions" }} />
 
-      <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="card">
         <SubscriptionForm subscription={subscription} categories={options} todayKey={todayKey} />
       </div>
 
       <section className="flex flex-col gap-2">
         <div className="flex items-baseline justify-between gap-3 px-1">
-          <h2 className="font-medium text-foreground">Charges</h2>
+          <h2 className="section-title">Charges</h2>
           {charges.length > 0 && (
             <span className="font-mono text-sm tabular-nums text-ink-muted">
               {formatCurrency(total)} in {charges.length} {charges.length === 1 ? "charge" : "charges"}

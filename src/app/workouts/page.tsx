@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getActivities, getBodyWeights, getLiveWorkout, getTemplates, getWorkouts, getWorkoutsGlance } from "@/lib/data/workouts";
 import { getSectionMood } from "@/lib/data/homeMoods";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -32,13 +33,12 @@ export default async function WorkoutsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3">
-        <LiveMascot kind="workouts" mood={mood.mood} name={coach} line={mood.line} />
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Workouts</h1>
-          <p className="text-sm text-ink-muted">{coach}</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Workouts"
+        subtitle={coach}
+        section="workouts"
+        mascot={<LiveMascot kind="workouts" mood={mood.mood} name={coach} line={mood.line} size={42} badge />}
+      />
 
       {live && (
         <Link
@@ -61,7 +61,7 @@ export default async function WorkoutsPage() {
         </Link>
       )}
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
+      <section className="card p-5">
         <div className="flex items-baseline justify-between gap-3">
           <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
             {week.done}
@@ -95,14 +95,14 @@ export default async function WorkoutsPage() {
 
       {!live && (
         <section className="flex flex-col gap-3">
-          <h2 className="text-lg font-semibold text-foreground">Train now</h2>
+          <h2 className="section-title">Train now</h2>
           <StartPanel templates={templates} activities={activities} />
         </section>
       )}
 
       <section className="flex flex-col gap-1">
         <div className="flex items-baseline justify-between px-3">
-          <h2 className="text-lg font-semibold text-foreground">Latest</h2>
+          <h2 className="section-title">Latest</h2>
           {recent.length > 0 && (
             <Link href="/workouts/log" className="btn btn-ghost -mr-3 inline-flex min-h-11 px-3 text-sm">
               All ›
@@ -110,12 +110,11 @@ export default async function WorkoutsPage() {
           )}
         </div>
         {recent.length === 0 ? (
-          <p className="px-3 text-sm text-ink-muted">
+          <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
             Nothing yet. Start a session above, or{" "}
-            <Link href="/workouts/add" className="text-primary underline">
+            <Link href="/workouts/add" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
               log one you did
             </Link>
-            .
           </p>
         ) : (
           <ul className="flex flex-col">

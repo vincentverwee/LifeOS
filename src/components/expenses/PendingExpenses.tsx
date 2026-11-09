@@ -37,7 +37,7 @@ export function PendingExpenses() {
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4" aria-live="polite">
+    <section className="flex flex-col gap-3 card" aria-live="polite">
       <div className="flex items-center justify-between gap-3">
         <h2 className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
           <CloudOff size={16} aria-hidden="true" className="text-warning-text" />

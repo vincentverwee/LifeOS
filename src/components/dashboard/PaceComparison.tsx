@@ -23,7 +23,7 @@ export function PaceComparison({ day, daysInMonth, spent, rows, insightsHref }: 
   if (rows.length === 0) return null;
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4">
+    <section className="card">
       <div className="flex items-baseline justify-between gap-2">
         <h2 className="font-medium text-foreground">
           By day {day} <span className="font-normal text-ink-muted">of {daysInMonth}</span>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { formatLongDay } from "@/lib/format";
 import { Suspense } from "react";
 import { getDebts, getPeriodData, getPeriodSummaries, getSavingsEntries } from "@/lib/data";
 import { computeMonthStats, cumulativeAtDay } from "@/lib/monthStats";
@@ -72,27 +74,20 @@ export default async function TodayPage() {
     .filter((m) => m !== null)
     .map((month) => ({ month, stats: computeMonthStats(month, todayKey) }));
 
-  const dateLabel = new Intl.DateTimeFormat("nl-BE", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    timeZone: tz,
-  }).format(new Date());
-
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Today</h1>
-          <p className="mt-1 text-sm text-ink-muted first-letter:uppercase">{dateLabel}</p>
-        </div>
-        <Link
-          href="/budget/add"
-          className="btn btn-primary hidden px-5 py-2.5 text-sm font-semibold sm:inline-flex"
-        >
-          + Add expense
-        </Link>
-      </div>
+      <PageHeader section="budget"
+        title="Budget"
+        subtitle={formatLongDay(todayKey)}
+        action={
+          <Link
+            href="/budget/add"
+            className="btn btn-primary hidden px-5 py-2.5 text-sm font-semibold sm:inline-flex"
+          >
+            + Add expense
+          </Link>
+        }
+      />
 
       <Suspense>
         <DueSubscriptionsCard todayKey={todayKey} />
@@ -134,14 +129,14 @@ async function SavingsAndDebts() {
     <>
       {savings.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-medium text-foreground">Savings trend</h2>
+          <h2 className="section-title">Savings trend</h2>
           <SavingsTrendChart entries={savings} />
         </section>
       )}
 
       {debts.length > 0 && (
         <section className="flex flex-col gap-3">
-          <h2 className="font-medium text-foreground">Debts</h2>
+          <h2 className="section-title">Debts</h2>
           <DebtsList debts={debts} />
         </section>
       )}

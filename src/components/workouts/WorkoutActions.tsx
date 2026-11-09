@@ -5,20 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deleteWorkout, saveAsTemplate } from "@/lib/actions/workouts";
 import { FIELD } from "@/components/workouts/ui";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 const FAILED = "Couldn't save that. Check your connection and try again.";
 
 /** Edit · Save as template · Delete (a second tap confirms; no browser dialogs). */
 export function WorkoutActions({ id, hasSets, suggestedName }: { id: string; hasSets: boolean; suggestedName: string }) {
   const router = useRouter();
-  const [confirming, setConfirming] = useState(false);
   const [naming, setNaming] = useState(false);
   const [name, setName] = useState(suggestedName);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function remove() {
-    if (!confirming) return setConfirming(true);
     startTransition(async () => {
       try {
         await deleteWorkout(id);
@@ -55,15 +54,9 @@ export function WorkoutActions({ id, hasSets, suggestedName }: { id: string; has
             Save as template
           </button>
         )}
-        <button
-          type="button"
-          onClick={remove}
-          onBlur={() => setConfirming(false)}
-          disabled={pending}
-          className={`btn min-h-11 px-5 text-sm ${confirming ? "btn-destructive" : "btn-danger"}`}
-        >
-          {confirming ? "Tap again to delete" : "Delete"}
-        </button>
+        <ConfirmButton onConfirm={remove} disabled={pending} className="min-h-11 px-5 text-sm">
+          Delete
+        </ConfirmButton>
       </div>
       {naming && (
         <div className="flex gap-2">

@@ -19,5 +19,10 @@ export default async function AllTripsExportPage({ searchParams }: PageProps<'/w
   const filter = readTripFilter(params, companions, { anyVan: allTrips.some((t) => t.with_van), saved });
   const trips = allTrips.filter((t) => keepTrip(filter, t));
   const shownIds = new Set(trips.map((t) => t.id));
-  return <AllTripsExport trips={trips} locations={allLocations.filter((l) => shownIds.has(l.trip_id))} />;
+  // data-waypoint widens the root <main>: room for the controls beside the preview.
+  return (
+    <div data-waypoint>
+      <AllTripsExport trips={trips} locations={allLocations.filter((l) => shownIds.has(l.trip_id))} />
+    </div>
+  );
 }

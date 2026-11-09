@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getTodayKey } from "@/lib/today";
 import { getBeerVisits, getPubOptions, getPubs } from "@/lib/data/beer";
 import { getAllCategories, getLatestBeers } from "@/lib/data";
@@ -24,14 +25,14 @@ export default async function BeerPage() {
 
   if (visits.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Beer</h1>
-        <p className="text-sm text-ink-muted">
-          No beers yet. Log one on Add expense with a beer category (a category with a pint price) and pick the pub.
-        </p>
-        <Link href={LOG_BEER_HREF} className="btn btn-primary inline-flex self-start px-5 py-2.5 text-sm font-semibold">
-          Log a beer
-        </Link>
+      <div className="flex flex-col gap-6">
+        <PageHeader section="beer" title="Beer" />
+        <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+          <p>No beers yet. Log one on Add expense with a beer category (a category with a pint price) and pick the pub.</p>
+          <Link href={LOG_BEER_HREF} className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
+            Log a beer
+          </Link>
+        </div>
       </div>
     );
   }
@@ -48,9 +49,9 @@ export default async function BeerPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold text-foreground">Beer</h1>
+      <PageHeader section="beer" title="Beer" />
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
+      <section className="card p-5">
         <p className="text-sm text-ink-muted">This month</p>
         <p className="mt-1 font-mono text-4xl font-semibold tabular-nums text-foreground">
           {month.pints} <span className="text-lg text-ink-muted">{month.pints === 1 ? "pint" : "pints"}</span>
@@ -83,10 +84,10 @@ export default async function BeerPage() {
 
       {stats.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="font-medium text-foreground">Your pubs</h2>
-          <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+          <h2 className="section-title">Your pubs</h2>
+          <ul className="card-list">
             {stats.slice(0, TOP_PUBS).map((p) => (
-              <li key={p.id} className="border-b border-border last:border-b-0">
+              <li key={p.id}>
                 <Link href={`/beer/pubs/${p.id}`} className="tap flex min-h-14 items-center justify-between gap-3 px-4 py-2">
                   <span className="flex min-w-0 flex-col">
                     <span className="truncate font-medium text-foreground">{p.name}</span>
@@ -108,7 +109,7 @@ export default async function BeerPage() {
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-medium text-foreground">Latest beers</h2>
+        <h2 className="section-title">Latest beers</h2>
         <LatestBeers
           beers={latest}
           categories={categories.map(({ id, name, isArchived, pintPrice }) => ({ id, name, isArchived, pintPrice }))}

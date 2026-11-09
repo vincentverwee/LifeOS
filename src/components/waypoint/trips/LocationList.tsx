@@ -4,19 +4,9 @@ import { useState } from 'react';
 import { Location } from '@/lib/waypoint/types';
 import { Button } from '@/components/waypoint/ui/button';
 import { Input } from '@/components/waypoint/ui/input';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/waypoint/ui/alert-dialog';
+import { ConfirmButton } from '@/components/ui/ConfirmButton';
 import { StickerImage } from '@/components/waypoint/StickerImage';
-import { MapPin, Trash2, ChevronUp, ChevronDown, CalendarDays, StickyNote, Car, Plane } from 'lucide-react';
+import { Trash2, ChevronUp, ChevronDown, CalendarDays, Car, Plane } from 'lucide-react';
 
 interface LocationListProps {
   locations: Location[];
@@ -48,13 +38,9 @@ export function LocationList({
 
   if (locations.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-12 text-center">
-        <MapPin size={32} className="mb-3 text-muted-foreground/40" />
-        <p className="text-sm font-medium text-muted-foreground">No locations yet</p>
-        <p className="mt-1 text-xs text-muted-foreground/60">
-          Use the search above to add your first stop
-        </p>
-      </div>
+      <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+        No stops yet. Search above to add the first one.
+      </p>
     );
   }
 
@@ -74,7 +60,7 @@ export function LocationList({
           return (
             <div
               key={loc.id}
-              className="relative animate-in fade-in slide-in-from-left-2 duration-200"
+              className="relative"
             >
               {/* How this stop was reached from the previous one: tap to switch car ↔ plane. */}
               {!isFirst && (
@@ -90,13 +76,13 @@ export function LocationList({
                   >
                     <span
                       className={`flex h-7 w-7 items-center justify-center rounded-full border bg-card ${
-                        loc.arrived_by_plane ? 'border-primary text-primary' : 'border-border text-muted-foreground'
+                        loc.arrived_by_plane ? 'border-primary text-primary' : 'border-border text-ink-muted'
                       }`}
                     >
                       {loc.arrived_by_plane ? <Plane size={14} /> : <Car size={14} />}
                     </span>
                   </button>
-                  {loc.arrived_by_plane && <span className="text-xs text-muted-foreground">By plane</span>}
+                  {loc.arrived_by_plane && <span className="text-xs text-ink-muted">By plane</span>}
                 </div>
               )}
               <div className="flex items-start gap-3">
@@ -121,14 +107,14 @@ export function LocationList({
                             />
                           ))}
                           {stickerStops[loc.id].length > 3 && (
-                            <span className="pl-4 text-xs text-muted-foreground">+{stickerStops[loc.id].length - 3}</span>
+                            <span className="pl-4 text-xs text-ink-muted">+{stickerStops[loc.id].length - 3}</span>
                           )}
                         </span>
                       )}
                       <div className="min-w-0">
                         <p className="truncate font-medium text-sm">{loc.name}</p>
                         {loc.country && (
-                          <p className="text-xs text-muted-foreground">{loc.country}</p>
+                          <p className="text-xs text-ink-muted">{loc.country}</p>
                         )}
                       </div>
                     </div>
@@ -163,44 +149,25 @@ export function LocationList({
                       >
                         <ChevronDown size={16} />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="ml-1.5 h-10 w-10 text-destructive hover:text-destructive sm:ml-0 sm:h-8 sm:w-8"
-                            disabled={disabled}
-                            title="Remove"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove location?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Remove <strong>{loc.name}</strong> from this trip?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction destructive onClick={() => onRemove(loc.id)}>
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <ConfirmButton
+                        quiet
+                        onConfirm={() => onRemove(loc.id)}
+                        disabled={disabled}
+                        confirmLabel="Remove?"
+                        aria-label={`Remove ${loc.name}`}
+                        className="ml-1.5 inline-flex h-10 min-w-10 px-2 text-sm sm:ml-0 sm:h-8 sm:min-w-8"
+                      >
+                        <Trash2 size={16} aria-hidden="true" />
+                      </ConfirmButton>
                     </div>
                   </div>
 
                   {/* Expanded: dates and notes */}
                   {isExpanded && (
-                    <div className="overflow-hidden border-t border-border animate-in fade-in slide-in-from-top-1 duration-200">
+                    <div className="overflow-hidden border-t border-border">
                       <div className="grid grid-cols-2 gap-3 p-3 pb-3">
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">
-                            Arrival
-                          </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-sm text-ink-muted">Arrival</span>
                           <Input
                             type="date"
                             defaultValue={loc.arrival_date ?? ''}
@@ -210,11 +177,9 @@ export function LocationList({
                               onUpdateDates(loc.id, e.target.value, loc.departure_date ?? '')
                             }
                           />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground">
-                            Departure
-                          </label>
+                        </label>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-sm text-ink-muted">Departure</span>
                           <Input
                             type="date"
                             defaultValue={loc.departure_date ?? ''}
@@ -224,23 +189,20 @@ export function LocationList({
                               onUpdateDates(loc.id, loc.arrival_date ?? '', e.target.value)
                             }
                           />
-                        </div>
-                        <div className="col-span-2 space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                            <StickyNote size={11} />
-                            Notes
-                          </label>
+                        </label>
+                        <label className="col-span-2 flex flex-col gap-1">
+                          <span className="text-sm text-ink-muted">Notes</span>
                           <textarea
                             defaultValue={loc.notes ?? ''}
                             placeholder="Add notes about this stop…"
                             rows={2}
-                            className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                            className="field w-full resize-none placeholder:text-ink-muted"
                             onBlur={(e) =>
                               e.target.value !== (loc.notes ?? '') &&
                               onUpdateNotes(loc.id, e.target.value)
                             }
                           />
-                        </div>
+                        </label>
                       </div>
                     </div>
                   )}

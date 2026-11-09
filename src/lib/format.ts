@@ -33,6 +33,18 @@ export function formatDate(value: string | Date): string {
   return dateFormatter.format(typeof value === "string" ? new Date(value) : value);
 }
 
+const longDayFormatter = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  timeZone: "UTC",
+});
+
+/** "YYYY-MM-DD" -> "Monday 9 November" (page subtitles). */
+export function formatLongDay(key: string): string {
+  return longDayFormatter.format(new Date(`${key}T00:00:00Z`));
+}
+
 export function formatPercent(value: number): string {
   return `${percentFormatter.format(value)}%`;
 }

@@ -13,7 +13,7 @@ import { ItemPhoto } from "./ItemPhoto";
 type Item = { id: string; name: string; categoryId: string | null; photoId: string | null; photoCutout: boolean };
 type Outfit = { id: string; name: string; notes: string | null; itemIds: string[] };
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 /** Add (no `outfit`) or edit an outfit: a name and the pieces, tapped on their photos. */
 export function OutfitForm({ outfit, items, categories }: { outfit?: Outfit; items: Item[]; categories: Category[] }) {

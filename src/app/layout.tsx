@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { QuickRail } from "@/components/home/QuickRail";
+import { railSections } from "@/components/home/TileBodies";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Navigation } from "@/components/Navigation";
 import { StandaloneStart } from "@/components/StandaloneStart";
@@ -59,6 +61,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col">
         <Navigation />
+        {/* Swipe left on any page for the column of section mascots (Home renders its own, with moods and dots). */}
+        <QuickRail global sections={railSections()} />
         <TimeZoneSync />
         <StandaloneStart />
         <ServiceWorkerRegister />

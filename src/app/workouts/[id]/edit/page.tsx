@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getActivities, getExercises, getLastSets, getPlaces, getWorkout } from "@/lib/data/workouts";
 import { getPeopleNames } from "@/lib/data/people";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -21,8 +22,8 @@ export default async function EditWorkoutPage({ params }: PageProps<"/workouts/[
   if (!workout) notFound();
   if (!workout.endedAt) redirect("/workouts/session");
   return (
-    <div className="flex flex-col gap-5">
-      <h1 className="text-2xl font-semibold text-foreground">Edit workout</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Edit workout" back={{ href: `/workouts/${workout.id}`, label: workout.activity.name }} />
       <WorkoutForm
         activities={activities}
         exercises={exercises}

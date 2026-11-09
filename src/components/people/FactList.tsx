@@ -5,8 +5,9 @@ import { addFact, deleteFact, updateFact, type PeopleFormState } from "@/lib/act
 import type { FactRow } from "@/lib/data/people";
 import { keepInput } from "@/components/people/keepInput";
 import { useQuickAction } from "@/components/people/useQuickAction";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 /** Suggestions for the label; anything else can be typed. */
 const LABELS = [
@@ -74,7 +75,7 @@ function FactItem({ fact }: { fact: FactRow }) {
 
   if (editing) {
     return (
-      <li className={`rounded-xl border border-primary bg-surface p-3 ${pending ? "opacity-60" : ""}`}>
+      <li className={`rounded-2xl border border-primary bg-surface p-3 ${pending ? "opacity-60" : ""}`}>
         <form onSubmit={keepInput(formAction)} className="flex flex-col gap-2">
           <input type="hidden" name="id" value={fact.id} />
           <FactFields fact={fact} />
@@ -85,16 +86,14 @@ function FactItem({ fact }: { fact: FactRow }) {
             <button type="button" onClick={() => setEditing(false)} className="btn btn-ghost inline-flex min-h-11 px-4 text-sm">
               Cancel
             </button>
-            <button
-              type="button"
+            <ConfirmButton
+              quiet
               disabled={saving || pending}
-              onClick={() => {
-                if (window.confirm(`Delete "${fact.label}"?`)) run(() => deleteFact(fact.id));
-              }}
-              className="btn btn-ghost ml-auto inline-flex min-h-11 px-3 text-sm"
+              onConfirm={() => run(() => deleteFact(fact.id))}
+              className="ml-auto inline-flex min-h-11 px-3 text-sm"
             >
               Delete
-            </button>
+            </ConfirmButton>
           </div>
         </form>
       </li>

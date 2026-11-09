@@ -45,7 +45,7 @@ export function StartPanel({ templates, activities }: { templates: TemplateView[
                 type="button"
                 disabled={pending}
                 onClick={() => start(t.activity.id, t.id)}
-                className="tap flex w-full items-center gap-3 rounded-xl border border-border bg-surface p-3 text-left hover:border-primary disabled:opacity-60"
+                className="tap flex w-full items-center gap-3 card p-3 text-left hover:border-primary disabled:opacity-60"
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
                   <Play size={18} aria-hidden="true" />

@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/workouts";
 import { ACTIVITY_KIND_LABELS, ACTIVITY_KINDS, type Activity, type ExerciseRow } from "@/lib/workouts/types";
 import { ActivityDot, FIELD } from "@/components/workouts/ui";
+import { Disclosure } from "@/components/Disclosure";
 
 const FAILED = "Couldn't save that. Check your connection and try again.";
 
@@ -165,10 +166,9 @@ export function ActivityManager({ activities }: { activities: Activity[] }) {
       <ul className="divide-y divide-border">{active.map(row)}</ul>
       <ActivityForm />
       {archived.length > 0 && (
-        <details>
-          <summary className="min-h-11 cursor-pointer py-2 text-sm text-ink-muted">Archived ({archived.length})</summary>
+        <Disclosure title={`Archived (${archived.length})`}>
           <ul className="divide-y divide-border">{archived.map(row)}</ul>
-        </details>
+        </Disclosure>
       )}
       <ErrorLine error={error} />
     </div>
@@ -251,10 +251,9 @@ export function ExerciseManager({ exercises }: { exercises: ExerciseRow[] }) {
       <ul className="divide-y divide-border">{active.map(row)}</ul>
       <ExerciseForm />
       {archived.length > 0 && (
-        <details>
-          <summary className="min-h-11 cursor-pointer py-2 text-sm text-ink-muted">Archived ({archived.length})</summary>
+        <Disclosure title={`Archived (${archived.length})`}>
           <ul className="divide-y divide-border">{archived.map(row)}</ul>
-        </details>
+        </Disclosure>
       )}
       <ErrorLine error={error} />
     </div>

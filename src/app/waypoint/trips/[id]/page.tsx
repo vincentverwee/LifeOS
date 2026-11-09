@@ -18,13 +18,16 @@ export default async function TripDetailPage({ params }: PageProps<'/waypoint/tr
   ]);
   if (!data) notFound();
   // Keyed so navigating to another trip starts from that trip's data.
+  // data-waypoint widens the root <main>: the stops and the route map sit side by side on desktop.
   return (
-    <TripDetail
-      key={id}
-      initialTrip={data.trip}
-      initialLocations={data.locations}
-      people={<TripPeople tripId={id} people={people} everyone={everyone} groups={groups} />}
-      stickers={stickers}
-    />
+    <div data-waypoint>
+      <TripDetail
+        key={id}
+        initialTrip={data.trip}
+        initialLocations={data.locations}
+        people={<TripPeople tripId={id} people={people} everyone={everyone} groups={groups} />}
+        stickers={stickers}
+      />
+    </div>
   );
 }

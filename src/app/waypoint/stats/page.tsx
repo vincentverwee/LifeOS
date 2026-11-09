@@ -4,7 +4,7 @@ import { YearlyKmChart } from '@/components/waypoint/stats/YearlyKmChart';
 import { CountryBreakdown } from '@/components/waypoint/stats/CountryBreakdown';
 import { VanCard } from '@/components/waypoint/stats/VanCard';
 import { TripFilter } from '@/components/waypoint/map/TripFilter';
-import { Badge } from '@/components/waypoint/ui/badge';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { getAllTripSummaries, getAllLocations } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { getTodayKey } from '@/lib/today';
@@ -20,7 +20,6 @@ import {
   vanMilestone,
 } from '@/lib/waypoint/stats';
 import { describeTripFilter, keepTrip, readTripFilter, TRIP_FILTER_COOKIE, tripFilterValue } from '@/lib/waypoint/tripFilter';
-import { BarChart3, Plane, Trophy } from 'lucide-react';
 
 export default async function StatsPage({ searchParams }: PageProps<'/waypoint/stats'>) {
   await connection();
@@ -45,72 +44,62 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
   const van = getVanStats(allTrips, todayKey);
 
   return (
-    <>
-      <div className="mx-auto max-w-7xl space-y-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-2xl font-semibold text-foreground">Statistics</h2>
-            <p className="mt-1 text-sm text-muted-foreground">{describeTripFilter(filter, trips.length)}</p>
-          </div>
-          <TripFilter
-            companions={companions}
-            value={tripFilterValue(filter)}
-            showVan={anyVan}
-            basePath="/waypoint/stats"
-          />
-        </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Stats"
+        subtitle={describeTripFilter(filter, trips.length)}
+        back={{ href: '/waypoint', label: 'Waypoint' }}
+      />
 
-        {van.trips > 0 && (
-          <VanCard
-            vanKm={van.km}
-            vanTrips={van.trips}
-            milestone={vanMilestone(van.km)}
-            time={getVanTime(allTrips, todayKey)}
-            countries={getVanCountries(allTrips, allLocations, todayKey)}
-            stickers={stickerCount}
-          />
-        )}
+      {van.trips > 0 && (
+        <VanCard
+          vanKm={van.km}
+          vanTrips={van.trips}
+          milestone={vanMilestone(van.km)}
+          time={getVanTime(allTrips, todayKey)}
+          countries={getVanCountries(allTrips, allLocations, todayKey)}
+          stickers={stickerCount}
+        />
+      )}
 
-        {trips.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
-            <BarChart3 size={48} className="mb-4 text-muted-foreground/40" />
-            <p className="font-medium text-muted-foreground">No stats yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/60">
-              {allTrips.length === 0 ? 'Add a trip to start seeing your travel stats' : 'No trips match this choice'}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* The headline numbers live on the Overview tab; this page is the breakdown. */}
-            {(stats.longest_trip_title || flights.flights > 0) && (
-              <div className="flex flex-wrap gap-2">
-                {stats.longest_trip_title && (
-                  <Badge variant="secondary" className="max-w-full gap-1.5 text-xs font-normal">
-                    <Trophy size={12} className="shrink-0" />
-                    <span className="truncate">Longest trip: {stats.longest_trip_title}</span>
-                    <span className="shrink-0">· {stats.longest_trip_km.toLocaleString()} km</span>
-                  </Badge>
-                )}
-                {/* Flights stay out of the km-per-year chart, which is km driven. */}
-                {flights.flights > 0 && (
-                  <Badge variant="secondary" className="gap-1.5 text-xs font-normal">
-                    <Plane size={12} className="shrink-0" />
-                    Flown: {flights.km.toLocaleString()} km
-                    <span className="shrink-0">
-                      · {flights.flights} {flights.flights === 1 ? 'flight' : 'flights'}
-                    </span>
-                  </Badge>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-              <YearlyKmChart data={getYearlyStats(trips)} split={filter.kind === 'all' || filter.kind === 'person'} />
-              <CountryBreakdown data={getCountryStats(locations)} />
-            </div>
-          </>
-        )}
+      <div>
+        <TripFilter
+          companions={companions}
+          value={tripFilterValue(filter)}
+          showVan={anyVan}
+          basePath="/waypoint/stats"
+        />
       </div>
-    </>
+
+      {trips.length === 0 ? (
+        <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+          {allTrips.length === 0 ? 'Add a trip to start seeing your travel stats.' : 'No trips match this choice.'}
+        </p>
+      ) : (
+        <>
+          {/* The headline numbers live on the Overview tab; this page is the breakdown. */}
+          {(stats.longest_trip_title || flights.flights > 0) && (
+            <ul className="flex flex-col gap-1 text-sm text-ink-muted">
+              {stats.longest_trip_title && (
+                <li className="truncate">
+                  Longest trip: <span className="text-foreground">{stats.longest_trip_title}</span> ·{' '}
+                  <span className="tabular-nums">{stats.longest_trip_km.toLocaleString()} km</span>
+                </li>
+              )}
+              {/* Flights stay out of the km-per-year chart, which is km driven. */}
+              {flights.flights > 0 && (
+                <li>
+                  Flown: <span className="tabular-nums text-foreground">{flights.km.toLocaleString()} km</span> ·{' '}
+                  {flights.flights} {flights.flights === 1 ? 'flight' : 'flights'}
+                </li>
+              )}
+            </ul>
+          )}
+
+          <YearlyKmChart data={getYearlyStats(trips)} split={filter.kind === 'all' || filter.kind === 'person'} />
+          <CountryBreakdown data={getCountryStats(locations)} />
+        </>
+      )}
+    </div>
   );
 }

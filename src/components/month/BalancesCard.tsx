@@ -105,7 +105,7 @@ export function BalancesCard({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-4 card">
       <div className="flex items-baseline justify-between gap-2">
         <div>
           <h3 className="font-medium text-foreground">What I have</h3>
@@ -167,7 +167,7 @@ export function BalancesCard({
               value={rentValue}
               placeholder="0"
               onChange={(e) => setRentValue(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 font-mono tabular-nums text-foreground"
+              className="field py-2 font-mono tabular-nums"
             />
           </label>
           <label className="flex flex-col gap-1">
@@ -178,7 +178,7 @@ export function BalancesCard({
               value={rentDayValue}
               placeholder="17"
               onChange={(e) => setRentDayValue(e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 font-mono tabular-nums text-foreground"
+              className="field py-2 font-mono tabular-nums"
             />
           </label>
         </div>

@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import { loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
 import { CourseManager, DeletePeriodButton, ExamManager, StudyPeriodForm } from "@/components/lessons/StudySettings";
@@ -10,31 +11,30 @@ export default async function LessonsSettingsPage({ searchParams }: PageProps<"/
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
-          <p className="mt-1 text-sm text-ink-muted">A period is one semester: lessons, blok, exams.</p>
-        </div>
-        {period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="A period is one semester: lessons, blok, exams."
+        back={{ href: typeof requested === "string" ? `/lessons?period=${encodeURIComponent(requested)}` : "/lessons", label: "Lessons" }}
+        action={period && <StudyPeriodSwitcher periods={periods} activeId={period.id} />}
+      />
 
       {period && (
         <>
           <section className="flex flex-col gap-2">
-            <h2 className="px-1 font-medium text-foreground">Exams, tests &amp; deadlines</h2>
+            <h2 className="section-title px-1">Exams, tests &amp; deadlines</h2>
             <ExamManager key={period.id} period={period} />
           </section>
 
           <section className="flex flex-col gap-2">
-            <h2 className="px-1 font-medium text-foreground">{period.name}</h2>
-            <div className="rounded-xl border border-border bg-surface p-4">
+            <h2 className="section-title px-1">{period.name}</h2>
+            <div className="card">
               <StudyPeriodForm key={period.id} period={period} />
             </div>
           </section>
 
           <section className="flex flex-col gap-2">
             <div className="px-1">
-              <h2 className="font-medium text-foreground">Courses</h2>
+              <h2 className="section-title">Courses</h2>
               <p className="text-sm text-ink-muted">The code is what you tap when logging time.</p>
             </div>
             <CourseManager key={period.id} period={period} />
@@ -45,8 +45,8 @@ export default async function LessonsSettingsPage({ searchParams }: PageProps<"/
       )}
 
       <section className="flex flex-col gap-2">
-        <h2 className="px-1 font-medium text-foreground">New period</h2>
-        <div className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="section-title px-1">New period</h2>
+        <div className="card">
           <StudyPeriodForm />
         </div>
       </section>

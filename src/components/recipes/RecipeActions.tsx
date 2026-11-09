@@ -3,17 +3,7 @@
 import { useState, useTransition } from "react";
 import { markRecipeMade, removeSavedRecipe } from "@/lib/actions/recipes";
 import { formatDate } from "@/lib/format";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/waypoint/ui/alert-dialog";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 /** Mark as made (with a date), put back on the list, or remove. */
 export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: string | null; todayKey: string }) {
@@ -31,7 +21,7 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 card">
       {madeOn && (
         <p className="text-sm font-medium text-positive-text">Made on {formatDate(madeOn)}</p>
       )}
@@ -64,32 +54,15 @@ export function RecipeActions({ id, madeOn, todayKey }: { id: string; madeOn: st
             Not made yet
           </button>
         )}
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button
-              type="button"
-              disabled={pending}
-              className="btn btn-danger min-h-11 px-5 text-sm"
-            >
-              Remove
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Remove this recipe?</AlertDialogTitle>
-              <AlertDialogDescription>It disappears from your saved list. It can turn up in the deck again later.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep it</AlertDialogCancel>
-              <AlertDialogAction
-                destructive
-                onClick={() => run(() => removeSavedRecipe(id))}
-              >
-                Remove
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmButton
+          onConfirm={() => run(() => removeSavedRecipe(id))}
+          disabled={pending}
+          confirmLabel="Tap again to remove"
+          aria-label="Remove from saved (it can turn up in the deck again)"
+          className="min-h-11 px-5 text-sm"
+        >
+          Remove
+        </ConfirmButton>
       </div>
       {error && <p className="text-sm text-critical">{error}</p>}
     </div>

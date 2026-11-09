@@ -22,7 +22,7 @@ type NewTripFormProps = {
   onDone?: () => void;
 };
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
+const input = "field";
 
 export function NewTripForm({ trip, onDone }: NewTripFormProps) {
   const router = useRouter();
@@ -145,7 +145,7 @@ export function NewTripForm({ trip, onDone }: NewTripFormProps) {
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 card">
       <div>
         <h2 className="font-medium text-foreground">New trip</h2>
         <p className="text-sm text-ink-muted">A separate budget for a few days away.</p>

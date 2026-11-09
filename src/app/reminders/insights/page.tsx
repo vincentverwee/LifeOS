@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getRoutineLogs } from "@/lib/data/routines";
 import { getTodayKey } from "@/lib/today";
 import { formatPercent } from "@/lib/format";
@@ -30,7 +31,7 @@ const monthFormatter = new Intl.DateTimeFormat("en-GB", { month: "short", timeZo
 
 function Section({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-4">
+    <section className="card">
       <h2 className="font-medium text-foreground">{title}</h2>
       {hint && <p className="mt-0.5 text-sm text-ink-muted">{hint}</p>}
       <div className="mt-3">{children}</div>
@@ -48,8 +49,8 @@ export default async function RemindersInsightsPage({ searchParams }: PageProps<
 
   if (routines.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Insights" back={{ href: "/reminders", label: "Reminders" }} />
         <p className="text-sm text-ink-muted">
           Nothing to show yet: insights come from your Last done items.{" "}
           <Link href="/reminders/add?type=last-done" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
@@ -81,8 +82,8 @@ export default async function RemindersInsightsPage({ searchParams }: PageProps<
   const byCount = [...stats].sort((a, b) => b.stats.last30 - a.stats.last30 || b.stats.count - a.stats.count);
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Insights" back={{ href: "/reminders", label: "Reminders" }} />
 
       <SummaryCards
         cards={[

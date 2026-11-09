@@ -17,7 +17,7 @@ type Item = {
   price: number | null;
 };
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 /** Add (no `item`) or edit a clothing item. The photo is shrunk here, before it's sent. */
 export function ItemForm({

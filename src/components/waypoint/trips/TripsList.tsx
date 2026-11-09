@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import { TripCard } from '@/components/waypoint/trips/TripCard';
 import { TripDialog } from '@/components/waypoint/trips/TripDialog';
-import { Button } from '@/components/waypoint/ui/button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { TripSummary } from '@/lib/waypoint/types';
 import { CreateTripInput, createTrip, updateTrip, deleteTrip } from '@/lib/actions/waypoint';
-import { Plus, Route } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { TripFilter } from '@/components/waypoint/map/TripFilter';
 import { describeTripFilter, keepTrip, tripFilterValue, type TripFilter as TripFilterValue } from '@/lib/waypoint/tripFilter';
 
@@ -73,56 +73,51 @@ export function TripsList({
 
   return (
     <>
-      <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Trips</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {describeTripFilter(filter, shown.length)}
-            </p>
-          </div>
-          <Button onClick={openCreate} className="gap-2">
-            <Plus size={16} />
-            New trip
-          </Button>
-        </div>
-
-        <TripFilter
-          companions={companions}
-          value={tripFilterValue(filter)}
-          showVan={anyVan}
-          basePath="/waypoint/trips"
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Trips"
+          subtitle={describeTripFilter(filter, shown.length)}
+          back={{ href: '/waypoint', label: 'Waypoint' }}
+          action={
+            <button type="button" onClick={openCreate} className="btn btn-primary inline-flex min-h-11 shrink-0 px-5 text-sm font-semibold">
+              <Plus size={16} aria-hidden="true" />
+              New trip
+            </button>
+          }
         />
 
+        <div>
+          <TripFilter
+            companions={companions}
+            value={tripFilterValue(filter)}
+            showVan={anyVan}
+            basePath="/waypoint/trips"
+          />
+        </div>
+
         {trips.length === 0 ? (
-          <div className="animate-fade-in flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
-            <Route size={48} className="mb-4 text-muted-foreground/40" />
-            <p className="font-medium text-muted-foreground">No trips yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/60">
-              Click &quot;New trip&quot; to start your first road trip
-            </p>
-            <Button onClick={openCreate} className="mt-6 gap-2" variant="outline">
-              <Plus size={16} />
-              Create first trip
-            </Button>
+          <div className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+            <p>No trips yet. Start with your first road trip.</p>
+            <button type="button" onClick={openCreate} className="btn btn-primary mt-3 inline-flex min-h-11 px-5 text-sm font-semibold">
+              New trip
+            </button>
           </div>
         ) : shown.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-border px-4 py-12 text-center text-sm text-muted-foreground">
+          <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
             No trips match this choice. Pick another one above.
           </p>
         ) : (
-          <div className="space-y-3">
-            {shown.map((trip, i) => (
+          <ul className="flex flex-col gap-3">
+            {shown.map((trip) => (
               <TripCard
                 key={trip.id}
                 trip={trip}
-                index={i}
                 onEdit={openEdit}
                 onDelete={handleDelete}
                 sticker={stickers[trip.id]}
               />
             ))}
-          </div>
+          </ul>
         )}
       </div>
 

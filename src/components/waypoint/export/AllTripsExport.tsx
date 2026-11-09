@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useLayoutEffect, useRef, useMemo } from 'react';
-import Link from 'next/link';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { THEME_COLORS } from '@/lib/theme';
 import { MapWrapper } from '@/components/waypoint/map/MapWrapper';
 import { Button } from '@/components/waypoint/ui/button';
 import { Label } from '@/components/waypoint/ui/label';
@@ -19,7 +20,6 @@ import {
   slugify,
 } from '@/lib/waypoint/exportFormats';
 import {
-  ArrowLeft,
   Download,
   Sun,
   Moon,
@@ -31,7 +31,8 @@ import {
 } from 'lucide-react';
 
 const FORMATS = EXPORT_FORMATS;
-const DEFAULT_ACCENT = '#4f46e5';
+// The app's primary colour (a build-time hex, so the colour picker can show it).
+const DEFAULT_ACCENT = THEME_COLORS.primary;
 
 interface LegendEntry {
   id: string;
@@ -244,22 +245,11 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
   if (trips.length === 0) {
     return (
       <>
-        <div className="mx-auto max-w-5xl space-y-4">
-          <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon">
-              <Link href="/waypoint">
-                <ArrowLeft size={18} />
-              </Link>
-            </Button>
-            <h2 className="text-2xl font-semibold text-foreground">Export map</h2>
-          </div>
-          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border py-24 text-center">
-            <ImageDown size={48} className="mb-4 text-muted-foreground/40" />
-            <p className="font-medium text-muted-foreground">No trips yet</p>
-            <p className="mt-1 text-sm text-muted-foreground/60">
-              Add a trip with a few stops first — then the whole map exports as one post
-            </p>
-          </div>
+        <div className="flex flex-col gap-6">
+          <PageHeader title="Export map" back={{ href: '/waypoint/map', label: 'Map' }} />
+          <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
+            Add a trip with a few stops first, then the whole map exports as one post.
+          </p>
         </div>
       </>
     );
@@ -340,25 +330,16 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
 
   return (
     <>
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="flex items-center gap-3">
-          <Button asChild variant="ghost" size="icon">
-            <Link href="/waypoint">
-              <ArrowLeft size={18} />
-            </Link>
-          </Button>
-          <div>
-            <h2 className="text-2xl font-semibold text-foreground">Export map — all trips</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Every trip on one map, each in its own color. Tick the trips to include, rename them
-              for the legend, and set a headline.
-            </p>
-          </div>
-        </div>
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Export map"
+          back={{ href: '/waypoint/map', label: 'Map' }}
+          subtitle="Every trip on one map, each in its own colour. Tick the trips to include, rename them for the legend, and set a headline."
+        />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_1fr]">
           <div className="space-y-4">
-            <Card className="border-border/50">
+            <Card>
               <CardContent className="space-y-5 p-5">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -386,7 +367,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                       </button>
                     </div>
                   </div>
-                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border/60 p-1">
+                  <div className="max-h-80 space-y-1 overflow-y-auto overscroll-contain rounded-xl border border-border p-1">
                     {trips.map((trip) => {
                       const on = included.has(trip.id);
                       const custom = customLabels[trip.id] ?? '';
@@ -605,7 +586,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="accent-color">Accent color</Label>
+                  <Label htmlFor="accent-color">Accent colour</Label>
                   <div className="flex items-center gap-2">
                     <input
                       id="accent-color"
@@ -643,7 +624,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                 )}
 
                 {rendered && (
-                  <div className="space-y-2 rounded-xl border border-border/60 p-3">
+                  <div className="space-y-2 rounded-xl border border-border p-3">
                     <div className="flex items-center justify-between">
                       <p className="text-xs font-medium">
                         Ready — {format.width}×{format.height}
@@ -661,7 +642,7 @@ export function AllTripsExport({ trips, locations }: { trips: Trip[]; locations:
                     <img
                       src={rendered.url}
                       alt="Exported map preview"
-                      className="w-full rounded-lg border border-border/60"
+                      className="w-full rounded-lg border border-border"
                     />
                     <Button className="w-full gap-2" onClick={handleSave}>
                       {isIOS() ? <Share2 size={16} /> : <Download size={16} />}

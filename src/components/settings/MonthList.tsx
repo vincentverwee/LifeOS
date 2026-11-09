@@ -14,14 +14,14 @@ export type MonthRow = {
   spent: number;
 };
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground";
+const input = "field";
 
 /** Every month's budget and label, newest first. */
 export function MonthList({ months, labels }: { months: MonthRow[]; labels: string[] }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
-    <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+    <ul className="overflow-hidden rounded-2xl border border-border bg-surface">
       <datalist id="period-labels">
         {labels.map((l) => (
           <option key={l} value={l} />

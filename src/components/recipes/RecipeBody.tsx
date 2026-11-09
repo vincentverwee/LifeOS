@@ -5,7 +5,7 @@ export function RecipeBody({ ingredients, steps }: { ingredients: RecipeIngredie
   return (
     <div className="flex flex-col gap-6">
       <section>
-        <h3 className="text-sm font-semibold tracking-wide text-ink-muted uppercase">Ingredients</h3>
+        <h3 className="section-title">Ingredients</h3>
         <ul className="mt-2 flex flex-col divide-y divide-border">
           {ingredients.map((ingredient, i) => (
             <li key={i} className="py-2 text-foreground">
@@ -16,7 +16,7 @@ export function RecipeBody({ ingredients, steps }: { ingredients: RecipeIngredie
       </section>
       {steps.length > 0 && (
         <section>
-          <h3 className="text-sm font-semibold tracking-wide text-ink-muted uppercase">Steps</h3>
+          <h3 className="section-title">Steps</h3>
           <ol className="mt-3 flex flex-col gap-4">
             {steps.map((step, i) => (
               <li key={i} className="flex gap-3">

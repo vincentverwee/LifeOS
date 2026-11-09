@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getReminder } from "@/lib/data/reminders";
 import { getTodayKey } from "@/lib/today";
@@ -13,12 +13,7 @@ export default async function EditReminderPage({ params }: PageProps<"/reminders
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/reminders" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Reminders
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">Edit reminder</h1>
-      </div>
+      <PageHeader title="Edit reminder" back={{ href: "/reminders", label: "Reminders" }} />
 
       <ReminderForm reminder={reminder} todayKey={todayKey} />
 

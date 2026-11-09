@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getOutfits } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
 import { describeUnavailable, describeWorn, outfitReadiness } from "@/lib/wardrobe/logic";
@@ -14,12 +15,15 @@ export default async function OutfitsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Outfits</h1>
-        <Link href="/wardrobe/outfits/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
-          + New
-        </Link>
-      </div>
+      <PageHeader
+        title="Outfits"
+        back={{ href: "/wardrobe/items", label: "Wardrobe" }}
+        action={
+          <Link href="/wardrobe/outfits/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
+            + New
+          </Link>
+        }
+      />
 
       {outfits.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">

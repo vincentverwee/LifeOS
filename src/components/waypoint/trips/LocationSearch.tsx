@@ -3,7 +3,8 @@
 import { useState, useRef } from 'react';
 import { Input } from '@/components/waypoint/ui/input';
 import { searchPlaces, extractCity, extractCountry, GeocodingResult } from '@/lib/waypoint/geocoding';
-import { Search, MapPin, Loader2 } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
+import { SheepSpinner } from '@/components/icons/SheepSpinner';
 import type { CreateLocationInput } from '@/lib/actions/waypoint';
 
 interface LocationSearchProps {
@@ -68,7 +69,7 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
   return (
     <div className="relative">
       <div className="relative">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
         <Input
           placeholder="Search for a city or place…"
           value={query}
@@ -76,12 +77,14 @@ export function LocationSearch({ tripId, onAdd }: LocationSearchProps) {
           className="pl-9"
         />
         {loading && (
-          <Loader2 size={16} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" />
+          <span role="status" aria-label="Searching" className="absolute right-2.5 top-1/2 -translate-y-1/2">
+            <SheepSpinner size={22} kind="waypoint" />
+          </span>
         )}
       </div>
 
       {open && results.length > 0 && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
           {results.map((r, i) => (
             <button
               key={i}

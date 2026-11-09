@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getCategories, getItem } from "@/lib/data/wardrobe";
 import { ItemForm } from "@/components/wardrobe/ItemForm";
@@ -13,12 +14,7 @@ export default async function AddItemPage({ searchParams }: PageProps<"/wardrobe
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/wardrobe/items" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Items
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">Add item</h1>
-      </div>
+      <PageHeader title="Add item" back={{ href: "/wardrobe/items", label: "Wardrobe" }} />
       {last && (
         <p role="status" className="flex items-center justify-between gap-3 rounded-2xl bg-surface-muted py-1 pr-1 pl-4 text-sm text-foreground">
           <span className="min-w-0 truncate">✓ Added {last.name}</span>

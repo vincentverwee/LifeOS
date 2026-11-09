@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getTodayKey } from "@/lib/today";
 import { getBeerVisits, getPub, getPubs } from "@/lib/data/beer";
@@ -25,16 +25,16 @@ export default async function PubPage(props: PageProps<"/beer/pubs/[id]">) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/beer/pubs" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Pubs
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{pub.name}</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          {stats.lastVisit ? `Last visit ${describeSince(stats.lastVisit, todayKey).toLowerCase()}` : "No beers here yet"}
-          {stats.firstVisit && ` · first ${formatDate(stats.firstVisit)}`}
-        </p>
-      </div>
+      <PageHeader
+        title={pub.name}
+        subtitle={
+          <>
+            {stats.lastVisit ? `Last visit ${describeSince(stats.lastVisit, todayKey).toLowerCase()}` : "No beers here yet"}
+            {stats.firstVisit && ` · first ${formatDate(stats.firstVisit)}`}
+          </>
+        }
+        back={{ href: "/beer/pubs", label: "Pubs" }}
+      />
 
       <dl className="grid grid-cols-2 gap-3">
         {[
@@ -43,7 +43,7 @@ export default async function PubPage(props: PageProps<"/beer/pubs/[id]">) {
           ["Spent", formatCurrency(stats.spend)],
           ["A pint", stats.pricePerPint !== null ? formatCurrency(stats.pricePerPint) : "—"],
         ].map(([label, value]) => (
-          <div key={label} className="rounded-xl border border-border bg-surface p-4">
+          <div key={label} className="card">
             <dt className="text-sm text-ink-muted">{label}</dt>
             <dd className="mt-1 font-mono text-2xl font-semibold tabular-nums text-foreground">{value}</dd>
           </div>
@@ -60,8 +60,8 @@ export default async function PubPage(props: PageProps<"/beer/pubs/[id]">) {
 
       {prices.length > 1 && (
         <section className="flex flex-col gap-2">
-          <h2 className="font-medium text-foreground">Price per pint</h2>
-          <div className="rounded-xl border border-border bg-surface p-4">
+          <h2 className="section-title">Price per pint</h2>
+          <div className="card">
             <PriceChart
               data={prices.map((m) => ({
                 label: monthFormatter.format(new Date(`${m.month}-01T00:00:00Z`)),
@@ -75,7 +75,7 @@ export default async function PubPage(props: PageProps<"/beer/pubs/[id]">) {
 
       {latestFirst.length > 0 && (
         <section className="flex flex-col gap-2">
-          <h2 className="font-medium text-foreground">Visits</h2>
+          <h2 className="section-title">Visits</h2>
           <VisitList visits={latestFirst.slice(0, RECENT)} />
           {latestFirst.length > RECENT && (
             <Disclosure title={`Show all ${latestFirst.length}`}>
@@ -101,11 +101,11 @@ export default async function PubPage(props: PageProps<"/beer/pubs/[id]">) {
 
 function VisitList({ visits }: { visits: Awaited<ReturnType<typeof getBeerVisits>> }) {
   return (
-    <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+    <ul className="card-list">
       {visits.map((v) => {
         const pints = pintsIn(v);
         return (
-          <li key={v.id} className="flex min-h-12 items-center justify-between gap-3 border-b border-border px-4 py-2 last:border-b-0">
+          <li key={v.id} className="flex min-h-12 items-center justify-between gap-3 px-4 py-2">
             <span className="flex min-w-0 flex-col">
               <span className="text-sm text-foreground">{formatDate(v.date)}</span>
               <span className="truncate text-xs text-ink-muted">

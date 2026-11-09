@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { workoutHeadline } from "@/lib/workouts/describe";
 import { notFound } from "next/navigation";
 import { getGroups, getPeopleNames, getPerson } from "@/lib/data/people";
@@ -28,7 +29,7 @@ function byYear(gifts: GiftRow[]): [string, GiftRow[]][] {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+      <h2 className="section-title">{title}</h2>
       {children}
     </section>
   );
@@ -45,32 +46,30 @@ export default async function PersonPage({ params }: PageProps<"/people/[id]">) 
   const { birthday, next } = person;
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
-        <Link href="/people" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ People
-        </Link>
-        <div className="mt-1 flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-2xl font-semibold break-words text-foreground">{person.name}</h1>
-            {(person.relationToMe || person.groupName) && (
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {person.relationToMe && (
-                  <span className="rounded-full bg-primary px-2.5 py-0.5 text-sm text-primary-foreground">
-                    Your {person.relationToMe}
-                  </span>
-                )}
-                {person.groupName && (
-                  <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{person.groupName}</span>
-                )}
-              </div>
-            )}
-          </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title={<span className="break-words">{person.name}</span>}
+        subtitle={
+          (person.relationToMe || person.groupName) && (
+            <span className="mt-1 flex flex-wrap gap-1.5">
+              {person.relationToMe && (
+                <span className="rounded-full bg-primary px-2.5 py-0.5 text-sm text-primary-foreground">
+                  Your {person.relationToMe}
+                </span>
+              )}
+              {person.groupName && (
+                <span className="rounded-full bg-surface-muted px-2.5 py-0.5 text-sm text-ink-muted">{person.groupName}</span>
+              )}
+            </span>
+          )
+        }
+        back={{ href: "/people", label: "People" }}
+        action={
           <Link href={`/people/${person.id}/edit`} className="btn btn-outline inline-flex min-h-11 shrink-0 px-4 text-sm">
             Edit
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {birthday && next ? (
         <div className="rounded-2xl bg-primary p-5 text-primary-foreground">

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound } from "next/navigation";
 import { getOutfit } from "@/lib/data/wardrobe";
 import { getTodayKey } from "@/lib/today";
@@ -19,21 +20,21 @@ export default async function OutfitPage({ params }: PageProps<"/wardrobe/outfit
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/wardrobe/outfits" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Outfits
-        </Link>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">{outfit.name}</h1>
+      <PageHeader
+        title={outfit.name}
+        subtitle={
+          <>
+            {describeWorn(outfit.lastWornOn, todayKey)}
+            {outfit.wearCount > 0 && ` · ${outfit.wearCount}× in total`}
+          </>
+        }
+        back={{ href: "/wardrobe/outfits", label: "Outfits" }}
+        action={
           <Link href={`/wardrobe/outfits/${outfit.id}/edit`} className="btn btn-outline inline-flex min-h-11 px-4 text-sm">
             Edit
           </Link>
-        </div>
-        <p className="text-sm text-ink-muted">
-          {describeWorn(outfit.lastWornOn, todayKey)}
-          {outfit.wearCount > 0 && ` · ${outfit.wearCount}× in total`}
-        </p>
-      </div>
+        }
+      />
 
       {!ready && !outfit.wornToday && (
         <p className="rounded-2xl bg-surface-muted px-4 py-3 text-sm text-foreground">

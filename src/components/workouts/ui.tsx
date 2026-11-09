@@ -5,7 +5,7 @@ import type { WeekProgress } from "@/lib/workouts/stats";
 import type { ActivityRef, WorkoutView } from "@/lib/workouts/types";
 import { moodOf } from "@/lib/diary/onThisDay";
 
-export const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+export const FIELD = "field";
 
 /** The activity's palette colour as a small dot. */
 export function ActivityDot({ activity, className = "h-2.5 w-2.5" }: { activity: Pick<ActivityRef, "color">; className?: string }) {

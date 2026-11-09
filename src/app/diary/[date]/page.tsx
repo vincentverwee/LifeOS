@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { notFound, redirect } from "next/navigation";
 import { getDiaryEntry, getOnThisDay } from "@/lib/data/diary";
 import { getTodayKey } from "@/lib/today";
@@ -30,10 +31,7 @@ export default async function DiaryDayPage({ params }: PageProps<"/diary/[date]"
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/diary" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Diary
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold text-foreground">{longDate.format(new Date(`${date}T00:00:00Z`))}</h1>
+        <PageHeader title={longDate.format(new Date(`${date}T00:00:00Z`))} back={{ href: "/diary", label: "Diary" }} />
         <div className="mt-2 flex justify-between">
           <Link href={`/diary/${addDays(date, -1)}`} className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
             ‹ Day before
@@ -44,12 +42,12 @@ export default async function DiaryDayPage({ params }: PageProps<"/diary/[date]"
         </div>
       </div>
 
-      <section className="rounded-2xl border border-border bg-surface p-4">
+      <section className="card">
         <DiaryForm key={date} date={date} entry={entry} placeholder="Add something about that day…" />
       </section>
 
       <section className="flex flex-col gap-3">
-        <h2 className="text-lg font-semibold text-foreground">This day in earlier years</h2>
+        <h2 className="section-title">This day in earlier years</h2>
         <OnThisDay memories={memories} emptyText="Nothing logged on this day in earlier years." />
       </section>
     </div>

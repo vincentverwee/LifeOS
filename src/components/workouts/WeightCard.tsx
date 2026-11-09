@@ -32,9 +32,9 @@ export function WeightCard({ weighIns, todayKey }: { weighIns: WeighIn[]; todayK
   }, [state]);
 
   return (
-    <section className="rounded-2xl border border-border bg-surface p-5">
+    <section className="card p-5">
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Body weight</h2>
+        <h2 className="section-title">Body weight</h2>
         {trend && (
           <span className="text-sm text-ink-muted">
             {describeDoneOn(trend.latest.date, todayKey)}

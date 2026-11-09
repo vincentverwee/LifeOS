@@ -36,7 +36,7 @@ export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge, c
     <section className="flex flex-col gap-4">
       {today.budgetGoneBeforeToday ? (
         // No allowance left to show: say how far over the month is instead.
-        <div className="rounded-xl border border-critical/40 bg-surface p-5">
+        <div className="rounded-2xl border border-critical/40 bg-surface p-5">
           <p className="text-sm text-ink-muted">
             {isMonth ? "Over budget this month" : `${month.name} · over budget`}
           </p>
@@ -51,7 +51,7 @@ export function TodayPanel({ month, stats, todayKey, comparisons, balancesAge, c
           </p>
         </div>
       ) : (
-        <div className="rounded-xl border border-border bg-surface p-5">
+        <div className="card p-5">
           <p className="text-sm text-ink-muted">
             {isMonth ? "Left to spend today" : `${month.name} · left to spend today`}
           </p>

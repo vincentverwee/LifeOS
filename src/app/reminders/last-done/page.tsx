@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getRoutines } from "@/lib/data/routines";
 import { getTodayKey } from "@/lib/today";
 import { RoutineList } from "@/components/reminders/RoutineList";
@@ -9,9 +10,12 @@ export default async function LastDonePage() {
   const routines = await getRoutines(todayKey);
 
   return (
-    <section>
-      <h1 className="text-2xl font-semibold text-foreground">Last done</h1>
-      <p className="mt-1 mb-4 text-sm text-ink-muted">Tap the {MASCOT} when you did it today. Longest ago at the top.</p>
+    <section className="flex flex-col gap-4">
+      <PageHeader
+        title="Last done"
+        subtitle={<>Tap the {MASCOT} when you did it today. Longest ago at the top.</>}
+        back={{ href: "/reminders", label: "Reminders" }}
+      />
       {routines.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">
           Keep track of things like washing, bedsheets or training.{" "}

@@ -18,8 +18,9 @@
   --color-critical: #d03b3b; /* status fill/text: reserved for genuinely negative states */
   --color-positive-text: #006300; /* card deltas, "under budget" text */
   --color-warning-text: #9a5b00; /* gentle nudges, e.g. stale balances */
+  --color-warning: #e39a14; /* warning fill: ahead of plan, "catch up" */
 
-  --color-ink-muted: #898781; /* axis labels, context series */
+  --color-ink-muted: #6b6964; /* secondary text, axis labels: ≥ 4.5:1 on background and surface */
   --color-gridline: #e1e0d9;
 
   /* Tag palette — fixed 8-hue categorical order, never cycled. */
@@ -33,6 +34,11 @@
   --color-tag-red: #e34948;
 
   --color-wool: #ffffff; /* sheep mark wool, stays light in dark mode too */
+
+  /* Home's glass tiles (.glass-card) and the faint stock photo behind them. */
+  --glass-edge: rgba(255, 255, 255, 0.95);
+  --glass-shadow: 0 10px 30px rgba(20, 40, 25, 0.08);
+  --photo-opacity: 0.26;
 }
 
 @theme inline {
@@ -48,6 +54,7 @@
   --color-critical: var(--color-critical);
   --color-positive-text: var(--color-positive-text);
   --color-warning-text: var(--color-warning-text);
+  --color-warning: var(--color-warning);
   --color-ink-muted: var(--color-ink-muted);
   --color-gridline: var(--color-gridline);
   --color-tag-blue: var(--color-tag-blue);
@@ -97,8 +104,12 @@
     --color-critical: #d03b3b;
     --color-positive-text: #0ca30c;
     --color-warning-text: #e0a33a;
+    --color-warning: #d4922c;
 
     --color-ink-muted: #898781;
+    --glass-edge: rgba(255, 255, 255, 0.09);
+    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    --photo-opacity: 0.32;
     --color-gridline: #2c2c2a;
 
     --color-tag-blue: #3987e5;
@@ -130,8 +141,12 @@
   --color-critical: #d03b3b;
   --color-positive-text: #0ca30c;
   --color-warning-text: #e0a33a;
+  --color-warning: #d4922c;
 
   --color-ink-muted: #898781;
+  --glass-edge: rgba(255, 255, 255, 0.09);
+  --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  --photo-opacity: 0.32;
   --color-gridline: #2c2c2a;
 
   --color-tag-blue: #3987e5;
@@ -277,6 +292,53 @@ textarea {
    The root <main> drops its own bottom padding when this is inside it. */
 .pb-tabbar {
   padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+/* The shared building blocks (use these instead of hand-rolled class strings):
+   card       a standalone block            card-list  one card with divided rows (lists)
+   field      text/number/date inputs        section-title  an h2 inside a page */
+@utility card {
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 1rem;
+}
+@utility card-list {
+  overflow: hidden;
+  border-radius: var(--radius-2xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  & > * + * {
+    border-top: 1px solid var(--color-border);
+  }
+}
+@utility field {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: 0.625rem 0.75rem;
+  color: var(--color-foreground);
+}
+@utility section-title {
+  font-size: var(--text-lg);
+  line-height: var(--text-lg--line-height);
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+/* A Home tile: frosted surface, a light edge, rounded like the hero cards. */
+@utility glass-card {
+  border-radius: 28px;
+  border: 1px solid var(--glass-edge);
+  background: color-mix(in oklab, var(--color-surface) 78%, transparent);
+  box-shadow: var(--glass-shadow);
+}
+
+/* Sits just above the phone tab bar (sticky Save rows, the Undo bar); 1.5rem from the bottom from sm: up. */
+@utility bottom-tabbar {
+  bottom: calc(5.25rem + env(safe-area-inset-bottom));
+  @media (width >= 40rem) {
+    bottom: 1.5rem;
+  }
 }
 @media (min-width: 640px) {
   .pb-tabbar {

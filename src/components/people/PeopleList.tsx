@@ -8,7 +8,7 @@ import type { PersonSummary } from "@/lib/data/people";
 import { groupColor } from "@/lib/people/family";
 import { GroupDot } from "./GroupDot";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 /** Everyone A–Z, narrowed by the search box and a group chip. */
 export function PeopleList({ people, groups, todayKey }: { people: PersonSummary[]; groups: string[]; todayKey: string }) {

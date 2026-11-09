@@ -15,8 +15,8 @@ export function DueSubscriptions({ due, todayKey }: { due: SubscriptionRow[]; to
 
   return (
     <section className="flex flex-col gap-2">
-      <h2 className="px-1 font-medium text-foreground">Subscriptions to confirm</h2>
-      <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+      <h2 className="section-title px-1">Subscriptions to confirm</h2>
+      <ul className="card-list">
         {rows.map((s) => (
           <DueRow
             key={`${s.id}:${s.nextDueOn}`}
@@ -46,7 +46,7 @@ function DueRow({ subscription: s, todayKey, onDone }: { subscription: Subscript
   }
 
   return (
-    <li className="flex flex-col gap-2 border-b border-border px-4 py-3 last:border-b-0">
+    <li className="flex flex-col gap-2 px-4 py-3">
       <div className="flex items-center gap-2.5">
         <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${s.category.color})` }} aria-hidden="true" />
         <span className="flex min-w-0 flex-1 flex-col">
@@ -71,7 +71,7 @@ function DueRow({ subscription: s, todayKey, onDone }: { subscription: Subscript
             inputMode="decimal"
             aria-label={`Amount charged for ${s.name}`}
             placeholder={String(s.amount).replace(".", ",")}
-            className="min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2 font-mono tabular-nums text-foreground"
+            className="min-w-0 flex-1 field py-2 font-mono tabular-nums"
           />
           <button type="submit" disabled={isPending} className="btn btn-primary min-h-11 px-4 text-sm font-semibold">
             Log

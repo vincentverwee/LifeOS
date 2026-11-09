@@ -7,9 +7,15 @@ import { deleteExpense, updateExpense } from "@/lib/actions/expenses";
 import { formatCurrency, parseAmount } from "@/lib/format";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { PubPicker, suggestedPints } from "@/components/beer/PubPicker";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import type { PubChoice, PubOption } from "@/lib/beer/types";
 
-export type CategoryOption = { id: string; name: string; isArchived?: boolean; pintPrice: number | null };
+export type CategoryOption = {
+  id: string;
+  name: string;
+  isArchived?: boolean;
+  pintPrice: number | null;
+};
 
 type ExpenseListProps = {
   expenses: ListExpense[];
@@ -33,7 +39,16 @@ const dayFormatter = new Intl.DateTimeFormat("nl-BE", {
 
 function PencilIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M12 20h9" />
       <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
     </svg>
@@ -42,7 +57,16 @@ function PencilIcon() {
 
 function TrashIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M3 6h18" />
       <path d="M8 6V4h8v2" />
       <path d="M19 6l-1 14H6L5 6" />
@@ -64,7 +88,6 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
   }
 
   function remove(expense: ListExpense) {
-    if (!window.confirm(`Delete ${formatCurrency(expense.amount)} · ${expense.categoryName}?`)) return;
     setError(null);
     setNotice(null);
     setDeletingId(expense.id);
@@ -87,12 +110,15 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
       last.items.push(expense);
       last.total += expense.amount;
     } else {
-      days.push({ date: expense.date, total: expense.amount, items: [expense] });
+      days.push({
+        date: expense.date,
+        total: expense.amount,
+        items: [expense],
+      });
     }
   }
 
-  const iconButton =
-    "btn flex h-11 w-11 shrink-0 text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted";
+  const iconButton = "btn flex h-11 w-11 shrink-0 text-ink-muted hover:bg-surface-muted hover:text-foreground active:bg-surface-muted";
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,14 +127,12 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
       {days.map((day) => (
         <section key={day.date} id={`day-${day.date}`} className="flex scroll-mt-4 flex-col gap-1.5">
           <div className="flex items-baseline justify-between px-1 text-sm">
-            <span className="font-medium capitalize text-foreground">
-              {dayFormatter.format(new Date(`${day.date}T00:00:00Z`))}
-            </span>
+            <span className="font-medium capitalize text-foreground">{dayFormatter.format(new Date(`${day.date}T00:00:00Z`))}</span>
             <span className="font-mono tabular-nums text-ink-muted">{formatCurrency(day.total)}</span>
           </div>
-          <ul className="overflow-hidden rounded-xl border border-border bg-surface">
+          <ul className="card-list">
             {day.items.map((expense) => (
-              <li key={expense.id} className="border-b border-border last:border-b-0">
+              <li key={expense.id}>
                 {editingId === expense.id ? (
                   <div className="p-3">
                     <EditRow
@@ -123,11 +147,7 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
                     />
                   </div>
                 ) : (
-                  <div
-                    className={`flex min-h-14 items-center gap-1 py-1.5 pr-1.5 pl-3 ${
-                      deletingId === expense.id ? "opacity-50" : ""
-                    }`}
-                  >
+                  <div className={`flex min-h-14 items-center gap-1 py-1.5 pr-1.5 pl-3 ${deletingId === expense.id ? "opacity-50" : ""}`}>
                     <button
                       type="button"
                       onClick={() => setEditingId(expense.id)}
@@ -136,7 +156,9 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
                       <span className="flex min-w-0 items-center gap-2.5">
                         <span
                           className="h-3 w-3 shrink-0 rounded-full"
-                          style={{ backgroundColor: `var(--color-tag-${expense.categoryColor})` }}
+                          style={{
+                            backgroundColor: `var(--color-tag-${expense.categoryColor})`,
+                          }}
                           aria-hidden="true"
                         />
                         <span className="flex min-w-0 flex-col">
@@ -167,15 +189,18 @@ export function ExpenseList({ expenses, categories, pubs }: ExpenseListProps) {
                     >
                       <PencilIcon />
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(expense)}
+                    <ConfirmButton
+                      quiet
+                      onConfirm={() => remove(expense)}
                       disabled={deletingId === expense.id}
-                      aria-label={`Delete ${expense.categoryName} ${formatCurrency(expense.amount)}`}
-                      className={`${iconButton} hover:!text-critical`}
+                      confirmLabel="Delete?"
+                      className="flex h-11 min-w-11 shrink-0 px-2 text-sm"
                     >
                       {deletingId === expense.id ? <SheepSpinner size={20} /> : <TrashIcon />}
-                    </button>
+                      <span className="sr-only">
+                        Delete {expense.categoryName} {formatCurrency(expense.amount)}
+                      </span>
+                    </ConfirmButton>
                   </div>
                 )}
               </li>
@@ -215,7 +240,14 @@ export function EditRow({
   // Archived categories stay selectable only for the expense that already uses one.
   const options = categories.filter((c) => !c.isArchived || c.id === expense.categoryId);
   const pintPrice = categories.find((c) => c.id === categoryId)?.pintPrice ?? null;
-  const pickedPub = pub === undefined ? (expense.pubId ? pubs.find((p) => p.id === expense.pubId) : undefined) : pub?.kind === "known" ? pubs.find((p) => p.id === pub.id) : undefined;
+  const pickedPub =
+    pub === undefined
+      ? expense.pubId
+        ? pubs.find((p) => p.id === expense.pubId)
+        : undefined
+      : pub?.kind === "known"
+        ? pubs.find((p) => p.id === pub.id)
+        : undefined;
   // A new amount re-guesses the pints (the stored number may have been the old guess); a tap wins.
   const parsedAmount = parseAmount(amount);
   const amountChanged = parsedAmount !== null && parsedAmount !== expense.amount;
@@ -259,7 +291,7 @@ export function EditRow({
             inputMode="decimal"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-2.5 font-mono tabular-nums text-foreground"
+            className="field font-mono tabular-nums"
           />
         </label>
         <label className="flex flex-col gap-1">
@@ -269,7 +301,7 @@ export function EditRow({
             required
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+            className="field"
           />
         </label>
       </div>
@@ -278,7 +310,7 @@ export function EditRow({
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="field"
         >
           {options.map((c) => (
             <option key={c.id} value={c.id}>
@@ -309,36 +341,22 @@ export function EditRow({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Optional"
-          className="rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground"
+          className="field"
         />
       </label>
       {error && <p className="text-sm text-critical">{error}</p>}
       <div className="flex items-center gap-2 pt-1">
-        <button
-          type="button"
-          onClick={save}
-          disabled={isPending}
-          className="btn btn-primary inline-flex px-5 py-2.5 text-sm"
-        >
+        <button type="button" onClick={save} disabled={isPending} className="btn btn-primary inline-flex px-5 py-2.5 text-sm">
           {isPending && <SheepSpinner size={18} />}
           Save
         </button>
-        <button
-          type="button"
-          onClick={() => onDone()}
-          className="btn btn-outline px-5 py-2.5 text-sm"
-        >
+        <button type="button" onClick={() => onDone()} className="btn btn-outline px-5 py-2.5 text-sm">
           Cancel
         </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={isPending}
-          className="btn btn-danger ml-auto inline-flex gap-1.5 px-4 py-2.5 text-sm"
-        >
+        <ConfirmButton onConfirm={onDelete} disabled={isPending} className="ml-auto inline-flex gap-1.5 px-4 py-2.5 text-sm">
           <TrashIcon />
           Delete
-        </button>
+        </ConfirmButton>
       </div>
     </div>
   );

@@ -4,17 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { deleteMyRecipe, markMyRecipeMade } from "@/lib/actions/myRecipes";
 import { formatDate } from "@/lib/format";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/waypoint/ui/alert-dialog";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 
 /** Mark as made (with a date), edit, or delete a Cookbook recipe. */
 export function MyRecipeActions({ id, lastMadeOn, todayKey }: { id: string; lastMadeOn: string | null; todayKey: string }) {
@@ -31,7 +21,7 @@ export function MyRecipeActions({ id, lastMadeOn, todayKey }: { id: string; last
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 card">
       <p className="text-sm text-ink-muted">
         {lastMadeOn ? (
           <span className="font-medium text-positive-text">Last made {formatDate(lastMadeOn)}</span>
@@ -61,25 +51,14 @@ export function MyRecipeActions({ id, lastMadeOn, todayKey }: { id: string; last
         <Link href={`/recipes/mine/${id}/edit`} className="btn btn-outline inline-flex min-h-11 px-5 text-sm">
           Edit
         </Link>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <button type="button" disabled={pending} className="btn btn-danger min-h-11 px-5 text-sm">
-              Delete
-            </button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Delete this recipe?</AlertDialogTitle>
-              <AlertDialogDescription>It&apos;s gone from your Cookbook for good.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Keep it</AlertDialogCancel>
-              <AlertDialogAction destructive onClick={() => run(() => deleteMyRecipe(id))}>
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <ConfirmButton
+          onConfirm={() => run(() => deleteMyRecipe(id))}
+          disabled={pending}
+          confirmLabel="Tap again: gone for good"
+          className="min-h-11 px-5 text-sm"
+        >
+          Delete
+        </ConfirmButton>
       </div>
       {error && <p className="text-sm text-critical">{error}</p>}
     </div>

@@ -1,3 +1,4 @@
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getPeriodData, getPeriodSummaries, resolveActivePeriod, type Period } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
 import { computeMonthStats } from "@/lib/monthStats";
@@ -23,7 +24,7 @@ import { Disclosure } from "@/components/Disclosure";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="min-w-0 rounded-xl border border-border bg-surface p-4">
+    <section className="min-w-0 card">
       <h2 className="mb-3 font-medium text-foreground">{title}</h2>
       {children}
     </section>
@@ -57,7 +58,7 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   if (!activePeriod || !active) {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="text-2xl font-semibold text-foreground">Insights</h1>
+        <PageHeader title="Insights" back={{ href: "/budget", label: "Budget" }} />
         <EmptyState variant="no-periods" />
       </div>
     );
@@ -104,12 +105,13 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   const typical = baseline ? `typical ${baseline.label} ${formatCurrency(baseline.avgPerDay)}/day` : undefined;
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-3 sm:items-end">
-          <h1 className="text-xl font-semibold text-foreground sm:text-2xl">Insights</h1>
-          <PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />
-        </div>
+        <PageHeader
+          title="Insights"
+          back={{ href: "/budget", label: "Budget" }}
+          action={<PeriodSwitcher periods={periods} activeKey={encodePeriodKey(activePeriod)} />}
+        />
         <LabelChip
           cycleId={month.kind === "month" ? month.id : null}
           label={month.label}

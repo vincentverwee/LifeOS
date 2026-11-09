@@ -81,7 +81,7 @@ export function FridgeResults({ matches, savedIds }: { matches: FridgeMatch[]; s
       {error && !open && <p className="text-sm text-critical">{error}</p>}
 
       <section>
-        <h2 className="text-xl font-semibold text-foreground">Make now</h2>
+        <h2 className="section-title">Make now</h2>
         {makeNow.length > 0 ? (
           list(makeNow)
         ) : (
@@ -91,7 +91,7 @@ export function FridgeResults({ matches, savedIds }: { matches: FridgeMatch[]; s
 
       {buyFew.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold text-foreground">Buy 1–2 things</h2>
+          <h2 className="section-title">Buy 1–2 things</h2>
           {list(buyFew)}
         </section>
       )}

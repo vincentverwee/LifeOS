@@ -7,6 +7,7 @@ import { deletePub, mergePub, renamePub, setPubPosition, type BeerResult } from 
 import { MAX_PUB_NAME } from "@/lib/beer/types";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { Disclosure } from "@/components/Disclosure";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import type { Position } from "./PositionPicker";
 
 const PositionPicker = dynamic(() => import("./PositionPicker"), {
@@ -18,7 +19,7 @@ const PositionPicker = dynamic(() => import("./PositionPicker"), {
   ),
 });
 
-const input = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const input = "field";
 
 /** Rename, put on / take off the map, merge into another pub, delete. */
 export function PubEditor({
@@ -31,6 +32,7 @@ export function PubEditor({
   const router = useRouter();
   const [name, setName] = useState(pub.name);
   const [mergeInto, setMergeInto] = useState("");
+  const mergeTarget = others.find((o) => o.id === mergeInto);
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<Position | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -150,33 +152,37 @@ export function PubEditor({
                   </option>
                 ))}
               </select>
-              <button
-                type="button"
+              <ConfirmButton
                 disabled={pending || !mergeInto}
-                onClick={() => {
-                  const into = others.find((o) => o.id === mergeInto);
-                  if (!into || !window.confirm(`Move every beer of ${pub.name} to ${into.name} and remove ${pub.name}?`)) return;
+                confirmLabel="Tap again to merge"
+                onConfirm={() => {
+                  const into = mergeTarget;
+                  if (!into) return;
                   run(() => mergePub(pub.id, into.id), undefined, () => router.replace(`/beer/pubs/${into.id}`));
                 }}
-                className="btn btn-outline px-4 text-sm"
+                className="min-h-11 shrink-0 px-4 text-sm"
               >
                 Merge
-              </button>
+              </ConfirmButton>
             </div>
+            {mergeTarget && (
+              <p className="text-xs text-ink-muted">
+                Moves every beer of {pub.name} to {mergeTarget.name} and removes {pub.name}.
+              </p>
+            )}
           </div>
         )}
 
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => {
-            if (!window.confirm(`Delete ${pub.name}? Its beers stay, without a pub.`)) return;
-            run(() => deletePub(pub.id), undefined, () => router.replace("/beer/pubs"));
-          }}
-          className="btn btn-danger inline-flex min-h-11 self-start px-4 text-sm"
-        >
-          Delete pub
-        </button>
+        <div className="flex flex-col gap-1 self-start">
+          <ConfirmButton
+            disabled={pending}
+            onConfirm={() => run(() => deletePub(pub.id), undefined, () => router.replace("/beer/pubs"))}
+            className="inline-flex min-h-11 px-4 text-sm"
+          >
+            Delete pub
+          </ConfirmButton>
+          <p className="text-xs text-ink-muted">Its beers stay, without a pub.</p>
+        </div>
 
         {pending && <SheepSpinner size={20} />}
         {message && <p className="text-sm text-positive-text">✓ {message}</p>}

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getSavedRecipes, type SavedRecipeSummary } from "@/lib/data/recipes";
 import { formatDate } from "@/lib/format";
@@ -9,9 +10,9 @@ export default async function SavedRecipesPage() {
   const { toMake, made } = await getSavedRecipes();
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <section>
-        <h1 className="text-2xl font-semibold text-foreground">To make</h1>
+        <PageHeader title="To make" back={{ href: "/recipes", label: "Recipes" }} />
         {toMake.length > 0 ? (
           <RecipeList recipes={toMake} />
         ) : (
@@ -26,7 +27,7 @@ export default async function SavedRecipesPage() {
 
       {made.length > 0 && (
         <section>
-          <h2 className="text-xl font-semibold text-foreground">Made</h2>
+          <h2 className="section-title">Made</h2>
           <RecipeList recipes={made} />
         </section>
       )}

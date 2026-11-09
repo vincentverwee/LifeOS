@@ -7,6 +7,7 @@ import type { Location } from '@/lib/waypoint/types';
 import { colorForTrip } from '@/lib/waypoint/tripColors';
 import { buildCorridorSegments } from '@/lib/waypoint/routing/corridors';
 import { flightLegs, routeLines, type RouteGeometry } from '@/lib/waypoint/routing/lines';
+import { THEME_COLORS } from '@/lib/theme';
 
 const ROUTE_SOURCE_ID = 'route'; // single-trip solid line (trip detail + export)
 const ROUTE_LAYER_ID = 'route-line';
@@ -23,6 +24,10 @@ const DOTS_LAYER_ID = 'stop-dots-layer';
 const ROUTE_WIDTH = 4;
 
 // Default (no trip selected) corridor stroke colors.
+// Single-trip pins, lines and labels: the app's primary colour (per theme, fixed at build time;
+// the darker light-mode shade, which reads on the light basemap in either colour mode).
+const PRIMARY = THEME_COLORS.primary;
+
 const CORRIDOR_SHARED_COLOR = '#5b6470'; // graphite — reads as "several trips travel this road"
 const CORRIDOR_CASING_COLOR = '#ffffff'; // white outline under every stroke (road-map readability)
 const CORRIDOR_DIM_COLOR = '#aeb6c2'; // unrelated trips fade to this once one trip is selected
@@ -421,7 +426,7 @@ export default function MapView({
     // Per-trip color: an explicit map wins (distinct hues), else the hashed fallback, else the
     // single-trip default. Shared by numbered pins, dots and route lines so they always match.
     const resolveColor = (tripId: string) =>
-      accentColor ?? tripColors?.[tripId] ?? (tripLabels ? colorForTrip(tripId) : '#4f46e5');
+      accentColor ?? tripColors?.[tripId] ?? (tripLabels ? colorForTrip(tripId) : PRIMARY);
 
     // Number each marker by its position within its own trip (visit_order), not by
     // position in the combined array — otherwise markers from multiple trips plotted
@@ -490,8 +495,8 @@ export default function MapView({
       const padY = Math.round(labelFont * 0.42);
       const padX = Math.round(labelFont * 0.75);
       const radius = Math.round(labelFont * 0.7);
-      const lineColor = accentColor ?? '#4f46e5';
-      const dotColor = accentColor ?? '#4f46e5';
+      const lineColor = accentColor ?? PRIMARY;
+      const dotColor = accentColor ?? PRIMARY;
       labelItemsRef.current = labeledLocs.map((loc) => {
         const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
         line.setAttribute('stroke', lineColor);
@@ -579,7 +584,7 @@ export default function MapView({
         ? [
             {
               type: 'Feature',
-              properties: { color: accentColor ?? '#4f46e5', opacity: 0.9 },
+              properties: { color: accentColor ?? PRIMARY, opacity: 0.9 },
               geometry: routeGeometry,
             },
           ]

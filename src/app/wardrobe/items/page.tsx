@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { connection } from "next/server";
 import { getCategories, getItems } from "@/lib/data/wardrobe";
 import { ItemGrid } from "@/components/wardrobe/ItemGrid";
@@ -11,17 +12,15 @@ export default async function ItemsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href="/" className="btn btn-ghost -mx-3 inline-flex min-h-11 px-3 text-sm">
-          ‹ Home
-        </Link>
-        <div className="mt-1 flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-semibold text-foreground">Items</h1>
-          <Link href="/wardrobe/items/add" className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
+      <PageHeader section="wardrobe"
+        title="Wardrobe"
+        subtitle={`${items.length} ${items.length === 1 ? "piece" : "pieces"}`}
+        action={
+          <Link href="/wardrobe/items/add" className="btn btn-primary hidden min-h-11 px-5 text-sm font-semibold sm:inline-flex">
             + Add
           </Link>
-        </div>
-      </div>
+        }
+      />
 
       {items.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-border px-4 py-6 text-center text-ink-muted">

@@ -4,12 +4,13 @@ import { useActionState, useState } from "react";
 import { deleteGift, setGiftStatus, updateGift, type PeopleFormState } from "@/lib/actions/people";
 import { keepInput } from "@/components/people/keepInput";
 import { useQuickAction } from "@/components/people/useQuickAction";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { formatCurrency } from "@/lib/format";
 import { formatDay } from "@/lib/reminders/schedule";
 import type { GiftStatus } from "@/lib/people/birthdays";
 import type { GiftRow } from "@/lib/data/people";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 /** The one step forward from each status, and back for a slip of the thumb. */
 const NEXT: Record<GiftStatus, { status: GiftStatus; label: string } | null> = {
@@ -115,7 +116,6 @@ export function GiftItem({ gift, todayKey }: { gift: GiftRow; todayKey: string }
   }
 
   function remove() {
-    if (!window.confirm(`Delete "${gift.title}"?`)) return;
     run(() => deleteGift(gift.id));
   }
 
@@ -161,22 +161,37 @@ export function GiftItem({ gift, todayKey }: { gift: GiftRow; todayKey: string }
       </div>
       <div className="flex flex-wrap gap-2">
         {next && (
-          <button type="button" disabled={pending} onClick={() => move(next.status)} className="btn btn-outline inline-flex min-h-11 px-4 text-sm">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => move(next.status)}
+            className="btn btn-outline inline-flex min-h-11 px-4 text-sm"
+          >
             ✓ {next.label}
           </button>
         )}
         {back && (
-          <button type="button" disabled={pending} onClick={() => move(back.status)} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => move(back.status)}
+            className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
+          >
             {back.label}
           </button>
         )}
         <span className="ml-auto flex gap-1">
-          <button type="button" disabled={pending} onClick={() => setEditing(true)} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => setEditing(true)}
+            className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
+          >
             Edit
           </button>
-          <button type="button" disabled={pending} onClick={remove} className="btn btn-ghost inline-flex min-h-11 px-3 text-sm">
+          <ConfirmButton quiet disabled={pending} onConfirm={remove} className="inline-flex min-h-11 px-3 text-sm">
             Delete
-          </button>
+          </ConfirmButton>
         </span>
       </div>
       {error && <p className="text-sm text-critical">{error}</p>}

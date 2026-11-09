@@ -9,7 +9,7 @@ import type { Contact, ContactKind } from "@/lib/data/people";
 import { keepInput } from "./keepInput";
 import { useQuickAction } from "./useQuickAction";
 
-const FIELD = "rounded-lg border border-border bg-surface px-3 py-2.5 text-foreground";
+const FIELD = "field";
 
 export const CONTACT_LABEL: Record<ContactKind, { today: string; icon: string; past: string }> = {
   seen: { today: "Saw them today", icon: "👋", past: "saw" },
@@ -68,7 +68,7 @@ export function SeenCard({
   const inTouchToday = last?.day === todayKey;
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-border bg-surface p-4">
+    <div className="flex flex-col gap-3 card">
       <div className="grid grid-cols-2 gap-2">
         {(["seen", "message"] as const).map((k) => (
           <div key={k} className="flex items-center gap-2">

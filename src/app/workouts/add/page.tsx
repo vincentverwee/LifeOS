@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PageHeader } from "@/components/ui/PageHeader";
 import { getActivities, getExercises, getLastSets, getPlaces } from "@/lib/data/workouts";
 import { getPeopleNames } from "@/lib/data/people";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
@@ -17,13 +18,16 @@ export default async function AddWorkoutPage() {
     getPlaces(),
   ]);
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold text-foreground">Log a workout</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Done already? Fill it in here. Training now? <Link href="/workouts" className="text-primary underline">Start a session</Link> instead.
-        </p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <PageHeader
+        title="Log a workout"
+        subtitle={
+          <>
+            Done already? Fill it in here. Training now? <Link href="/workouts" className="text-primary underline">Start a session</Link> instead.
+          </>
+        }
+        back={{ href: "/workouts", label: "Workouts" }}
+      />
       <WorkoutForm
         activities={activities}
         exercises={exercises}
