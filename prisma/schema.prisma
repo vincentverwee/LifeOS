@@ -74,14 +74,15 @@ model BudgetCycleDay {
 // Expenses use the same global categories as months.
 
 model Trip {
-  id          String    @id @default(cuid())
-  name        String
-  totalBudget Decimal   @db.Decimal(12, 2)
-  startDate   DateTime  @db.Date
-  endDate     DateTime  @db.Date
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  expenses    Expense[]
+  id           String        @id @default(cuid())
+  name         String
+  totalBudget  Decimal       @db.Decimal(12, 2)
+  startDate    DateTime      @db.Date
+  endDate      DateTime      @db.Date
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  expenses     Expense[]
+  waypointTrip WaypointTrip?
 
   @@index([startDate])
 }
@@ -227,6 +228,9 @@ model WaypointTrip {
   // The same route thinned once (~50 m, overviewOf in src/lib/waypoint/simplify.ts) when it's
   // saved: the dashboard and big map read only this, never the full line (Supabase egress).
   overviewGeometry Json?
+  // The budget Trip made alongside a planned trip (optional). Either can be deleted alone.
+  budgetTripId     String?              @unique
+  budgetTrip       Trip?                @relation(fields: [budgetTripId], references: [id], onDelete: SetNull)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
   locations        WaypointLocation[]

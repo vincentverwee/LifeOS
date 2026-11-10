@@ -8,6 +8,8 @@ import { getAllLocations, getAllTrips } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { routeLines } from '@/lib/waypoint/routing/lines';
+import { journalOnly } from '@/lib/waypoint/stats';
+import { getTodayKey } from '@/lib/today';
 import {
   describeTripFilter,
   keepTrip,
@@ -20,12 +22,15 @@ import { ImageDown } from 'lucide-react';
 
 export default async function MapPage({ searchParams }: PageProps<'/waypoint/map'>) {
   await connection();
-  const [params, allLocations, allTrips, companions] = await Promise.all([
+  const [params, everyLocation, everyTrip, companions, todayKey] = await Promise.all([
     searchParams,
     getAllLocations(),
     getAllTrips({ simplify: 0.0005 }),
     getTripCompanions(),
+    getTodayKey(),
   ]);
+  // Planned trips stay off the map until they start (their own page shows the plan).
+  const { trips: allTrips, locations: allLocations } = journalOnly(everyTrip, everyLocation, todayKey);
   // ?trip=all|van|novan or ?person= narrows everything to those trips; with no choice the
   // map opens on the last one picked here, else on the van trips (when there are any).
   const anyVan = allTrips.some((t) => t.with_van);

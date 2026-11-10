@@ -369,7 +369,13 @@ async function WaypointTileBody() {
         {waypoint.trips} {waypoint.van ? "van " : ""}
         {waypoint.trips === 1 ? "trip" : "trips"}
       </p>
-      {waypoint.latest && (
+      {waypoint.next ? (
+        <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
+          <span className="text-ink-muted">Next · </span>
+          {waypoint.next.title}
+          <span className="text-ink-muted"> · {waypoint.next.days === 1 ? "tomorrow" : `in ${waypoint.next.days} days`}</span>
+        </p>
+      ) : waypoint.latest && (
         <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Latest · </span>
           {waypoint.latest}

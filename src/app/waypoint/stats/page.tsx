@@ -17,13 +17,14 @@ import {
   getVanStats,
   getVanTime,
   getYearlyStats,
+  journalOnly,
   vanMilestone,
 } from '@/lib/waypoint/stats';
 import { describeTripFilter, keepTrip, readTripFilter, TRIP_FILTER_COOKIE, tripFilterValue } from '@/lib/waypoint/tripFilter';
 
 export default async function StatsPage({ searchParams }: PageProps<'/waypoint/stats'>) {
   await connection();
-  const [params, allTrips, allLocations, companions, todayKey, stickerCount] = await Promise.all([
+  const [params, everyTrip, everyLocation, companions, todayKey, stickerCount] = await Promise.all([
     searchParams,
     getAllTripSummaries(),
     getAllLocations(),
@@ -31,6 +32,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/waypoint/s
     getTodayKey(),
     countStickers({ vanOnly: true }),
   ]);
+  const { trips: allTrips, locations: allLocations } = journalOnly(everyTrip, everyLocation, todayKey);
   // The breakdown follows the choice shared by every Waypoint page (Van by default); the
   // van card above it is always about the van.
   const anyVan = allTrips.some((t) => t.with_van);

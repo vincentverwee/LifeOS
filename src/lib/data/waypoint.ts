@@ -8,6 +8,8 @@ import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
 import { joinLines, routeLines } from '@/lib/waypoint/routing/lines';
 import { Trip, TripSummary, Location } from '@/lib/waypoint/types';
 import { isUuid } from '@/lib/waypoint/uuid';
+import { getTodayKey } from '@/lib/today';
+import { daysUntil, hasStarted } from '@/lib/waypoint/stats';
 
 /**
  * `route_geometry` is a full OSRM polyline (tens to hundreds of kB per trip), so loading it
@@ -99,12 +101,31 @@ export async function getTripWithLocations(
   return { trip: toTrip(trip), locations: locations.map(toLocation) };
 }
 
-export type WaypointGlance = { totalKm: number; trips: number; latest: string | null; van: boolean };
+export type WaypointGlance = {
+  totalKm: number;
+  trips: number;
+  latest: string | null;
+  van: boolean;
+  /** The soonest planned trip (starting after today), if any. */
+  next: { title: string; days: number } | null;
+};
+
+/** A linked budget trip's name and budget, for a planned trip's page. */
+export async function getBudgetTripBrief(id: string | null): Promise<{ name: string; totalBudget: number } | null> {
+  if (!id) return null;
+  const row = await prisma.trip.findUnique({ where: { id }, select: { name: true, totalBudget: true } });
+  return row ? { name: row.name, totalBudget: Number(row.totalBudget) } : null;
+}
 
 /** The Home tile, van-first: the van's km and trips once any trip is in the van, else every trip.
  *  Cached per request so the tile and its mascot's mood share one load. */
 export const getWaypointGlance = cache(async (): Promise<WaypointGlance> => {
-  const all = await getAllTripSummaries(); // newest first
+  const [every, todayKey] = await Promise.all([getAllTripSummaries(), getTodayKey()]); // newest first
+  // Planned trips don't count yet; the soonest one shows as "Next".
+  const all = every.filter((t) => hasStarted(t, todayKey));
+  const soonest = every
+    .filter((t) => !hasStarted(t, todayKey))
+    .sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? ''))[0];
   const vanTrips = all.filter((t) => t.with_van);
   const trips = vanTrips.length > 0 ? vanTrips : all;
   return {
@@ -112,5 +133,6 @@ export const getWaypointGlance = cache(async (): Promise<WaypointGlance> => {
     trips: trips.length,
     latest: trips[0]?.title ?? null,
     van: vanTrips.length > 0,
+    next: soonest?.start_date ? { title: soonest.title, days: daysUntil(soonest.start_date, todayKey) } : null,
   };
 });

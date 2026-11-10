@@ -13,6 +13,8 @@ interface TripCardProps {
   onDelete: (id: string) => void;
   /** Its first sticker, shown in front of the title. */
   sticker?: { photoId: string; cutout: boolean };
+  /** A planned trip: "In 12 days", and its km read as an estimate. */
+  countdown?: string;
 }
 
 function formatDate(dateStr: string) {
@@ -27,7 +29,7 @@ function formatDate(dateStr: string) {
 const REVEAL =
   'transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100';
 
-export function TripCard({ trip, onEdit, onDelete, sticker }: TripCardProps) {
+export function TripCard({ trip, onEdit, onDelete, sticker, countdown }: TripCardProps) {
   return (
     <li className="group flex items-center gap-1 rounded-2xl border border-border bg-surface pr-2">
       <Link href={`/waypoint/trips/${trip.id}`} className="tap flex min-w-0 flex-1 items-center gap-3 rounded-2xl p-4">
@@ -49,7 +51,13 @@ export function TripCard({ trip, onEdit, onDelete, sticker }: TripCardProps) {
                 {trip.end_date && ` – ${formatDate(trip.end_date)}`}
               </span>
             )}
-            {trip.total_km ? <span className="tabular-nums">{trip.total_km.toLocaleString()} km</span> : null}
+            {trip.total_km ? (
+              <span className="tabular-nums">
+                {countdown && '≈ '}
+                {trip.total_km.toLocaleString()} km
+              </span>
+            ) : null}
+            {countdown && <Badge variant="secondary">{countdown}</Badge>}
             {trip.with_van && (
               <Badge variant="secondary" className="gap-1">
                 <Caravan size={12} aria-hidden="true" />

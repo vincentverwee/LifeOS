@@ -9,7 +9,8 @@ import { toLocation, toTripSummary } from '@/lib/waypoint/rows';
 import { calculateTripRoute } from '@/lib/waypoint/routing/osrm';
 import type { RouteGeometry } from '@/lib/waypoint/routing/lines';
 import { overviewOf } from '@/lib/waypoint/simplify';
-import { parseDateKey } from '@/lib/format';
+import { dayKey, parseDateKey } from '@/lib/format';
+import { validate as validateBudgetTrip, overlapError, strandedError } from '@/lib/budgetTrips';
 
 /**
  * Waypoint's data store. These used to be browser-side Supabase calls; they are server
@@ -25,6 +26,8 @@ export type CreateTripInput = {
   start_date?: string;
   end_date?: string;
   with_van?: boolean;
+  /** Also create a budget Trip with this budget (planned trips; needs both dates). */
+  budget?: number;
 };
 
 export type UpdateTripInput = Partial<CreateTripInput>;
@@ -36,10 +39,13 @@ export type TripRoute = { total_km: number | null; route_geometry: RouteGeometry
 const WITHOUT_GEOMETRY = { routeGeometry: true, overviewGeometry: true } as const;
 const MAX_STOPS = 100;
 
+/** A message meant for the person (validation, clashes); anything else stays generic. */
+class TripError extends Error {}
+
 function requireTitle(title: unknown): string {
   const trimmed = typeof title === 'string' ? title.trim() : '';
-  if (!trimmed) throw new Error('A trip needs a title.');
-  if (trimmed.length > 120) throw new Error('Keep the title under 120 characters.');
+  if (!trimmed) throw new TripError('A trip needs a title.');
+  if (trimmed.length > 120) throw new TripError('Keep the title under 120 characters.');
   return trimmed;
 }
 
@@ -53,63 +59,158 @@ function optionalText(value: string | null | undefined, max: number): string | n
 function optionalDate(value: string | null | undefined, label: string): Date | null {
   if (!value) return null;
   const key = parseDateKey(value);
-  if (!key) throw new Error(`${label} isn't a valid date.`);
+  if (!key) throw new TripError(`${label} isn't a valid date.`);
   return new Date(`${key}T00:00:00Z`);
 }
 
-function revalidate() {
+function revalidate(budgetToo = false) {
   revalidatePath('/'); // hub shows total km
   revalidatePath('/waypoint', 'layout');
+  if (budgetToo) {
+    revalidatePath('/budget', 'layout');
+  }
 }
 
+/** Budget trip names are capped at 60 characters; Waypoint titles at 120. */
+const budgetName = (title: string) => title.slice(0, 60).trim();
+const dateKey = (d: Date | null) => (d ? dayKey(d) : '');
+
 function checkOrder(from: Date | null, to: Date | null, message: string) {
-  if (from && to && to < from) throw new Error(message);
+  if (from && to && to < from) throw new TripError(message);
 }
 
 // --- Trips ---
 
-export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
+/**
+ * Trip saves return their message instead of throwing: a production build hides a thrown
+ * server action's message, and a budget trip clash has to be readable.
+ */
+export type TripSaveResult = { ok: true; trip: TripSummary } | { ok: false; error: string };
+
+async function asResult(save: () => Promise<TripSummary>): Promise<TripSaveResult> {
+  try {
+    return { ok: true, trip: await save() };
+  } catch (e) {
+    if (e instanceof TripError) return { ok: false, error: e.message };
+    console.error('Saving a Waypoint trip failed', e);
+    return { ok: false, error: 'Saving failed. Try again.' };
+  }
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Creates the budget Trip for a planned trip, under the budget rules (name, amount, overlap). */
+async function createLinkedBudget(
+  tx: Tx,
+  title: string,
+  startDate: Date | null,
+  endDate: Date | null,
+  amount: number,
+): Promise<string> {
+  if (!startDate || !endDate) throw new TripError('A budget trip needs a start and end date.');
+  const valid = validateBudgetTrip({
+    name: budgetName(title),
+    totalBudget: amount,
+    startDate: dateKey(startDate),
+    endDate: dateKey(endDate),
+  });
+  if (!valid.ok) throw new TripError(valid.error);
+  const overlap = await overlapError(tx, valid.trip);
+  if (overlap) throw new TripError(`Budget trip: ${overlap}`);
+  return (await tx.trip.create({ data: valid.trip, select: { id: true } })).id;
+}
+
+export async function createTrip(input: CreateTripInput): Promise<TripSaveResult> {
   await requireAuth();
+  return asResult(() => insertTrip(input));
+}
+
+export async function updateTrip(id: string, input: UpdateTripInput): Promise<TripSaveResult> {
+  await requireAuth();
+  return asResult(() => editTrip(id, input));
+}
+
+async function insertTrip(input: CreateTripInput): Promise<TripSummary> {
+  const title = requireTitle(input.title);
   const startDate = optionalDate(input.start_date, 'The start date');
   const endDate = optionalDate(input.end_date, 'The end date');
   checkOrder(startDate, endDate, "The end date can't be before the start date.");
-  const row = await prisma.waypointTrip.create({
-    data: {
-      title: requireTitle(input.title),
-      description: optionalText(input.description, 2000),
-      startDate,
-      endDate,
-      withVan: input.with_van === true,
-    },
-    omit: WITHOUT_GEOMETRY,
+  const withBudget = input.budget !== undefined;
+
+  const row = await prisma.$transaction(async (tx) => {
+    const budgetTripId = withBudget
+      ? await createLinkedBudget(tx, title, startDate, endDate, input.budget ?? 0)
+      : null;
+    return tx.waypointTrip.create({
+      data: {
+        title,
+        description: optionalText(input.description, 2000),
+        startDate,
+        endDate,
+        withVan: input.with_van === true,
+        budgetTripId,
+      },
+      omit: WITHOUT_GEOMETRY,
+    });
   });
-  revalidate();
+  revalidate(withBudget);
   return toTripSummary(row);
 }
 
-export async function updateTrip(id: string, input: UpdateTripInput): Promise<TripSummary> {
-  await requireAuth();
+async function editTrip(id: string, input: UpdateTripInput): Promise<TripSummary> {
   const current = await prisma.waypointTrip.findUnique({
     where: { id },
-    select: { startDate: true, endDate: true },
+    select: { title: true, startDate: true, endDate: true, budgetTripId: true },
   });
-  if (!current) throw new Error('That trip no longer exists.');
+  if (!current) throw new TripError('That trip no longer exists.');
   const startDate = input.start_date !== undefined ? optionalDate(input.start_date, 'The start date') : current.startDate;
   const endDate = input.end_date !== undefined ? optionalDate(input.end_date, 'The end date') : current.endDate;
   checkOrder(startDate, endDate, "The end date can't be before the start date.");
+  const title = input.title !== undefined ? requireTitle(input.title) : current.title;
+  const linked = current.budgetTripId;
+  // A plan made without one can get its budget trip later from the same dialog.
+  const addBudget = !linked && input.budget !== undefined;
 
-  const row = await prisma.waypointTrip.update({
-    where: { id },
-    data: {
-      ...(input.title !== undefined && { title: requireTitle(input.title) }),
-      ...(input.description !== undefined && { description: optionalText(input.description, 2000) }),
-      startDate,
-      endDate,
-      ...(input.with_van !== undefined && { withVan: input.with_van === true }),
-    },
-    omit: WITHOUT_GEOMETRY,
+  const row = await prisma.$transaction(async (tx) => {
+    // Keep the linked budget trip's name and dates in step, under its own rules.
+    if (linked) {
+      const budget = await tx.trip.findUnique({ where: { id: linked }, select: { totalBudget: true } });
+      if (budget) {
+        if (!startDate || !endDate) throw new TripError('This trip has a budget trip, so it needs a start and end date.');
+        const valid = validateBudgetTrip({
+          name: budgetName(title),
+          totalBudget: Number(budget.totalBudget),
+          startDate: dateKey(startDate),
+          endDate: dateKey(endDate),
+        });
+        if (!valid.ok) throw new TripError(valid.error);
+        const overlap = await overlapError(tx, valid.trip, linked);
+        if (overlap) throw new TripError(`Budget trip: ${overlap}`);
+        const stranded = await strandedError(tx, linked, valid.trip.startDate, valid.trip.endDate);
+        if (stranded) throw new TripError(`Budget trip: ${stranded}`);
+        await tx.trip.update({
+          where: { id: linked },
+          data: { name: valid.trip.name, startDate: valid.trip.startDate, endDate: valid.trip.endDate },
+        });
+      }
+    }
+    const budgetTripId = addBudget
+      ? await createLinkedBudget(tx, title, startDate, endDate, input.budget ?? 0)
+      : undefined;
+    return tx.waypointTrip.update({
+      where: { id },
+      data: {
+        title,
+        ...(budgetTripId && { budgetTripId }),
+        ...(input.description !== undefined && { description: optionalText(input.description, 2000) }),
+        startDate,
+        endDate,
+        ...(input.with_van !== undefined && { withVan: input.with_van === true }),
+      },
+      omit: WITHOUT_GEOMETRY,
+    });
   });
-  revalidate();
+  revalidate(!!linked || addBudget);
   return toTripSummary(row);
 }
 

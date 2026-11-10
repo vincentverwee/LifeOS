@@ -11,6 +11,7 @@ const trip = (id: string, start: string | null, km: number | null, withVan: bool
   cover_image: null,
   total_km: km,
   with_van: withVan,
+  budget_trip_id: null,
   created_at: '',
   updated_at: '',
 });

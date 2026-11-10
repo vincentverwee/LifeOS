@@ -8,7 +8,8 @@ import { TripFilter } from '@/components/waypoint/map/TripFilter';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { getAllTrips, getAllLocations } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
-import { getDashboardStats } from '@/lib/waypoint/stats';
+import { getDashboardStats, journalOnly } from '@/lib/waypoint/stats';
+import { getTodayKey } from '@/lib/today';
 import { assignTripColors } from '@/lib/waypoint/tripColors';
 import { routeLines } from '@/lib/waypoint/routing/lines';
 import {
@@ -24,13 +25,16 @@ import { countStickers } from '@/lib/data/stickers';
 
 export default async function DashboardPage({ searchParams }: PageProps<'/waypoint'>) {
   await connection();
-  const [params, allTrips, allLocations, companions, stickerCount] = await Promise.all([
+  const [params, everyTrip, everyLocation, companions, stickerCount, todayKey] = await Promise.all([
     searchParams,
     getAllTrips({ simplify: 0.0005 }),
     getAllLocations(),
     getTripCompanions(),
     countStickers(),
+    getTodayKey(),
   ]);
+  // Planned trips (starting after today) live on the trips list, not in the journal numbers.
+  const { trips: allTrips, locations: allLocations } = journalOnly(everyTrip, everyLocation, todayKey);
   // Everything follows the choice shared by every Waypoint page (?trip= / ?person=, else
   // the last one picked on this device, else the van trips): van-first.
   const anyVan = allTrips.some((t) => t.with_van);

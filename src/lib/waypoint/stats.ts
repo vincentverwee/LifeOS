@@ -34,9 +34,33 @@ export interface VanStats {
   trips: number;
 }
 
-/** A trip that hasn't started yet (planned) doesn't count for the van; undated ones do. */
-function hasStarted(trip: Pick<TripSummary, 'start_date'>, todayKey: string): boolean {
+/**
+ * Planned trips: a trip whose start date is after today is a plan, and turns into the journal
+ * on its first day by itself (no status column). Undated trips count as started. Journal
+ * numbers (km, counts, countries, maps, Home) only use started trips.
+ */
+export function hasStarted(trip: Pick<TripSummary, 'start_date'>, todayKey: string): boolean {
   return !trip.start_date || trip.start_date.slice(0, 10) <= todayKey;
+}
+
+export function isPlanned(trip: Pick<TripSummary, 'start_date'>, todayKey: string): boolean {
+  return !hasStarted(trip, todayKey);
+}
+
+/** The started trips, and only the stops on them. */
+export function journalOnly<T extends Pick<TripSummary, 'id' | 'start_date'>, L extends Pick<Location, 'trip_id'>>(
+  trips: T[],
+  locations: L[],
+  todayKey: string,
+): { trips: T[]; locations: L[] } {
+  const started = trips.filter((t) => hasStarted(t, todayKey));
+  const ids = new Set(started.map((t) => t.id));
+  return { trips: started, locations: locations.filter((l) => ids.has(l.trip_id)) };
+}
+
+/** Whole days from today to a planned trip's start ("in 12 days"). */
+export function daysUntil(startKey: string, todayKey: string): number {
+  return Math.round((Date.parse(`${startKey.slice(0, 10)}T00:00:00Z`) - Date.parse(`${todayKey}T00:00:00Z`)) / 86_400_000);
 }
 
 /** Everything driven in the van, dated or not, leaving out trips that haven't started. */

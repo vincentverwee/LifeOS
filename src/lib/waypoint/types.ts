@@ -10,6 +10,8 @@ export interface Trip {
   total_km: number | null;
   /** Driven in the van. */
   with_van: boolean;
+  /** The budget Trip made alongside it (planned trips), if any. */
+  budget_trip_id: string | null;
   /** The driving parts; a MultiLineString when a flight splits them (see routing/lines.ts). */
   route_geometry: RouteGeometry | null;
   created_at: string;

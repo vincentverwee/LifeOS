@@ -23,6 +23,7 @@ export function toTripSummary(row: Omit<WaypointTrip, 'routeGeometry' | 'overvie
     cover_image: row.coverImage,
     total_km: row.totalKm === null ? null : Number(row.totalKm),
     with_van: row.withVan,
+    budget_trip_id: row.budgetTripId,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
   };

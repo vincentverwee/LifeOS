@@ -4,8 +4,11 @@ Projects to pick up later, next one first.
 
 ## Next up (picked 2026-11-08)
 
-- **Trip planning in Waypoint**: plan the next van trip before leaving: stops in order, a km/route estimate (same OSRM route as finished trips), and a budget Trip created alongside it, so the plan becomes the journal once you're on the road.
 - **Monthly mini-review**: like the weekly review (`/review`), told by the mascots on the 1st of the month, with month-on-month comparisons per section (spend vs budget, pints, study hours, km, Last done on-time share, outfits worn…). Could reuse `WeekStory` and the Sunday-push pattern.
+
+## Done: Trip planning in Waypoint
+
+Built 2026-11-10: a trip starting after today is a plan (own group on Trips, countdown, ≈ km from the same OSRM route), optionally with a linked budget Trip that follows its name and dates. See CLAUDE.md ("Planned trips"). Possible follow-up: avoid tolls in the estimate (Valhalla `use_tolls`).
 
 ## Done: Pint map → the Beer section (/beer)
 

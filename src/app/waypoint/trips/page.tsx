@@ -4,15 +4,17 @@ import { TripsList, type ShownTrips } from '@/components/waypoint/trips/TripsLis
 import { getAllTripSummaries } from '@/lib/data/waypoint';
 import { getTripCompanions } from '@/lib/data/people';
 import { getFirstStickerByTrip } from '@/lib/data/stickers';
+import { getTodayKey } from '@/lib/today';
 import { readTripFilter, TRIP_FILTER_COOKIE } from '@/lib/waypoint/tripFilter';
 
 export default async function TripsPage({ searchParams }: PageProps<'/waypoint/trips'>) {
   await connection();
-  const [params, trips, companions, stickers] = await Promise.all([
+  const [params, trips, companions, stickers, todayKey] = await Promise.all([
     searchParams,
     getAllTripSummaries(),
     getTripCompanions(),
     getFirstStickerByTrip(),
+    getTodayKey(),
   ]);
   // The same All / Van / Without van / With… choice as every Waypoint page (Van by default).
   const saved = (await cookies()).get(TRIP_FILTER_COOKIE)?.value;
@@ -27,6 +29,7 @@ export default async function TripsPage({ searchParams }: PageProps<'/waypoint/t
       shownTrips={shownTrips}
       companions={companions.map(({ id, name }) => ({ id, name }))}
       stickers={stickers}
+      todayKey={todayKey}
     />
   );
 }

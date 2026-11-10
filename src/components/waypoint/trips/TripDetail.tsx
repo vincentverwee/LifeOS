@@ -23,7 +23,9 @@ import {
   setLegByPlane,
 } from '@/lib/actions/waypoint';
 import { flownKm } from '@/lib/waypoint/routing/lines';
-import { Caravan, Pencil, ImageDown, Plane } from 'lucide-react';
+import { Caravan, Pencil, ImageDown, Plane, Wallet } from 'lucide-react';
+import { daysUntil, isPlanned } from '@/lib/waypoint/stats';
+import { formatCurrency } from '@/lib/format';
 
 const dayFormatter = new Intl.DateTimeFormat('en-GB', {
   day: 'numeric',
@@ -49,6 +51,8 @@ export function TripDetail({
   initialLocations,
   people,
   stickers = [],
+  todayKey,
+  budgetTrip = null,
 }: {
   initialTrip: Trip;
   initialLocations: Location[];
@@ -56,6 +60,9 @@ export function TripDetail({
   people?: React.ReactNode;
   /** Its stickers (from the server; refreshed after each sticker change). */
   stickers?: Sticker[];
+  todayKey: string;
+  /** The budget trip made alongside it (planned trips). */
+  budgetTrip?: { name: string; totalBudget: number } | null;
 }) {
   const id = initialTrip.id;
   const [trip, setTrip] = useState<Trip>(initialTrip);
@@ -115,8 +122,9 @@ export function TripDetail({
   }
 
   async function handleEditSave(data: CreateTripInput) {
-    const updated = await updateTrip(trip.id, data);
-    setTrip((prev) => ({ ...prev, ...updated }));
+    const result = await updateTrip(trip.id, data);
+    if (!result.ok) throw new Error(result.error); // the dialog shows it
+    setTrip((prev) => ({ ...prev, ...result.trip }));
   }
 
   async function addLocation(loc: CreateLocationInput) {
@@ -170,6 +178,9 @@ export function TripDetail({
 
   const displayedRouteGeometry = locations.length < 2 ? null : trip.route_geometry;
   const flown = flownKm(locations);
+  // Starts after today = a plan: km are an estimate, nothing to stick or tag yet.
+  const planned = isPlanned(trip, todayKey);
+  const daysToGo = planned && trip.start_date ? daysUntil(trip.start_date, todayKey) : 0;
 
   return (
     <>
@@ -202,6 +213,17 @@ export function TripDetail({
               </div>
             }
           />
+          {planned && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <Badge variant="secondary">Planned · {daysToGo === 1 ? 'starts tomorrow' : `starts in ${daysToGo} days`}</Badge>
+              {budgetTrip && (
+                <Link href="/budget/settings" className="inline-flex items-center gap-1 text-ink-muted underline-offset-2 hover:underline">
+                  <Wallet size={13} aria-hidden="true" />
+                  Budget trip: {budgetTrip.name} · <span className="tabular-nums">{formatCurrency(budgetTrip.totalBudget)}</span>
+                </Link>
+              )}
+            </div>
+          )}
           {(trip.start_date || (!!trip.total_km && locations.length >= 2) || trip.with_van || flown > 0) && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted">
               {trip.start_date && (
@@ -211,7 +233,9 @@ export function TripDetail({
                 </span>
               )}
               {!!trip.total_km && locations.length >= 2 && (
-                <span className="tabular-nums">{trip.total_km.toLocaleString()} km</span>
+                <span className="tabular-nums">
+                  {planned ? `≈ ${trip.total_km.toLocaleString()} km planned` : `${trip.total_km.toLocaleString()} km`}
+                </span>
               )}
               {flown > 0 && (
                 <span className="flex items-center gap-1 tabular-nums" title="Flown, not counted in the km driven">
@@ -229,13 +253,15 @@ export function TripDetail({
           )}
         </div>
 
-        {people}
+        {!planned && people}
 
-        <TripStickers
-          tripId={id}
-          stickers={stickers}
-          stops={locations.map(({ id: stopId, name, city }) => ({ id: stopId, name, city }))}
-        />
+        {!planned && (
+          <TripStickers
+            tripId={id}
+            stickers={stickers}
+            stops={locations.map(({ id: stopId, name, city }) => ({ id: stopId, name, city }))}
+          />
+        )}
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
           {/* Left: locations */}
