@@ -7,16 +7,10 @@ import type { SectionKind } from "@/lib/data/homeMoods";
  * show no photo for that section.
  */
 const SECTION_PHOTOS: Partial<Record<SectionKind, string>> = {
-  budget: "/photos/budget.jpg",
-  lessons: "/photos/lessons.jpg",
-  reminders: "/photos/reminders.jpg",
   diary: "/photos/diary.jpg",
   beer: "/photos/beer.jpg",
-  workouts: "/photos/workouts.jpg",
-  wardrobe: "/photos/wardrobe.jpg",
   people: "/photos/people.jpg",
   waypoint: "/photos/waypoint.jpg",
-  recipes: "/photos/recipes.jpg",
 };
 
 export const sectionPhoto = (kind: SectionKind): string | undefined => SECTION_PHOTOS[kind];
