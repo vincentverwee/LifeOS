@@ -9,7 +9,7 @@ import { dayKeyIn, getTimeZone, getTodayKey } from "@/lib/today";
 import type { Prisma } from "@/generated/prisma/client";
 import { isCategoryColorSlot } from "@/lib/categoryPalette";
 import { isLessonStatus, type LessonKind } from "@/lib/lessons/marks";
-import { EXAM_KINDS, type ExamKind } from "@/lib/lessons/types";
+import { EXAM_KINDS, parseGrade, type ExamKind } from "@/lib/lessons/types";
 
 function revalidateLessonRoutes() {
   revalidatePath("/"); // hub shows today's hours
@@ -399,7 +399,8 @@ export async function deleteStudyPeriod(id: string): Promise<LessonsResult> {
 
 // --- Courses ---
 
-export type StudyCourseInput = { name: string; color: string; hasWc: boolean; countsAsStudy: boolean };
+/** `grade`: as typed, "" = none (kept while "Counts as study" is off, like hasWc). */
+export type StudyCourseInput = { name: string; color: string; hasWc: boolean; countsAsStudy: boolean; grade?: string };
 
 /** `currentName`: a course's existing name may stay longer than the limit (from before it). */
 function validateCourse(input: StudyCourseInput, currentName?: string): string | null {
@@ -407,8 +408,15 @@ function validateCourse(input: StudyCourseInput, currentName?: string): string |
   if (!name) return "Give the course a name.";
   if (name.length > 40 && name !== currentName) return "Keep the name short (40 characters at most).";
   if (!isCategoryColorSlot(input.color)) return "Pick a colour.";
+  const grade = parseGrade(input.grade ?? "");
+  if (!grade.ok) return grade.error;
   return null;
 }
+
+const gradeOf = (input: StudyCourseInput) => {
+  const parsed = parseGrade(input.grade ?? "");
+  return parsed.ok ? parsed.grade : null;
+};
 
 export async function createStudyCourse(periodId: string, input: StudyCourseInput): Promise<LessonsResult> {
   await requireAuth();
@@ -424,6 +432,7 @@ export async function createStudyCourse(periodId: string, input: StudyCourseInpu
         color: input.color,
         hasWc: input.hasWc,
         countsAsStudy: input.countsAsStudy !== false,
+        grade: gradeOf(input),
         sortOrder: (last?.sortOrder ?? 0) + 10,
       },
     });
@@ -447,7 +456,7 @@ export async function updateStudyCourse(id: string, input: StudyCourseInput): Pr
   try {
     await prisma.studyCourse.update({
       where: { id },
-      data: { name, color: input.color, hasWc: input.hasWc, countsAsStudy: input.countsAsStudy !== false },
+      data: { name, color: input.color, hasWc: input.hasWc, countsAsStudy: input.countsAsStudy !== false, grade: gradeOf(input) },
     });
   } catch (e) {
     return knownError(e, {

@@ -16,6 +16,7 @@ import {
 import type { CountdownPoint, WeekStat, WeekdayStat } from "@/lib/lessons/stats";
 import type { CategoryColorSlot } from "@/lib/categoryPalette";
 import { formatDate, formatHours } from "@/lib/format";
+import { EarlierToggle } from "@/components/charts/EarlierToggle";
 
 const tick = { fill: "var(--color-ink-muted)", fontSize: 12 };
 const tooltipBox = "rounded-lg border border-border bg-surface px-3 py-2 text-sm shadow-sm";
@@ -86,14 +87,11 @@ export function CountdownChart({ points, series: allSeries, hasAvg }: { points: 
         )}
       </div>
       {hasAvg && others > 0 && (
-        <button
-          type="button"
-          onClick={() => setShowAll((v) => !v)}
-          aria-pressed={showAll}
-          className="btn btn-ghost -mx-3 -mt-1 mb-1 inline-flex min-h-11 px-3 text-sm"
-        >
-          {showAll ? "Only the average" : `Show all ${others} earlier ${others === 1 ? "period" : "periods"}`}
-        </button>
+        <EarlierToggle
+          on={showAll}
+          onToggle={() => setShowAll((v) => !v)}
+          showLabel={`Show all ${others} earlier ${others === 1 ? "period" : "periods"}`}
+        />
       )}
       <ResponsiveContainer width="100%" height={240} minWidth={0} initialDimension={{ width: 320, height: 240 }}>
         <LineChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>

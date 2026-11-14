@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { loadStudyPeriods } from "@/lib/data/lessons";
+import { getGradeSummaries, loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
-import { comparePace, computePeriodStats, countdownChart } from "@/lib/lessons/stats";
+import { comparePace, computePeriodStats, countdownChart, hoursPerPoint, periodHoursPerPoint } from "@/lib/lessons/stats";
 import { CATEGORY_COLOR_SLOTS } from "@/lib/categoryPalette";
-import { formatDate, formatHours, formatPercent } from "@/lib/format";
+import { formatDate, formatGrade, formatHours, formatPercent } from "@/lib/format";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { Disclosure } from "@/components/Disclosure";
 import type { ChartSeries } from "@/components/lessons/StudyCharts";
@@ -22,11 +22,16 @@ function Section({ title, hint, children }: { title: string; hint?: string; chil
 }
 
 const hoursOrDash = (n: number | null) => (n === null ? "–" : formatHours(n));
+/** "3,2 h" per point, one decimal. */
+const perPoint = (n: number) => formatHours(Math.round(n * 10) / 10);
 
 export default async function LessonsInsightsPage({ searchParams }: PageProps<"/lessons/insights">) {
   const { period: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const { periods, period } = await loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true });
+  const [{ periods, period }, grades] = await Promise.all([
+    loadStudyPeriods(typeof requested === "string" ? requested : undefined, todayKey, { peerEntries: true }),
+    getGradeSummaries(),
+  ]);
 
   if (!period) {
     return (
@@ -50,6 +55,13 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
   const summaries = chronological
     .map((p) => ({ period: p, stats: p.id === period.id ? stats : computePeriodStats(p, todayKey) }))
     .reverse();
+  // Hours per grade point: this period from its own course stats, the others from the summaries.
+  const myPerPoint = periodHoursPerPoint(stats.courses.map((c) => ({ hours: c.hours, grade: c.course.grade })));
+  const perPointOf = (id: string) => (id === period.id ? myPerPoint : periodHoursPerPoint(grades.get(id) ?? []));
+  const gradedPeriods = summaries
+    .map(({ period: p }) => ({ period: p, value: perPointOf(p.id) }))
+    .filter((r): r is { period: typeof r.period; value: number } => r.value !== null);
+  const fewest = gradedPeriods.length > 1 ? Math.min(...gradedPeriods.map((r) => r.value)) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -126,12 +138,49 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
                   <p className="mt-1 text-xs text-ink-muted">
                     {formatPercent(c.share * 100)} · {c.days} {c.days === 1 ? "day" : "days"}
                     {c.lastStudied ? ` · last ${formatDate(c.lastStudied)}` : ""}
+                    {c.course.grade !== null && ` · ${formatGrade(c.course.grade)}`}
+                    {(() => {
+                      const n = hoursPerPoint(c.hours, c.course.grade);
+                      return n === null ? "" : ` · ${perPoint(n)} per point`;
+                    })()}
                   </p>
                 </li>
               ))}
           </ul>
           {stats.unassigned > 0 && (
             <p className="mt-3 text-xs text-ink-muted">{formatHours(stats.unassigned)} logged without a course.</p>
+          )}
+        </Section>
+      )}
+
+      {gradedPeriods.length > 0 && (
+        <Section title="Hours per point" hint="Study hours ÷ points out of 20, over the courses with a grade (time without a course doesn't count).">
+          {myPerPoint !== null ? (
+            <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">
+              {perPoint(myPerPoint)} <span className="font-sans text-base font-normal text-ink-muted">per point</span>
+            </p>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              No grades for {period.name} yet: add them per course in{" "}
+              <Link href={`/lessons/settings?period=${encodeURIComponent(period.id)}`} className="underline">
+                Settings
+              </Link>
+              .
+            </p>
+          )}
+          {gradedPeriods.some((r) => r.period.id !== period.id) && (
+            <ul className="mt-3 flex flex-col divide-y divide-border">
+              {gradedPeriods.map(({ period: p, value }) => (
+                <li key={p.id} className="flex items-center justify-between gap-3 py-2 text-sm">
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: `var(--color-tag-${colorOf(p.id)})` }} aria-hidden="true" />
+                    <span className={`truncate text-foreground ${p.id === period.id ? "font-semibold" : ""}`}>{p.name}</span>
+                    {value === fewest && <span className="shrink-0 text-xs text-ink-muted">fewest</span>}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-foreground">{perPoint(value)}</span>
+                </li>
+              ))}
+            </ul>
           )}
         </Section>
       )}
@@ -168,6 +217,10 @@ export default async function LessonsInsightsPage({ searchParams }: PageProps<"/
                     <span className={`truncate text-sm ${p.id === period.id ? "font-semibold" : ""} text-foreground`}>{p.name}</span>
                     <span className="text-xs text-ink-muted">
                       {s.studiedDays} days · {hoursOrDash(s.avgPerStudyDay)}/day · {s.daysAtGoal} ≥ goal
+                      {(() => {
+                        const n = perPointOf(p.id);
+                        return n === null ? "" : ` · ${perPoint(n)}/point`;
+                      })()}
                     </span>
                   </span>
                 </span>

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { labelBaseline, labelSummaries, previousMonth, type PeriodEntry } from "@/lib/insights";
+import { earlierMonths, labelBaseline, labelSummaries, previousMonth, type PeriodEntry } from "@/lib/insights";
 import { computeMonthStats, type Month, type MonthExpense } from "@/lib/monthStats";
 
 const TODAY = "2026-10-15";
@@ -106,6 +106,27 @@ describe("previousMonth", () => {
     const aug = period("aug", "2026-08-01", "2026-08-31");
     const sep = period("sep", "2026-09-01", "2026-09-30");
     expect(previousMonth(aug, [aug, sep])).toBeNull();
+  });
+});
+
+describe("earlierMonths", () => {
+  const months = ["03", "04", "05", "06", "07", "08", "09"].map((m) => period(`m${m}`, `2026-${m}-01`, `2026-${m}-28`));
+  const oct = period("oct", "2026-10-01", "2026-10-31");
+  const nov = period("nov", "2026-11-01", "2026-11-30");
+  const trip = period("trip", "2026-09-20", "2026-09-25", { kind: "trip", label: "Trip" });
+
+  it("returns the last 6 earlier months, oldest first, skipping trips and later months", () => {
+    const ids = earlierMonths(oct, [nov, trip, oct, ...months].reverse()).map((e) => e.month.id);
+    expect(ids).toEqual(["m04", "m05", "m06", "m07", "m08", "m09"]);
+  });
+
+  it("takes fewer when there aren't that many, and none for the first month", () => {
+    expect(earlierMonths(oct, [oct, months[6]], 6).map((e) => e.month.id)).toEqual(["m09"]);
+    expect(earlierMonths(months[0], [...months, oct])).toEqual([]);
+  });
+
+  it("is empty for a trip", () => {
+    expect(earlierMonths(trip, [trip, ...months])).toEqual([]);
   });
 });
 

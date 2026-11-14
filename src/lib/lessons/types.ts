@@ -11,7 +11,22 @@ export type StudyCourse = {
   hasWc: boolean;
   /** Off = tracked time (Ekonomika, Projectvak): logged like study, kept out of every study number. */
   countsAsStudy: boolean;
+  /** final grade out of 20, null = none yet (tracked courses never have one) */
+  grade: number | null;
 };
+
+export const MAX_GRADE = 20;
+
+/** A grade typed in the course form: empty = none, else 0–20 with "," or "." (one decimal kept). */
+export function parseGrade(raw: string): { ok: true; grade: number | null } | { ok: false; error: string } {
+  const text = raw.trim().replace(",", ".");
+  if (text === "") return { ok: true, grade: null };
+  const n = Number(text);
+  if (!/^\d+(\.\d+)?$/.test(text) || !Number.isFinite(n) || n < 0 || n > MAX_GRADE) {
+    return { ok: false, error: `A grade is a number from 0 to ${MAX_GRADE}.` };
+  }
+  return { ok: true, grade: Math.round(n * 10) / 10 };
+}
 
 export type StudyEntry = {
   id: string;

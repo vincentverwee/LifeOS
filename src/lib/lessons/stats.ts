@@ -411,3 +411,25 @@ export function countdownChart(
     hasAvg: peers.length > 1,
   };
 }
+
+// --- Hours per grade point ---
+
+/** Study hours one point out of 20 took: null without a grade (or a 0, which took no points). */
+export function hoursPerPoint(hours: number, grade: number | null): number | null {
+  if (grade === null || grade <= 0) return null;
+  return hours / grade;
+}
+
+export type GradedCourse = { hours: number; grade: number | null };
+
+/**
+ * A period's hours per point: the hours of its graded courses ÷ the sum of their grades
+ * (a weighted average, so a big course counts for more). Null when nothing is graded.
+ * Time logged without a course isn't in any course's hours, so it doesn't count.
+ */
+export function periodHoursPerPoint(courses: GradedCourse[]): number | null {
+  const graded = courses.filter((c) => c.grade !== null && c.grade > 0);
+  const points = graded.reduce((s, c) => s + (c.grade ?? 0), 0);
+  if (points === 0) return null;
+  return graded.reduce((s, c) => s + c.hours, 0) / points;
+}

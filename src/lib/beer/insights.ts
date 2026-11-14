@@ -79,6 +79,21 @@ export function usualMonth(visits: BeerVisit[], month: string, todayKey: string)
   };
 }
 
+/**
+ * The `n` months before `month` that are on record (from the first beer's month on, dry
+ * ones included), oldest first, each with its running pints: the "show the last months" lines.
+ */
+export function earlierPintMonths(visits: BeerVisit[], month: string, n = 6): { month: string; run: number[] }[] {
+  if (visits.length === 0) return [];
+  const first = monthOf(visits[0].date);
+  const out: { month: string; run: number[] }[] = [];
+  for (let k = n; k >= 1; k--) {
+    const m = shiftMonth(month, -k);
+    if (m >= first) out.push({ month: m, run: runningPints(visits, m) });
+  }
+  return out;
+}
+
 export type PubMonthRow = { pubId: string | null; name: string; totals: BeerTotals };
 
 /** Per pub in the given visits, most pints first; beers without a pub are one "No pub" row, last. */

@@ -387,6 +387,8 @@ model StudyCourse {
   // Off = tracked time (e.g. Ekonomika, Projectvak): logged like study, but left out of study
   // hours, goals, comparisons, Insights, the grid and notifications; shown on /lessons/tracked.
   countsAsStudy Boolean      @default(true)
+  // Final grade out of 20 (one decimal), for "hours per point" on Insights; null = none yet.
+  grade         Decimal?     @db.Decimal(3, 1)
   entries       StudyEntry[]
   exams         StudyExam[]
   lessons       LessonMark[]

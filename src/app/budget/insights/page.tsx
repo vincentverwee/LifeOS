@@ -1,10 +1,11 @@
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getPeriodData, getPeriodSummaries, resolveActivePeriod, type Period } from "@/lib/data";
 import { encodePeriodKey } from "@/lib/period";
-import { computeMonthStats } from "@/lib/monthStats";
+import { computeMonthStats, cumulativeAtDay } from "@/lib/monthStats";
 import {
   categoryTotalsAtDay,
   comparisonDay,
+  earlierMonths,
   labelBaseline,
   labelSummaries,
   type PeriodEntry,
@@ -16,6 +17,7 @@ import { PeriodSwitcher } from "@/components/dashboard/PeriodSwitcher";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { InsightsHero } from "@/components/insights/InsightsHero";
 import { CompareChart, type ComparePoint } from "@/components/insights/CompareChart";
+import { earlierColor, earlierName, type EarlierSeries } from "@/lib/earlierSeries";
 import { CategoryList, type CategoryRow } from "@/components/insights/CategoryList";
 import { PeriodList } from "@/components/insights/PeriodList";
 import { LabelChip } from "@/components/insights/LabelChip";
@@ -68,13 +70,26 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
   const day = comparisonDay(active);
   const baseline = labelBaseline(active, entries, today);
 
-  // Cumulative chart: this period vs the typical peer period vs the budget line.
-  const chart: ComparePoint[] = stats.daily.map((point, i) => ({
-    day: point.day,
-    actual: point.cumulative,
-    typical: baseline ? (baseline.curve[i] ?? null) : null,
-    budget: point.budgetLine,
+  // Cumulative chart: this period vs the typical peer period vs the budget line, plus the
+  // last 6 months' own lines behind a toggle (each cut off after its last day).
+  const earlier = earlierMonths(active, entries);
+  const earlierSeries: EarlierSeries[] = earlier.map((e) => ({
+    key: `m_${e.month.id}`,
+    name: earlierName(e.month.startDate, month.startDate),
+    color: earlierColor(e.month.startDate),
   }));
+  const chart: ComparePoint[] = stats.daily.map((point, i) => {
+    const row: ComparePoint = {
+      day: point.day,
+      actual: point.cumulative,
+      typical: baseline ? (baseline.curve[i] ?? null) : null,
+      budget: point.budgetLine,
+    };
+    for (const e of earlier) {
+      row[`m_${e.month.id}`] = point.day <= e.stats.daysInMonth ? cumulativeAtDay(e.stats, point.day) : null;
+    }
+    return row;
+  });
 
   // Categories of this period, each with its delta vs peers and its history.
   const colors = new Map(month.expenses.map((e) => [e.categoryId, e.categoryColor]));
@@ -145,7 +160,7 @@ export default async function InsightsPage(props: PageProps<"/budget/insights">)
       />
 
       <Section title="Spending over the period">
-        <CompareChart data={chart} typicalLabel={baseline?.label ?? null} />
+        <CompareChart data={chart} typicalLabel={baseline?.label ?? null} earlier={earlierSeries} />
       </Section>
 
       <Section title="Categories">

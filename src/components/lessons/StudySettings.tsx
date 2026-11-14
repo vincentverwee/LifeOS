@@ -16,7 +16,7 @@ import {
   type LessonsResult,
 } from "@/lib/actions/lessons";
 import { CATEGORY_COLOR_SLOTS, type CategoryColorSlot } from "@/lib/categoryPalette";
-import { formatDate, parseHours } from "@/lib/format";
+import { formatDate, formatGrade, parseHours } from "@/lib/format";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 import { Sheet } from "@/components/recipes/Sheet";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
@@ -189,11 +189,12 @@ function CourseForm({
   const [color, setColor] = useState<CategoryColorSlot>(course?.color ?? nextColor);
   const [hasWc, setHasWc] = useState(course?.hasWc ?? false);
   const [countsAsStudy, setCountsAsStudy] = useState(course?.countsAsStudy ?? true);
+  const [grade, setGrade] = useState(course?.grade != null ? String(course.grade).replace(".", ",") : "");
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
     // hasWc is kept while "Counts as study" is off, so switching it back on restores the WC column.
-    const fields = { name, color, hasWc, countsAsStudy };
+    const fields = { name, color, hasWc, countsAsStudy, grade };
     run(
       () => (course ? updateStudyCourse(course.id, fields) : createStudyCourse(periodId, fields)),
       () => {
@@ -201,6 +202,7 @@ function CourseForm({
           setName("");
           setHasWc(false);
           setCountsAsStudy(true);
+          setGrade("");
         }
         onDone?.();
       }
@@ -233,6 +235,19 @@ function CourseForm({
         <label className="flex min-h-11 items-center gap-2 text-sm text-foreground">
           <input type="checkbox" checked={hasWc} onChange={(e) => setHasWc(e.target.checked)} className="h-5 w-5 accent-[var(--color-primary)]" />
           Has WC (exercise sessions) next to HC
+        </label>
+      )}
+      {countsAsStudy && (
+        <label className="flex min-w-0 flex-col gap-1">
+          <span className={label}>Grade (out of 20)</span>
+          <input
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+            inputMode="decimal"
+            placeholder="Once you have it, e.g. 13,5"
+            className={input}
+          />
+          <span className="text-xs text-ink-muted">Used for hours per point on Insights.</span>
         </label>
       )}
       {error && <p className="text-sm text-critical">{error}</p>}
@@ -275,7 +290,13 @@ export function CourseManager({ period }: { period: StudyPeriod }) {
                     {!course.countsAsStudy ? (
                       <span className="truncate text-xs text-ink-muted">Tracked time, not study</span>
                     ) : (
-                      course.hasWc && <span className="truncate text-xs text-ink-muted">HC + WC</span>
+                      (course.hasWc || course.grade !== null) && (
+                        <span className="truncate text-xs text-ink-muted">
+                          {[course.hasWc ? "HC + WC" : null, course.grade !== null ? formatGrade(course.grade) : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      )
                     )}
                   </span>
                   <button type="button" onClick={() => setEditingId(course.id)} className="btn btn-ghost min-h-11 px-4 text-sm">

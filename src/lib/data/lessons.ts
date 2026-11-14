@@ -54,6 +54,7 @@ function toStudyPeriod(p: FullRow): StudyPeriod {
     sortOrder: c.sortOrder,
     hasWc: c.hasWc,
     countsAsStudy: c.countsAsStudy,
+    grade: c.grade !== null ? c.grade.toNumber() : null,
   }));
   const tracked = new Set(allCourses.filter((c) => !c.countsAsStudy).map((c) => c.id));
   const allEntries = p.entries.map((e) => ({
@@ -248,6 +249,31 @@ export async function getStudyDays(sinceKey: string): Promise<{ date: string; ho
   return rows.map((r) => ({ date: dayKey(r.date), hours: r._sum.hours?.toNumber() ?? 0 })).filter((r) => r.hours > 0);
 }
 
+/**
+ * Graded study courses of every period with their logged hours, by period id: enough for
+ * each period's hours per point (`periodHoursPerPoint`) while other periods load as headers.
+ */
+export async function getGradeSummaries(): Promise<Map<string, { hours: number; grade: number | null }[]>> {
+  const courses = await prisma.studyCourse.findMany({
+    where: { countsAsStudy: true, grade: { not: null } },
+    select: { id: true, periodId: true, grade: true },
+  });
+  if (courses.length === 0) return new Map();
+  const sums = await prisma.studyEntry.groupBy({
+    by: ["courseId"],
+    where: { courseId: { in: courses.map((c) => c.id) } },
+    _sum: { hours: true },
+  });
+  const hoursOf = new Map(sums.map((r) => [r.courseId, r._sum.hours?.toNumber() ?? 0]));
+  const byPeriod = new Map<string, { hours: number; grade: number | null }[]>();
+  for (const c of courses) {
+    const list = byPeriod.get(c.periodId) ?? [];
+    list.push({ hours: hoursOf.get(c.id) ?? 0, grade: c.grade?.toNumber() ?? null });
+    byPeriod.set(c.periodId, list);
+  }
+  return byPeriod;
+}
+
 /** Every tracked course (any semester), for editing entries on /lessons/tracked. */
 export async function getTrackedCourses() {
   const rows = await prisma.studyCourse.findMany({
@@ -255,7 +281,7 @@ export async function getTrackedCourses() {
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     select: { id: true, name: true, color: true, sortOrder: true, hasWc: true, countsAsStudy: true, periodId: true },
   });
-  return rows.map((c) => ({ ...c, color: slot(c.color) }));
+  return rows.map((c) => ({ ...c, color: slot(c.color), grade: null }));
 }
 
 /** The running study timer with its courses (in course order), or null. */

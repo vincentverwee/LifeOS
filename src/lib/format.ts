@@ -177,6 +177,13 @@ export function formatCurrencyShort(value: number): string {
 
 const hoursFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 2 });
 
+const gradeFormatter = new Intl.NumberFormat("nl-BE", { maximumFractionDigits: 1 });
+
+/** "13,5/20" */
+export function formatGrade(value: number): string {
+  return `${gradeFormatter.format(value)}/20`;
+}
+
 /** "3,5 h" */
 export function formatHours(value: number): string {
   return `${hoursFormatter.format(value)} h`;

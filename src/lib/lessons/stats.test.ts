@@ -7,6 +7,7 @@ import {
   dailyTotals,
   daysBetween,
   firstEntryDate,
+  hoursPerPoint,
   isFinished,
   lessonWeekCount,
   lessonWeekOf,
@@ -14,9 +15,10 @@ import {
   peerPeriods,
   phaseLabel,
   phaseOf,
+  periodHoursPerPoint,
   pickCurrentPeriod,
 } from "@/lib/lessons/stats";
-import type { StudyCourse, StudyEntry, StudyPeriod } from "@/lib/lessons/types";
+import { parseGrade, type StudyCourse, type StudyEntry, type StudyPeriod } from "@/lib/lessons/types";
 
 // Entries are passed sorted by date, as loadStudyPeriods (src/lib/data/lessons.ts)
 // always orders them `date asc, createdAt asc`; firstEntryDate relies on that.
@@ -27,7 +29,7 @@ function entry(date: string, hours: number, courseId: string | null = null, note
 }
 
 function course(id: string): StudyCourse {
-  return { id, name: id.toUpperCase(), color: "blue", sortOrder: 0, hasWc: false, countsAsStudy: true };
+  return { id, name: id.toUpperCase(), color: "blue", sortOrder: 0, hasWc: false, countsAsStudy: true, grade: null };
 }
 
 function period(over: Partial<StudyPeriod> = {}): StudyPeriod {
@@ -433,5 +435,33 @@ describe("app-logged peers", () => {
     // only the joint point at the very start, nothing really filled in
     expect(points.filter((p) => p["app~filled"] !== null).map((p) => p.x)).toEqual([-12]);
     expect(byX(-12)["app~filled"]).toBe(0);
+  });
+});
+
+describe("hours per point", () => {
+  it("divides a course's hours by its grade, null without one or at 0", () => {
+    expect(hoursPerPoint(42, 14)).toBe(3);
+    expect(hoursPerPoint(42, null)).toBeNull();
+    expect(hoursPerPoint(42, 0)).toBeNull();
+  });
+
+  it("weights a period by its graded courses only", () => {
+    expect(periodHoursPerPoint([{ hours: 60, grade: 15 }, { hours: 20, grade: 5 }, { hours: 99, grade: null }])).toBe(4);
+    expect(periodHoursPerPoint([{ hours: 10, grade: null }])).toBeNull();
+    expect(periodHoursPerPoint([])).toBeNull();
+  });
+});
+
+describe("parseGrade", () => {
+  it("takes empty as none and comma or dot decimals", () => {
+    expect(parseGrade("  ")).toEqual({ ok: true, grade: null });
+    expect(parseGrade("13,5")).toEqual({ ok: true, grade: 13.5 });
+    expect(parseGrade("14.25")).toEqual({ ok: true, grade: 14.3 });
+    expect(parseGrade("0")).toEqual({ ok: true, grade: 0 });
+    expect(parseGrade("20")).toEqual({ ok: true, grade: 20 });
+  });
+
+  it("refuses anything outside 0–20 or not a number", () => {
+    for (const raw of ["21", "-1", "abc", "12/20", "1e1"]) expect(parseGrade(raw).ok).toBe(false);
   });
 });

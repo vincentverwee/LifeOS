@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   CartesianGrid,
   Line,
@@ -10,6 +11,12 @@ import {
   YAxis,
 } from "recharts";
 import { formatCurrency, formatCurrencyCompact } from "@/lib/format";
+import {
+  EarlierLegend,
+  EarlierToggle,
+  EarlierTooltipRows,
+  type EarlierSeries,
+} from "@/components/charts/EarlierToggle";
 
 export type ComparePoint = {
   day: number;
@@ -18,17 +25,20 @@ export type ComparePoint = {
   /** typical cumulative spend of the peer group; null if none */
   typical: number | null;
   budget: number;
+  /** an earlier month's cumulative spend (`EarlierSeries.key`); null past its last day */
+  [earlier: `m_${string}`]: number | null;
 };
 
 function CompareTooltip({
   active,
   payload,
   label,
+  earlier,
 }: {
   active?: boolean;
   payload?: { payload: ComparePoint }[];
   label?: string;
-  typicalLabel?: string;
+  earlier: EarlierSeries[];
 }) {
   if (!active || !payload?.length) return null;
   const p = payload[0].payload;
@@ -41,13 +51,26 @@ function CompareTooltip({
           Typical{label ? ` ${label}` : ""}: {formatCurrency(p.typical)}
         </p>
       )}
+      <EarlierTooltipRows series={earlier} point={p} format={formatCurrency} />
       <p className="text-ink-muted">Budget line: {formatCurrency(p.budget)}</p>
     </div>
   );
 }
 
-export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typicalLabel: string | null }) {
+/** Cumulative spend of this period vs its typical peer and the budget line; the last
+ *  months' own lines are one tap away (`earlier`, oldest first). */
+export function CompareChart({
+  data,
+  typicalLabel,
+  earlier = [],
+}: {
+  data: ComparePoint[];
+  typicalLabel: string | null;
+  earlier?: EarlierSeries[];
+}) {
+  const [showEarlier, setShowEarlier] = useState(false);
   const hasTypical = data.some((d) => d.typical !== null);
+  const shown = showEarlier ? earlier : [];
 
   return (
     <div className="min-w-0">
@@ -66,7 +89,16 @@ export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typ
           <span className="inline-block h-0 w-4 border-t-2 border-dotted border-ink-muted" />
           Budget
         </span>
+        <EarlierLegend series={shown} />
       </div>
+      {earlier.length > 0 && (
+        <EarlierToggle
+          on={showEarlier}
+          onToggle={() => setShowEarlier((v) => !v)}
+          showLabel={`Show the last ${earlier.length === 1 ? "month" : `${earlier.length} months`}`}
+          hideLabel={hasTypical ? "Only the average" : "Hide earlier months"}
+        />
+      )}
       <ResponsiveContainer width="100%" height={220} minWidth={0} initialDimension={{ width: 320, height: 220 }}>
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="var(--color-gridline)" vertical={false} />
@@ -85,7 +117,7 @@ export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typ
             width={52}
           />
           <Tooltip
-            content={<CompareTooltip label={typicalLabel ?? undefined} />}
+            content={<CompareTooltip label={typicalLabel ?? undefined} earlier={shown} />}
             cursor={{ stroke: "var(--color-ink-muted)" }}
           />
           <Line
@@ -96,6 +128,18 @@ export function CompareChart({ data, typicalLabel }: { data: ComparePoint[]; typ
             dot={false}
             isAnimationActive={false}
           />
+          {shown.map((s) => (
+            <Line
+              key={s.key}
+              dataKey={s.key}
+              stroke={`var(--color-tag-${s.color})`}
+              strokeOpacity={0.75}
+              strokeWidth={1.5}
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          ))}
           {hasTypical && (
             <Line
               dataKey="typical"

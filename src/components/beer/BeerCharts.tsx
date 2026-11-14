@@ -1,7 +1,14 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useState } from "react";
 import { formatCurrency } from "@/lib/format";
+import {
+  EarlierLegend,
+  EarlierToggle,
+  EarlierTooltipRows,
+  type EarlierSeries,
+} from "@/components/charts/EarlierToggle";
 
 // Beer's versions of Budget's CompareChart / WeekdayChart: the same look, counting pints.
 
@@ -12,11 +19,28 @@ function pints(n: number) {
   return `${n} ${n === 1 ? "pint" : "pints"}`;
 }
 
-export type PintsPoint = { day: number; actual: number | null; usual: number | null };
+export type PintsPoint = {
+  day: number;
+  actual: number | null;
+  usual: number | null;
+  /** an earlier month's running pints (`EarlierSeries.key`); null past its last day */
+  [earlier: `m_${string}`]: number | null;
+};
 
-/** Running pints this month vs the usual month, by day of the month. */
-export function PintsCompareChart({ data, usualLabel }: { data: PintsPoint[]; usualLabel: string | null }) {
+/** Running pints this month vs the usual month, by day of the month; the last months'
+ *  own lines are one tap away (`earlier`, oldest first). */
+export function PintsCompareChart({
+  data,
+  usualLabel,
+  earlier = [],
+}: {
+  data: PintsPoint[];
+  usualLabel: string | null;
+  earlier?: EarlierSeries[];
+}) {
+  const [showEarlier, setShowEarlier] = useState(false);
   const hasUsual = data.some((d) => d.usual !== null);
+  const shown = showEarlier ? earlier : [];
   return (
     <div className="min-w-0">
       <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
@@ -30,7 +54,16 @@ export function PintsCompareChart({ data, usualLabel }: { data: PintsPoint[]; us
             {usualLabel === "your usual month" ? "Usual month" : usualLabel}
           </span>
         )}
+        <EarlierLegend series={shown} />
       </div>
+      {earlier.length > 0 && (
+        <EarlierToggle
+          on={showEarlier}
+          onToggle={() => setShowEarlier((v) => !v)}
+          showLabel={`Show the last ${earlier.length === 1 ? "month" : `${earlier.length} months`}`}
+          hideLabel={hasUsual ? "Only the average" : "Hide earlier months"}
+        />
+      )}
       <ResponsiveContainer width="100%" height={220} minWidth={0} initialDimension={{ width: 320, height: 220 }}>
         <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
           <CartesianGrid stroke="var(--color-gridline)" vertical={false} />
@@ -50,10 +83,23 @@ export function PintsCompareChart({ data, usualLabel }: { data: PintsPoint[]; us
                       {usualLabel === "your usual month" ? "Usual" : usualLabel}: {pints(p.usual)}
                     </p>
                   )}
+                  <EarlierTooltipRows series={shown} point={p} format={pints} />
                 </div>
               );
             }}
           />
+          {shown.map((s) => (
+            <Line
+              key={s.key}
+              dataKey={s.key}
+              stroke={`var(--color-tag-${s.color})`}
+              strokeOpacity={0.75}
+              strokeWidth={1.5}
+              dot={false}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          ))}
           {hasUsual && (
             <Line
               dataKey="usual"

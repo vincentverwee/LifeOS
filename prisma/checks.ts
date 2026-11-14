@@ -188,6 +188,15 @@ export const CHECKS: Check[] = [
     label: "Clothing items with a negative price",
     fix: "Fix those clothing prices first.",
   },
+  // A course's final grade is empty or 0–20.
+  {
+    name: "study_course_grade",
+    table: "StudyCourse",
+    check: `("grade" IS NULL OR "grade" BETWEEN 0 AND 20)`,
+    columns: "id, name, grade",
+    label: "Study courses with a grade outside 0–20",
+    fix: "Fix those course grades first.",
+  },
   // A diary day is 1–2000 characters (bits of ≤ 280 on their own lines), the mood 1–5 or empty.
   {
     name: "diary_entry",

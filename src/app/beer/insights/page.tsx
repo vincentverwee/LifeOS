@@ -12,6 +12,7 @@ import {
   inMonth,
   monthOf,
   monthTitle,
+  earlierPintMonths,
   runningPints,
   shiftMonth,
   toDate,
@@ -21,6 +22,7 @@ import {
 import { formatCurrency, formatDate, formatLiters, plural } from "@/lib/format";
 import { Disclosure } from "@/components/Disclosure";
 import { PintsBarChart, PintsCompareChart, PriceChart, type PintsPoint } from "@/components/beer/BeerCharts";
+import { earlierColor, earlierName, type EarlierSeries } from "@/lib/earlierSeries";
 import { LOG_BEER_HREF } from "@/components/beer/nav";
 
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -68,11 +70,17 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
   const atDay = usual && day > 0 ? usual.byDay[day - 1] : null;
   const delta = atDay !== null ? Math.round((sum.pints - atDay) * 10) / 10 : null;
 
-  const chart: PintsPoint[] = Array.from({ length }, (_, i) => ({
-    day: i + 1,
-    actual: i < day ? run[i] : null,
-    usual: usual ? usual.byDay[i] : null,
+  const earlier = earlierPintMonths(visits, month);
+  const earlierSeries: EarlierSeries[] = earlier.map((e) => ({
+    key: `m_${e.month}`,
+    name: earlierName(e.month, month),
+    color: earlierColor(e.month),
   }));
+  const chart: PintsPoint[] = Array.from({ length }, (_, i) => {
+    const row: PintsPoint = { day: i + 1, actual: i < day ? run[i] : null, usual: usual ? usual.byDay[i] : null };
+    for (const e of earlier) row[`m_${e.month}`] = i < e.run.length ? e.run[i] : null;
+    return row;
+  });
   const pubs = byPub(monthVisits);
   const nights = biggestNights(monthVisits);
   const weekdayRows = weekdays(visits, month === current ? todayKey : `${month}-${String(length).padStart(2, "0")}`);
@@ -134,7 +142,7 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
       </section>
 
       <Section title="Pints by day">
-        <PintsCompareChart data={chart} usualLabel={usual?.label ?? null} />
+        <PintsCompareChart data={chart} usualLabel={usual?.label ?? null} earlier={earlierSeries} />
       </Section>
 
       <Section title="Pubs this month">
