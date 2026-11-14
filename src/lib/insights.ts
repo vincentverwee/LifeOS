@@ -101,13 +101,21 @@ export function previousMonth(active: PeriodEntry, all: PeriodEntry[]): PeriodEn
 }
 
 /**
- * The `n` months right before this one (any label, trips skipped), oldest first, for the
- * "show the last months" lines. Empty when the period viewed is a trip.
+ * The `n` months right before this one with the same label (a Galway month next to other
+ * Galway months, never Thuis: a different budget), oldest first, for the "show the last
+ * months" lines. Trips are skipped; empty when the period viewed is a trip or has no label.
  */
 export function earlierMonths(active: PeriodEntry, all: PeriodEntry[], n = 6): PeriodEntry[] {
-  if (active.month.kind !== "month") return [];
+  const label = active.month.label;
+  if (active.month.kind !== "month" || !label) return [];
   return all
-    .filter((e) => e.month.kind === "month" && e.month.id !== active.month.id && e.month.startDate < active.month.startDate)
+    .filter(
+      (e) =>
+        e.month.kind === "month" &&
+        e.month.label === label &&
+        e.month.id !== active.month.id &&
+        e.month.startDate < active.month.startDate
+    )
     .sort((a, b) => a.month.startDate.localeCompare(b.month.startDate))
     .slice(-n);
 }

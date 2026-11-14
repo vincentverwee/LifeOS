@@ -128,6 +128,19 @@ describe("earlierMonths", () => {
   it("is empty for a trip", () => {
     expect(earlierMonths(trip, [trip, ...months])).toEqual([]);
   });
+
+  it("only takes months with the same label", () => {
+    const thuis = period("thuis-sep", "2026-09-01", "2026-09-30", { label: "Thuis" });
+    const galwayAug = period("galway-aug", "2026-08-01", "2026-08-31");
+    expect(earlierMonths(oct, [galwayAug, thuis, oct]).map((e) => e.month.id)).toEqual(["galway-aug"]);
+    const thuisOct = period("thuis-oct", "2026-10-01", "2026-10-31", { label: "Thuis" });
+    expect(earlierMonths(thuisOct, [galwayAug, thuis, thuisOct]).map((e) => e.month.id)).toEqual(["thuis-sep"]);
+  });
+
+  it("is empty without a label", () => {
+    const none = period("oct", "2026-10-01", "2026-10-31", { label: null });
+    expect(earlierMonths(none, [none, period("sep", "2026-09-01", "2026-09-30", { label: null })])).toEqual([]);
+  });
 });
 
 describe("labelSummaries", () => {

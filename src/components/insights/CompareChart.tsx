@@ -58,7 +58,7 @@ function CompareTooltip({
 }
 
 /** Cumulative spend of this period vs its typical peer and the budget line; the last
- *  months' own lines are one tap away (`earlier`, oldest first). */
+ *  months with the same label have their own lines one tap away (`earlier`, oldest first). */
 export function CompareChart({
   data,
   typicalLabel,
@@ -95,7 +95,7 @@ export function CompareChart({
         <EarlierToggle
           on={showEarlier}
           onToggle={() => setShowEarlier((v) => !v)}
-          showLabel={`Show the last ${earlier.length === 1 ? "month" : `${earlier.length} months`}`}
+          showLabel={`Show the last ${earlier.length === 1 ? "" : `${earlier.length} `}${typicalLabel ? `${typicalLabel} ` : ""}${earlier.length === 1 ? "month" : "months"}`}
           hideLabel={hasTypical ? "Only the average" : "Hide earlier months"}
         />
       )}
