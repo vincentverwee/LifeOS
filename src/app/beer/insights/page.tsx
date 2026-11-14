@@ -21,7 +21,8 @@ import {
 } from "@/lib/beer/insights";
 import { formatCurrency, formatDate, formatLiters, plural } from "@/lib/format";
 import { Disclosure } from "@/components/Disclosure";
-import { PintsBarChart, PintsCompareChart, PriceChart, type PintsPoint } from "@/components/beer/BeerCharts";
+import { PintsBarChart, PintsCompareChart, PriceChart } from "@/components/beer/BeerChartsLazy";
+import type { PintsPoint } from "@/components/beer/BeerCharts";
 import { earlierColor, earlierName, type EarlierSeries } from "@/lib/earlierSeries";
 import { LOG_BEER_HREF } from "@/components/beer/nav";
 

@@ -8,7 +8,7 @@ import { labelBaseline, previousMonth, type PeriodEntry } from "@/lib/insights";
 import { getTimeZone, dayKeyIn } from "@/lib/today";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
 import type { PaceRow } from "@/components/dashboard/PaceComparison";
-import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChart";
+import { SavingsTrendChart } from "@/components/dashboard/SavingsTrendChartLazy";
 import { DebtsList } from "@/components/dashboard/DebtsList";
 import { getDueSubscriptions } from "@/lib/data/subscriptions";
 import { DueSubscriptions } from "@/components/subscriptions/DueSubscriptions";

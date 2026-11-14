@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { MonthStats } from "@/lib/monthStats";
 import { formatCurrency, formatDate, formatPercent } from "@/lib/format";
-import { WeekdayChart } from "@/components/insights/WeekdayChart";
+import { WeekdayChart } from "@/components/insights/InsightChartsLazy";
 import { Disclosure } from "@/components/Disclosure";
 
 /** The deeper cuts, folded away so the page stays calm: weekdays, priciest days, beer. */

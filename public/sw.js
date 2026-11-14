@@ -6,7 +6,7 @@
 // notification (src/lib/lessons/timerNotification.ts), opens its page.
 // Bump VERSION when changing what gets cached here.
 
-const VERSION = "v5";
+const VERSION = "v6";
 const SHELL_CACHE = `lifeos-shell-${VERSION}`; // offline.html + icons
 const PAGES_CACHE = `lifeos-pages-${VERSION}`; // the last /budget/add
 // Hashed build files. Not versioned: a cached page needs its own build's chunks,
@@ -34,6 +34,9 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((key) => !keep.has(key)).map((key) => caches.delete(key))))
+      // The browser starts fetching a page while this worker is still waking up
+      // (navigate() picks that response up), so a cold launch doesn't wait for it.
+      .then(() => self.registration.navigationPreload?.enable())
       .then(() => self.clients.claim())
   );
 });
@@ -48,9 +51,9 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(navigate(event, url));
   } else if (url.pathname.startsWith("/_next/static/")) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE, STATIC_LIMIT));
+    event.respondWith(cacheFirst(event, STATIC_CACHE, STATIC_LIMIT));
   } else if (SHELL.includes(url.pathname) || /^\/(icon|apple-icon)/.test(url.pathname)) {
-    event.respondWith(cacheFirst(request, SHELL_CACHE));
+    event.respondWith(cacheFirst(event, SHELL_CACHE));
   }
 });
 
@@ -143,7 +146,7 @@ async function storePage(path, response) {
 async function navigate(event, url) {
   const offlinePage = OFFLINE_PAGES.includes(url.pathname) ? url.pathname : null;
   try {
-    const response = await fetch(event.request);
+    const response = (await event.preloadResponse) || (await fetch(event.request));
     // Keep a fresh copy of the offline-capable page, plain URL only: a ?period= copy
     // would queue every offline expense into that trip.
     if (offlinePage && !url.search) event.waitUntil(storePage(offlinePage, response.clone()));
@@ -154,14 +157,20 @@ async function navigate(event, url) {
   }
 }
 
-async function cacheFirst(request, cacheName, limit) {
+async function cacheFirst(event, cacheName, limit) {
+  const { request } = event;
   const cached = await caches.match(request, { cacheName });
   if (cached) return cached;
   const response = await fetch(request);
   if (response.ok) {
-    const cache = await caches.open(cacheName);
-    await cache.put(request, response.clone());
-    if (limit) await prune(cache, limit);
+    // Stored after the page already has the file, so a first load never waits for the cache.
+    const copy = response.clone();
+    event.waitUntil(
+      caches.open(cacheName).then(async (cache) => {
+        await cache.put(request, copy);
+        if (limit) await prune(cache, limit);
+      })
+    );
   }
   return response;
 }

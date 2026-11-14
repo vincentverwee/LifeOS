@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import type { PubOption } from "@/lib/beer/types";
 import { monthStarts, totals, type BeerVisit, type PubRow } from "@/lib/beer/stats";
+import { mondayOf } from "@/lib/lessons/stats";
 
 const pubSelect = { id: true, name: true, latitude: true, longitude: true, osmId: true } as const;
 
@@ -43,9 +44,10 @@ export async function getBeerVisits(filter: { pubId?: string; from?: string } = 
   }));
 }
 
-export async function getPubs(): Promise<PubRow[]> {
+/** Cached per request: /beer asks for it and so does `getPubOptions`. */
+export const getPubs = cache(async (): Promise<PubRow[]> => {
   return prisma.pub.findMany({ select: pubSelect, orderBy: { name: "asc" } });
-}
+});
 
 export async function getPub(id: string): Promise<PubRow | null> {
   return prisma.pub.findUnique({ where: { id }, select: pubSelect });
@@ -73,20 +75,32 @@ export async function getPubOptions(): Promise<PubOption[]> {
     .sort((a, b) => (b.lastVisit ?? "").localeCompare(a.lastVisit ?? "") || a.name.localeCompare(b.name));
 }
 
+/**
+ * Beers since the start of this month or this week's Monday, whichever is earlier, up to
+ * today. Cached per request: Home's Beer tile (month) and its week strip share one load.
+ */
+export const getRecentBeerVisits = cache(async (todayKey: string): Promise<BeerVisit[]> => {
+  const month = monthStarts(todayKey).thisMonth;
+  const monday = mondayOf(todayKey);
+  const visits = await getBeerVisits({ from: month < monday ? month : monday });
+  // Only up to today: a beer back-dated into the future isn't "so far".
+  return visits.filter((v) => v.date <= todayKey);
+});
+
 export type BeerGlance = { pints: number; lastPub: string | null; lastVisit: string | null };
 
 /** The hub tile: pints this calendar month and the latest beer (with its pub, if any). */
 async function loadBeerGlance(todayKey: string): Promise<BeerGlance> {
-  const [month, last] = await Promise.all([
-    getBeerVisits({ from: monthStarts(todayKey).thisMonth }),
+  const thisMonth = monthStarts(todayKey).thisMonth;
+  const [recent, last] = await Promise.all([
+    getRecentBeerVisits(todayKey),
     prisma.expense.findFirst({
       where: { ...beer, date: { lte: new Date(`${todayKey}T00:00:00Z`) } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       select: { date: true, pub: { select: { name: true } } },
     }),
   ]);
-  // Only up to today: a beer back-dated into the future isn't "this month so far".
-  const pints = totals(month.filter((v) => v.date <= todayKey)).pints;
+  const pints = totals(recent.filter((v) => v.date >= thisMonth)).pints;
   return { pints, lastPub: last?.pub?.name ?? null, lastVisit: last ? dayKey(last.date) : null };
 }
 /** Cached per request: the Home tile and its mascot's mood share one load. */

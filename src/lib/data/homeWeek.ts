@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { dayKey } from "@/lib/format";
 import { addDays, mondayOf } from "@/lib/lessons/stats";
 import { totals } from "@/lib/beer/stats";
-import { getBeerVisits } from "@/lib/data/beer";
+import { getRecentBeerVisits } from "@/lib/data/beer";
 
 /*
  * "This week" (Mon → Sun) per section, for the small strip at the bottom of Home tiles
@@ -31,7 +31,7 @@ const range = (todayKey: string) => {
 
 /** Pints per day this week. */
 export const getBeerWeek = cache(async (todayKey: string): Promise<number[]> => {
-  const visits = (await getBeerVisits({ from: mondayOf(todayKey) })).filter((v) => v.date <= todayKey);
+  const visits = await getRecentBeerVisits(todayKey);
   return weekOf(todayKey).map((d) => totals(visits.filter((v) => v.date === d.key)).pints);
 });
 

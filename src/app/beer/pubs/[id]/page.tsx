@@ -8,7 +8,7 @@ import { describeSince } from "@/lib/reminders/routines";
 import { Disclosure } from "@/components/Disclosure";
 import { PubMapLoader } from "@/components/beer/PubMapLoader";
 import { PubEditor } from "@/components/beer/PubEditor";
-import { PriceChart } from "@/components/beer/BeerCharts";
+import { PriceChart } from "@/components/beer/BeerChartsLazy";
 
 const RECENT = 8;
 

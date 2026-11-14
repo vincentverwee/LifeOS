@@ -24,7 +24,8 @@ import { getHomeMoods } from "@/lib/data/homeMoods";
 import { getHomeSnapshot } from "@/lib/data/homeSnapshot";
 import { THEME } from "@/lib/theme";
 import { dayKeyIn, getTimeZone } from "@/lib/today";
-import { caveat, fraunces, inter } from "./fonts";
+import { fraunces } from "@/components/home/fonts";
+import { caveat, inter } from "./fonts";
 
 export const metadata = { title: "Home preview" };
 

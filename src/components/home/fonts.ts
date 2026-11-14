@@ -6,5 +6,5 @@ export const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
   display: "swap",
-  axes: ["opsz", "SOFT"],
+  axes: ["opsz"],
 });

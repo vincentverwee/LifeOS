@@ -19,7 +19,13 @@ const nextConfig: NextConfig = {
     ];
   },
   async headers() {
+    // Home's photos: /public files are otherwise re-checked on every load, which held up
+    // the hero. A week, not immutable: the filenames aren't hashed, so a swapped photo
+    // shows within that time (or rename the file).
+    const photoCache = [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=2592000" }];
     return [
+      { source: "/hero/:path*", headers: photoCache },
+      { source: "/photos/:path*", headers: photoCache },
       {
         // Always fetch the service worker fresh, so changes to it roll out.
         source: "/sw.js",
