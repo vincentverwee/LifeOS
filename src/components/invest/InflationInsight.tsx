@@ -3,13 +3,11 @@ import { InflationChart } from "@/components/invest/InvestChartsLazy";
 import { FundDot } from "@/components/invest/FundDot";
 import type { SavingsAccountView } from "@/lib/data/inflation";
 import { formatCurrency } from "@/lib/format";
-import { formatSignedCurrency, formatSignedPct, gainClass } from "@/lib/invest/format";
+import { formatMonth, formatPct, formatSignedCurrency, formatSignedPct, gainClass } from "@/lib/invest/format";
 import { keepUpSeries, realRate, realResult, yearOnYear, type CpiPoint } from "@/lib/invest/inflation";
 import { valueSeries, type Totals } from "@/lib/invest/stats";
 import type { PricePoint, Trade } from "@/lib/invest/types";
 
-const monthLong = new Intl.DateTimeFormat("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
-const pct = (share: number) => `${(share * 100).toLocaleString("nl-BE", { maximumFractionDigits: 1 })}%`;
 
 /**
  * Insights' inflation section: Belgian inflation, the real gain (each trade grown with
@@ -34,7 +32,7 @@ export function InflationInsight({
   const latest = cpi.at(-1) ?? null;
   const more = (
     <Link href="/invest/inflation" className="btn btn-ghost -mx-3 inline-flex min-h-11 self-start px-3 text-sm">
-      Savings and Belgian prices ›
+      Belgian prices and your budget ›
     </Link>
   );
   if (!latest) {
@@ -53,8 +51,8 @@ export function InflationInsight({
   const points = hasTrades ? keepUpSeries(trades, cpi, valueSeries(trades, prices, todayKey)) : [];
   const yoyLine = (
     <>
-      Belgian prices are up <span className="font-medium text-foreground">{yoy !== null ? pct(yoy) : "?"}</span> on a year earlier (known up to{" "}
-      {monthLong.format(new Date(`${latest.month}-01T00:00:00Z`))}).
+      Belgian prices are up <span className="font-medium text-foreground">{yoy !== null ? formatPct(yoy) : "?"}</span> on a year earlier (known up to{" "}
+      {formatMonth(latest.month)}).
     </>
   );
   const savings = accounts.filter((a) => !a.isArchived && a.balances.length > 0);
@@ -88,7 +86,7 @@ export function InflationInsight({
       ) : (
         <div className="card p-5">
           <p className="text-sm text-ink-muted">Prices vs a year earlier</p>
-          <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{yoy !== null ? pct(yoy) : "?"}</p>
+          <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{yoy !== null ? formatPct(yoy) : "?"}</p>
           <p className="text-sm text-ink-muted">Money that earns less than this loses buying power. After your first buy, your real gain shows here.</p>
         </div>
       )}
@@ -105,7 +103,7 @@ export function InflationInsight({
                   <span className="block truncate font-medium text-foreground">{a.name}</span>
                   <span className="block truncate text-xs text-ink-muted">
                     {formatCurrency(balance)}
-                    {a.ratePct !== null && ` · ${pct(a.ratePct / 100)} interest`}
+                    {a.ratePct !== null && ` · ${formatPct(a.ratePct / 100)} interest`}
                   </span>
                 </span>
                 {r !== null && (

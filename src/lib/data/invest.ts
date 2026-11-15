@@ -95,13 +95,26 @@ export type InvestGlance = {
   /** monthGrowth ÷ the value at the start of the month (or the money put in this month). */
   monthPct: number | null;
   slices: { color: string; value: number; ticker: string }[];
+  /** The newest balance of every active savings account, added up; null without any. */
+  savings: number | null;
 };
+
+/** Newest balance per active savings account, summed (one query, newest first). */
+async function savingsTotal(): Promise<number | null> {
+  const rows = await prisma.savingsBalance.findMany({
+    where: { account: { isArchived: false } },
+    orderBy: { date: "desc" },
+    distinct: ["accountId"],
+    select: { balance: true },
+  });
+  return rows.length ? rows.reduce((s, r) => s + Number(r.balance), 0) : null;
+}
 
 /** Home tile and mood: trades plus only the last ~40 days of prices. */
 async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
-  const [funds, trades] = await Promise.all([getFunds(), getTrades()]);
+  const [funds, trades, savings] = await Promise.all([getFunds(), getTrades(), savingsTotal()]);
   if (trades.length === 0) {
-    return { funds: funds.filter((f) => !f.isArchived).length, value: 0, gain: 0, gainPct: null, dayChange: 0, monthGrowth: null, monthPct: null, slices: [] };
+    return { funds: funds.filter((f) => !f.isArchived).length, value: 0, gain: 0, gainPct: null, dayChange: 0, monthGrowth: null, monthPct: null, slices: [], savings };
   }
   const monthStart = `${todayKey.slice(0, 7)}-01`;
   const prices = await getPrices(addDays(monthStart, -10));
@@ -127,6 +140,7 @@ async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
     monthGrowth,
     monthPct,
     slices: list.filter((p) => p.units > 0).map((p) => ({ color: p.fund.color, value: p.value, ticker: p.fund.ticker })),
+    savings,
   };
 }
 

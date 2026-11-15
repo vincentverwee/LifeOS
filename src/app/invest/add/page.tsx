@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { TradeForm } from "@/components/invest/TradeForm";
-import { getFunds, getTrades } from "@/lib/data/invest";
+import { getPortfolio } from "@/lib/data/invest";
 import { getTodayKey } from "@/lib/today";
 
 export const metadata = { title: "Log a trade" };
 
 export default async function AddTradePage({ searchParams }: PageProps<"/invest/add">) {
-  const [{ fund }, todayKey, funds, trades] = await Promise.all([searchParams, getTodayKey(), getFunds(), getTrades()]);
+  const [{ fund }, todayKey, { funds, trades, prices }] = await Promise.all([searchParams, getTodayKey(), getPortfolio()]);
+  // Each fund's newest stored close: the starting price for "Same as last buy".
+  const latestClose = Object.fromEntries(Object.entries(prices).flatMap(([id, list]) => (list.length ? [[id, list.at(-1)!.close]] : [])));
   const active = funds.filter((f) => !f.isArchived);
   const lastBuy = trades.find((t) => t.type === "buy" && active.some((f) => f.id === t.instrumentId)) ?? null;
   const lastFee = trades.find((t) => t.type !== "dividend")?.fees ?? null;
@@ -27,6 +29,7 @@ export default async function AddTradePage({ searchParams }: PageProps<"/invest/
           todayKey={todayKey}
           lastBuy={lastBuy}
           lastFee={lastFee}
+          latestClose={latestClose}
           initialFundId={typeof fund === "string" ? fund : null}
         />
       )}

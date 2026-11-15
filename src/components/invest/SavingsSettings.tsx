@@ -32,7 +32,7 @@ function AccountForm({ account, onDone }: { account?: SavingsAccountRow; onDone?
           <input name="ratePct" inputMode="decimal" defaultValue={comma(account?.ratePct ?? null)} placeholder="2,5" className="field" />
         </label>
       </div>
-      {!account && <p className="text-xs text-ink-muted">Base rate plus loyalty premium, as your bank shows it. Balances are added on the Inflation page.</p>}
+      {!account && <p className="text-xs text-ink-muted">Base rate plus loyalty premium, as your bank shows it. You type its balance on Investments → Overview.</p>}
       <div className="flex gap-2">
         <button type="submit" disabled={pending} className="btn btn-primary flex min-h-11 self-start px-4 text-sm">
           {account ? "Save" : "Add account"}

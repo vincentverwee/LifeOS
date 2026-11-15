@@ -18,7 +18,9 @@ const show = (n: number | null | undefined) => (n === null || n === undefined ? 
 /**
  * Log or edit a buy, sell or dividend. The TOB box follows the fund's rate × the
  * amount until you type in it yourself (copy the number from Bolero's confirmation);
- * the fee starts at the last trade's fee. "Same as last buy" fills in the last buy.
+ * the fee starts at the last trade's fee. "Same as last buy" takes the fund, units and
+ * fee of the last buy and the fund's latest close as the price (last time's price would
+ * be stale with buys months or years apart).
  */
 export function TradeForm({
   funds,
@@ -27,6 +29,7 @@ export function TradeForm({
   lastBuy,
   lastFee,
   initialFundId,
+  latestClose = {},
 }: {
   funds: Fund[];
   todayKey: string;
@@ -35,6 +38,8 @@ export function TradeForm({
   lastBuy?: Trade | null;
   lastFee?: number | null;
   initialFundId?: string | null;
+  /** Newest stored close per fund id. */
+  latestClose?: Record<string, number>;
 }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<FormState, FormData>(saveTrade, null);
@@ -49,6 +54,7 @@ export function TradeForm({
   const [taxTouched, setTaxTouched] = useState(Boolean(trade));
   const [note, setNote] = useState(trade?.note ?? "");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [priceFromClose, setPriceFromClose] = useState(false);
 
   const fund = funds.find((f) => f.id === fundId);
   const u = num(units);
@@ -76,7 +82,9 @@ export function TradeForm({
     setType("buy");
     setFundId(lastBuy.instrumentId);
     setUnits(show(lastBuy.units));
-    setPrice(show(lastBuy.price));
+    const close = latestClose[lastBuy.instrumentId];
+    setPrice(show(close ?? lastBuy.price));
+    setPriceFromClose(close !== undefined);
     setFees(show(lastBuy.fees));
     setTaxTouched(false);
   }
@@ -139,7 +147,18 @@ export function TradeForm({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-sm text-ink-muted">Price per unit</span>
-            <input name="price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" className="field" />
+            <input
+              name="price"
+              inputMode="decimal"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value);
+                setPriceFromClose(false);
+              }}
+              placeholder="0,00"
+              className="field"
+            />
+            {priceFromClose && <span className="text-xs text-ink-muted">Latest close · check Bolero&apos;s confirmation</span>}
           </label>
         </div>
       )}

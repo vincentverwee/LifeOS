@@ -536,7 +536,17 @@ async function WardrobeTileBody() {
 
 async function InvestTileBody({ todayKey }: { todayKey: string }) {
   const g = await getInvestGlance(todayKey);
-  if (g.slices.length === 0) return <p className="text-sm text-ink-muted">{g.funds === 0 ? "Follow your ETFs" : "Log your first buy"}</p>;
+  if (g.slices.length === 0) {
+    if (g.savings === null) return <p className="text-sm text-ink-muted">Savings and ETFs vs inflation</p>;
+    return (
+      <>
+        <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+          {formatCurrencyShort(g.savings)}
+        </p>
+        <p className="text-sm text-ink-muted">In savings{g.funds === 0 ? "" : " · log your first buy"}</p>
+      </>
+    );
+  }
   const total = g.slices.reduce((s, x) => s + x.value, 0);
   return (
     <>
@@ -549,6 +559,7 @@ async function InvestTileBody({ todayKey }: { todayKey: string }) {
         </span>
         {g.monthPct !== null && <span className="text-ink-muted"> · {formatSignedPct(g.monthPct)} this month</span>}
       </p>
+      {g.savings !== null && <p className="truncate text-sm text-ink-muted">Savings {formatCurrencyShort(g.savings)}</p>}
       {g.slices.length > 1 && total > 0 && (
         <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-muted" aria-label="How your money is split">
           {g.slices.map((s) => (

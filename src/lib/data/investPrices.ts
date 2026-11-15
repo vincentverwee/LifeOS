@@ -102,16 +102,19 @@ export async function refreshPricesIfStale(): Promise<{ refreshed: string[]; fai
     where: { isArchived: false, OR: [{ pricesFetchedAt: null }, { pricesFetchedAt: { lt: new Date(Date.now() - PRICE_MAX_AGE_MS) } }] },
     select: { id: true, ticker: true },
   });
-  const refreshed: string[] = [];
-  const failed: string[] = [];
-  for (const f of stale) {
-    const ok = await refreshFund(f.id, f.ticker).catch((e) => {
-      console.error(`[invest] storing prices for ${f.ticker} failed`, e);
-      return false;
-    });
-    (ok ? refreshed : failed).push(f.ticker);
-  }
-  return { refreshed, failed };
+  // All funds at once: each can take up to ~8 s (Yahoo, then EODHD), and a run shouldn't add those up.
+  const results = await Promise.all(
+    stale.map((f) =>
+      refreshFund(f.id, f.ticker).catch((e) => {
+        console.error(`[invest] storing prices for ${f.ticker} failed`, e);
+        return false;
+      }),
+    ),
+  );
+  return {
+    refreshed: stale.filter((_, i) => results[i]).map((f) => f.ticker),
+    failed: stale.filter((_, i) => !results[i]).map((f) => f.ticker),
+  };
 }
 
 /** Yahoo's search, for adding a fund by ISIN, name or ticker (only on a tap in Settings). */

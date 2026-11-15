@@ -7,13 +7,13 @@ import { getCpi, getSavingsAccounts } from "@/lib/data/inflation";
 import { InflationInsight } from "@/components/invest/InflationInsight";
 import { getTodayKey } from "@/lib/today";
 import { formatCurrency } from "@/lib/format";
-import { formatSignedCurrency, gainClass } from "@/lib/invest/format";
+import { formatPct, formatSignedCurrency, gainClass } from "@/lib/invest/format";
 import { allocation, depositsByMonth, sortTrades, yearResult } from "@/lib/invest/stats";
 
 export const metadata = { title: "Investment insights" };
 
-const monthLabel = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: "UTC" });
-const pctFmt = (n: number) => `${n.toLocaleString("nl-BE", { maximumFractionDigits: 1 })}%`;
+/** Shares here are already in points (75 = 75 %). */
+const pctFmt = (points: number) => formatPct(points / 100);
 
 export default async function InvestInsightsPage() {
   const [todayKey, { trades, prices, positions, totals }, cpi, accounts] = await Promise.all([getTodayKey(), getPortfolio(), getCpi(), getSavingsAccounts()]);
@@ -32,22 +32,18 @@ export default async function InvestInsightsPage() {
   const slices = allocation(positions);
   const hasTargets = slices.some((s) => s.target !== null);
 
-  // The last 12 months, empty ones included, so the bars show the rhythm.
-  const deposits = new Map(depositsByMonth(trades).map((d) => [d.month, d.net]));
-  const months = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(`${todayKey.slice(0, 7)}-01T00:00:00Z`);
-    d.setUTCMonth(d.getUTCMonth() - (11 - i));
-    const key = d.toISOString().slice(0, 7);
-    return { month: key, label: monthLabel.format(d), net: Math.round((deposits.get(key) ?? 0) * 100) / 100 };
-  });
-  const firstMonth = sortTrades(trades)[0].date.slice(0, 7);
-  const shownMonths = months.filter((m) => m.month >= firstMonth);
-  const monthsActive = shownMonths.filter((m) => m.net > 0).length;
-  const average = monthsActive > 0 ? shownMonths.reduce((s, m) => s + Math.max(m.net, 0), 0) / shownMonths.length : 0;
-
+  // Buys come every few months or years, so money put in is shown per year (empty years included).
   const year = Number(todayKey.slice(0, 4));
   const firstYear = Number(sortTrades(trades)[0].date.slice(0, 4));
-  const years = Array.from({ length: year - firstYear + 1 }, (_, i) => year - i).map((y) => ({ year: y, ...yearResult(trades, y) }));
+  const putIn = new Map<number, number>();
+  for (const d of depositsByMonth(trades)) putIn.set(Number(d.month.slice(0, 4)), (putIn.get(Number(d.month.slice(0, 4))) ?? 0) + d.net);
+  const years = Array.from({ length: year - firstYear + 1 }, (_, i) => firstYear + i).map((y) => ({
+    year: y,
+    putIn: Math.round((putIn.get(y) ?? 0) * 100) / 100,
+    ...yearResult(trades, y),
+  }));
+  const bars = years.map((y) => ({ month: String(y.year), label: String(y.year), net: y.putIn }));
+  const totalIn = years.reduce((s, y) => s + y.putIn, 0);
   const costs = trades.reduce((s, t) => s + (t.type === "dividend" ? 0 : t.fees + t.tax), 0);
 
   return (
@@ -89,23 +85,25 @@ export default async function InvestInsightsPage() {
       <InflationInsight trades={trades} prices={prices} totals={totals} cpi={cpi} accounts={accounts} todayKey={todayKey} />
 
       <section className="card p-5">
-        <h2 className="section-title">Put in per month</h2>
+        <h2 className="section-title">Put in per year</h2>
         <p className="text-sm text-ink-muted">
-          {formatCurrency(average)} a month on average · {monthsActive} of the last {shownMonths.length} {shownMonths.length === 1 ? "month" : "months"}
+          {formatCurrency(totalIn)} in {years.length} {years.length === 1 ? "year" : "years"}
         </p>
         <div className="mt-3">
-          <DepositsChart months={shownMonths} />
+          <DepositsChart months={bars} />
         </div>
       </section>
 
       <Disclosure title="Per year">
         <ul className="card-list">
-          {years.map((y) => (
-            <li key={y.year} className="flex items-center justify-between gap-3 p-4 text-sm">
+          {[...years].reverse().map((y) => (
+            <li key={y.year} className="flex items-start justify-between gap-3 p-4 text-sm">
               <span className="font-medium text-foreground">{y.year}</span>
               <span className="text-right tabular-nums">
-                <span className={gainClass(y.realised)}>{formatSignedCurrency(y.realised)}</span>
-                <span className="text-ink-muted"> realised · {formatCurrency(y.dividends)} dividends</span>
+                <span className="block text-foreground">Put in {formatCurrency(y.putIn)}</span>
+                <span className="block text-ink-muted">
+                  <span className={gainClass(y.realised)}>{formatSignedCurrency(y.realised)}</span> realised · {formatCurrency(y.dividends)} dividends
+                </span>
               </span>
             </li>
           ))}
