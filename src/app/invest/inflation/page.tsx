@@ -3,6 +3,7 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Disclosure } from "@/components/Disclosure";
 import { RangeSwitch, readRange } from "@/components/invest/RangeSwitch";
 import { SavingsCard } from "@/components/invest/SavingsCard";
+import { FetchInflationButton } from "@/components/invest/FetchInflationButton";
 import { InflationChart, YoYChart } from "@/components/invest/InvestChartsLazy";
 import { getPortfolio } from "@/lib/data/invest";
 import { getBudgetMonths, getCpi, getSavingsAccounts } from "@/lib/data/inflation";
@@ -31,16 +32,8 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
   const range = readRange(rangeParam);
   const header = (subtitle?: string) => <PageHeader title="Inflation" subtitle={subtitle} back={{ href: "/invest", label: "Investments" }} />;
 
-  if (cpi.length === 0) {
-    return (
-      <div className="flex flex-col gap-6">
-        {header()}
-        <p className="text-sm text-ink-muted">The Belgian inflation figures haven&apos;t come in yet. They&apos;re fetched once a day; check back in a little while.</p>
-      </div>
-    );
-  }
-
-  const latest = cpi.at(-1)!;
+  // Without figures (before the first fetch) savings still show, so balances can be typed in.
+  const latest = cpi.at(-1) ?? null;
   const yoy = yearOnYear(cpi);
   const inflation = yoy.at(-1)?.pct ?? null;
   const { trades, prices, totals } = portfolio;
@@ -49,7 +42,7 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
   // Investments vs inflation.
   const series = trades.length > 0 ? valueSeries(trades, prices, todayKey, { from: range.days ? addDays(todayKey, -range.days) : undefined }) : [];
   const keepUp = keepUpSeries(trades, cpi, series);
-  const real = trades.length > 0 ? realResult(trades, cpi, totals.value) : null;
+  const real = latest && trades.length > 0 ? realResult(trades, cpi, totals.value) : null;
   const firstTrade = trades.length > 0 ? sortTrades(trades)[0].date : null;
 
   // Budget vs inflation.
@@ -60,19 +53,28 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
   const facts = [
     { label: "2015", month: "2015-01" },
     { label: "2020", month: "2020-01" },
-    { label: "a year ago", month: `${Number(latest.month.slice(0, 4)) - 1}-${latest.month.slice(5)}` },
+    ...(latest ? [{ label: "a year ago", month: `${Number(latest.month.slice(0, 4)) - 1}-${latest.month.slice(5)}` }] : []),
   ];
   const bars = yoy.slice(-36).map((p) => ({ month: p.month, label: labelOf(p.month, monthShort), pct: Math.round(p.pct * 1000) / 10 }));
 
   return (
     <div className="flex flex-col gap-6">
-      {header(`Belgium · known up to ${labelOf(latest.month)}`)}
+      {header(latest ? `Belgium · known up to ${labelOf(latest.month)}` : "Belgium")}
 
-      <section className="card p-5">
-        <p className="text-sm text-ink-muted">Prices vs a year earlier</p>
-        <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{inflation !== null ? pct(inflation) : "?"}</p>
-        <p className="text-sm text-ink-muted">Money that earns less than this loses buying power.</p>
-      </section>
+      {latest ? (
+        <section className="card p-5">
+          <p className="text-sm text-ink-muted">Prices vs a year earlier</p>
+          <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{inflation !== null ? pct(inflation) : "?"}</p>
+          <p className="text-sm text-ink-muted">Money that earns less than this loses buying power.</p>
+        </section>
+      ) : (
+        <section className="card flex flex-col gap-3 p-5">
+          <p className="text-sm text-ink-muted">
+            The Belgian inflation figures haven&apos;t come in yet. They&apos;re fetched once a day by themselves, or get them now.
+          </p>
+          <FetchInflationButton />
+        </section>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="section-title">Investments</h2>
@@ -101,6 +103,8 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
               </span>
             </p>
           </div>
+        ) : latest === null && trades.length > 0 ? (
+          <p className="text-sm text-ink-muted">Shows once the inflation figures are in.</p>
         ) : (
           <p className="text-sm text-ink-muted">
             Log a buy and this shows whether your investments beat inflation.{" "}
@@ -125,7 +129,7 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
         )}
       </section>
 
-      {budget.current && (
+      {latest && budget.current && (
         <section className="flex flex-col gap-3">
           <h2 className="section-title">Budget</h2>
           <div className="card p-5">
@@ -167,6 +171,7 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
         </section>
       )}
 
+      {latest && (
       <section className="flex flex-col gap-3">
         <h2 className="section-title">Prices in Belgium</h2>
         <div className="card p-5">
@@ -191,6 +196,7 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
           {thisYear > Number(latest.month.slice(0, 4)) && <p className="mt-2 text-xs text-ink-muted">This year&apos;s figures aren&apos;t out yet.</p>}
         </div>
       </section>
+      )}
     </div>
   );
 }

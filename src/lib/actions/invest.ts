@@ -9,6 +9,7 @@ import { getTodayKey } from "@/lib/today";
 import { CATEGORY_COLOR_SLOTS, isCategoryColorSlot } from "@/lib/categoryPalette";
 import { toTrade } from "@/lib/data/invest";
 import { fetchCloses, refreshFund, refreshPricesIfStale, searchFunds } from "@/lib/data/investPrices";
+import { refreshInflationIfStale } from "@/lib/data/inflation";
 import { isIsin, normalizeTicker } from "@/lib/invest/prices";
 import { addDays, firstOversell } from "@/lib/invest/stats";
 import { isTradeType, LIMITS, PRICE_MANUAL_MIN_MS, type FundHit, type Trade } from "@/lib/invest/types";
@@ -257,4 +258,16 @@ export async function lookupFunds(query: string): Promise<{ ok: true; hits: Fund
   } catch {
     return { ok: false, error: "The search didn't answer. Type the ticker instead." };
   }
+}
+
+/** The Inflation page's "Fetch now" while no figures are stored (the cron fetches them otherwise). */
+export async function fetchInflation(): Promise<Result> {
+  await requireAuth();
+  try {
+    await refreshInflationIfStale();
+  } catch {
+    return { ok: false, error: "Eurostat didn't answer. Try again in a bit." };
+  }
+  revalidate();
+  return { ok: true };
 }
