@@ -4,6 +4,8 @@ import { Disclosure } from "@/components/Disclosure";
 import { FundDot } from "@/components/invest/FundDot";
 import { DepositsChart } from "@/components/invest/InvestChartsLazy";
 import { getPortfolio } from "@/lib/data/invest";
+import { getCpi, getSavingsAccounts } from "@/lib/data/inflation";
+import { InflationInsight } from "@/components/invest/InflationInsight";
 import { getTodayKey } from "@/lib/today";
 import { formatCurrency } from "@/lib/format";
 import { formatSignedCurrency, gainClass } from "@/lib/invest/format";
@@ -15,7 +17,7 @@ const monthLabel = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: 
 const pctFmt = (n: number) => `${n.toLocaleString("nl-BE", { maximumFractionDigits: 1 })}%`;
 
 export default async function InvestInsightsPage() {
-  const [todayKey, { trades, positions, totals }] = await Promise.all([getTodayKey(), getPortfolio()]);
+  const [todayKey, { trades, prices, positions, totals }, cpi, accounts] = await Promise.all([getTodayKey(), getPortfolio(), getCpi(), getSavingsAccounts()]);
   const header = <PageHeader title="Insights" back={{ href: "/invest", label: "Investments" }} />;
   if (trades.length === 0) {
     return (
@@ -89,6 +91,8 @@ export default async function InvestInsightsPage() {
         </ul>
       </section>
 
+      <InflationInsight trades={trades} prices={prices} totals={totals} cpi={cpi} accounts={accounts} todayKey={todayKey} />
+
       <section className="card p-5">
         <h2 className="section-title">Put in per month</h2>
         <p className="text-sm text-ink-muted">
@@ -98,13 +102,6 @@ export default async function InvestInsightsPage() {
           <DepositsChart months={shownMonths} />
         </div>
       </section>
-
-      <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
-        <span className="font-medium text-foreground">Compared with inflation</span>
-        <span aria-hidden="true" className="text-xl text-ink-muted">
-          ›
-        </span>
-      </Link>
 
       <Disclosure title="Per year">
         <ul className="card-list">

@@ -76,18 +76,20 @@ describe("realRate", () => {
 });
 
 describe("budgetVsInflation", () => {
-  it("compares the budget with the first month of the same label", () => {
-    const { rows, first } = budgetVsInflation(
-      [
-        { start: "2025-01-01", label: "Thuis", budget: 500, spent: 400 },
-        { start: "2025-06-18", label: "Galway", budget: 900, spent: 850 },
-        { start: "2026-01-18", label: "Galway", budget: 900, spent: 950 },
-      ],
-      cpi,
-      { budget: 900, label: "Galway" },
-    );
+  const months = [
+    { start: "2025-01-01", label: "Thuis", budget: 500, spent: 400 },
+    { start: "2025-06-18", label: "Galway", budget: 1500, spent: 850 },
+    { start: "2026-01-18", label: "Galway", budget: 900, spent: 950 },
+  ];
+  it("says what the current budget buys in the first month's prices", () => {
+    const { rows, power } = budgetVsInflation(months, cpi, { budget: 1000, label: "Galway" });
     expect(rows[0].start).toBe("2026-01-18");
-    expect(first!.start).toBe("2025-06-18");
-    expect(first!.keepUp).toBeCloseTo((900 * 105) / 102);
+    expect(power!.since).toBe("2025-06");
+    expect(power!.rise).toBeCloseTo(105 / 102 - 1);
+    expect(power!.buys).toBeCloseTo(1000 / (105 / 102));
+  });
+  it("stays quiet while prices haven't moved", () => {
+    const flat = [{ month: "2025-01", index: 100 }];
+    expect(budgetVsInflation(months, flat, { budget: 1000, label: "Galway" }).power).toBeNull();
   });
 });

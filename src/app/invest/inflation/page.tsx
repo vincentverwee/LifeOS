@@ -1,17 +1,16 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Disclosure } from "@/components/Disclosure";
-import { RangeSwitch, readRange } from "@/components/invest/RangeSwitch";
 import { SavingsCard } from "@/components/invest/SavingsCard";
 import { FetchInflationButton } from "@/components/invest/FetchInflationButton";
-import { InflationChart, YoYChart } from "@/components/invest/InvestChartsLazy";
+import { YoYChart } from "@/components/invest/InvestChartsLazy";
 import { getPortfolio } from "@/lib/data/invest";
 import { getBudgetMonths, getCpi, getSavingsAccounts } from "@/lib/data/inflation";
 import { getTodayKey } from "@/lib/today";
 import { formatCurrency } from "@/lib/format";
-import { formatSignedCurrency, formatSignedPct, gainClass } from "@/lib/invest/format";
-import { budgetVsInflation, factor, inTodaysEuros, keepUpSeries, monthOf, realResult, yearOnYear } from "@/lib/invest/inflation";
-import { addDays, sortTrades, valueSeries } from "@/lib/invest/stats";
+import { formatSignedPct } from "@/lib/invest/format";
+import { budgetVsInflation, factor, inTodaysEuros, monthOf, yearOnYear } from "@/lib/invest/inflation";
+import { sortTrades } from "@/lib/invest/stats";
 
 export const metadata = { title: "Inflation" };
 
@@ -20,33 +19,24 @@ const monthShort = new Intl.DateTimeFormat("en-GB", { month: "short", timeZone: 
 const labelOf = (month: string, f = monthLong) => f.format(new Date(`${month}-01T00:00:00Z`));
 const pct = (share: number) => `${(share * 100).toLocaleString("nl-BE", { maximumFractionDigits: 1 })}%`;
 
-export default async function InflationPage({ searchParams }: PageProps<"/invest/inflation">) {
-  const [{ range: rangeParam }, todayKey, cpi, portfolio, accounts] = await Promise.all([
-    searchParams,
-    getTodayKey(),
-    getCpi(),
-    getPortfolio(),
-    getSavingsAccounts(),
-  ]);
-  const budget = await getBudgetMonths(todayKey);
-  const range = readRange(rangeParam);
-  const header = (subtitle?: string) => <PageHeader title="Inflation" subtitle={subtitle} back={{ href: "/invest", label: "Investments" }} />;
+export default async function InflationPage() {
+  const todayKey = await getTodayKey();
+  const [cpi, portfolio, accounts, budget] = await Promise.all([getCpi(), getPortfolio(), getSavingsAccounts(), getBudgetMonths(todayKey)]);
+  const header = (subtitle?: string) => <PageHeader title="Inflation" subtitle={subtitle} back={{ href: "/invest/insights", label: "Insights" }} />;
 
   // Without figures (before the first fetch) savings still show, so balances can be typed in.
   const latest = cpi.at(-1) ?? null;
   const yoy = yearOnYear(cpi);
   const inflation = yoy.at(-1)?.pct ?? null;
-  const { trades, prices, totals } = portfolio;
+  const { trades } = portfolio;
   const activeAccounts = accounts.filter((a) => !a.isArchived);
 
-  // Investments vs inflation.
-  const series = trades.length > 0 ? valueSeries(trades, prices, todayKey, { from: range.days ? addDays(todayKey, -range.days) : undefined }) : [];
-  const keepUp = keepUpSeries(trades, cpi, series);
-  const real = latest && trades.length > 0 ? realResult(trades, cpi, totals.value) : null;
   const firstTrade = trades.length > 0 ? sortTrades(trades)[0].date : null;
 
   // Budget vs inflation.
-  const { rows, first } = budgetVsInflation(budget.months, cpi, budget.current);
+  const { rows, power } = budgetVsInflation(budget.months, cpi, budget.current);
+  // Only months whose prices differ from today's say anything.
+  const changed = rows.filter((r) => Math.abs(r.spentToday - r.spent) >= 1).slice(0, 12);
 
   // Facts.
   const thisYear = Number(todayKey.slice(0, 4));
@@ -77,45 +67,6 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
       )}
 
       <section className="flex flex-col gap-3">
-        <h2 className="section-title">Investments</h2>
-        {real ? (
-          <div className="card p-5">
-            <p className={`font-mono text-3xl font-semibold tabular-nums ${gainClass(real.realGain)}`}>{formatSignedCurrency(real.realGain)}</p>
-            <p className="text-sm text-ink-muted">
-              after inflation {real.realPct !== null && `(${formatSignedPct(real.realPct)})`} · worth {formatCurrency(totals.value)}, to keep up you needed{" "}
-              {formatCurrency(real.keepUp)}
-            </p>
-            <div className="mt-3">
-              <RangeSwitch base="/invest/inflation" current={range} />
-            </div>
-            <div className="mt-3">
-              <InflationChart points={keepUp} />
-            </div>
-            <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 bg-primary" aria-hidden="true" /> Worth
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="w-4 border-t-2 border-dashed border-warning" aria-hidden="true" /> To keep up
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 bg-ink-muted" aria-hidden="true" /> Under the mattress
-              </span>
-            </p>
-          </div>
-        ) : latest === null && trades.length > 0 ? (
-          <p className="text-sm text-ink-muted">Shows once the inflation figures are in.</p>
-        ) : (
-          <p className="text-sm text-ink-muted">
-            Log a buy and this shows whether your investments beat inflation.{" "}
-            <Link href="/invest/add" className="btn btn-ghost -mx-1 inline-flex min-h-11 px-3">
-              Log a trade
-            </Link>
-          </p>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
         <h2 className="section-title">Savings</h2>
         {activeAccounts.length === 0 ? (
           <p className="text-sm text-ink-muted">
@@ -129,31 +80,20 @@ export default async function InflationPage({ searchParams }: PageProps<"/invest
         )}
       </section>
 
-      {latest && budget.current && (
+      {power && (
         <section className="flex flex-col gap-3">
-          <h2 className="section-title">Budget</h2>
+          <h2 className="section-title">Your budget</h2>
           <div className="card p-5">
-            {first ? (
-              <>
-                <p className="text-sm text-ink-muted">
-                  Your first {budget.current.label ?? ""} month ({labelOf(monthOf(first.start))}) had {formatCurrency(first.budget)}. In today&apos;s money that&apos;s
-                </p>
-                <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{formatCurrency(first.keepUp)}</p>
-                <p className="text-sm text-ink-muted">
-                  Your budget now is {formatCurrency(budget.current.budget)}
-                  {budget.current.budget + 0.5 < first.keepUp
-                    ? `: ${formatCurrency(first.keepUp - budget.current.budget)} short of keeping up.`
-                    : ": it keeps up with prices."}
-                </p>
-              </>
-            ) : (
-              <p className="text-sm text-ink-muted">Once a {budget.current.label ?? ""} month has finished, this compares your budget with prices.</p>
-            )}
+            <p className="text-sm text-ink-muted">
+              Prices are up {pct(power.rise)} since {labelOf(power.since)}. Your {formatCurrency(power.budget)} budget now buys what
+            </p>
+            <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{formatCurrency(power.buys)}</p>
+            <p className="text-sm text-ink-muted">did back then.</p>
           </div>
-          {rows.length > 0 && (
+          {changed.length > 0 && (
             <Disclosure title="Spending in today's money">
               <ul className="divide-y divide-border">
-                {rows.slice(0, 12).map((r) => (
+                {changed.map((r) => (
                   <li key={r.start} className="flex min-h-12 items-center justify-between gap-3 text-sm">
                     <span className="text-foreground">
                       {labelOf(monthOf(r.start))}

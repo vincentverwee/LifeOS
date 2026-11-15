@@ -41,10 +41,10 @@ export function SavingsCard({ account, cpi, inflation, todayKey }: { account: Sa
       {latest ? (
         <div>
           <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{formatCurrency(latest.balance)}</p>
-          {real !== null && rate !== null && inflation !== null ? (
+          {real !== null ? (
             <p className="text-sm text-ink-muted">
-              {pct(rate)} interest − {pct(inflation)} inflation = <span className={gainClass(real)}>{formatSignedPct(real)}</span> real ·{" "}
-              <span className={gainClass(real)}>{formatSignedCurrency(latest.balance * real)}</span> a year in buying power
+              <span className={gainClass(real)}>{formatSignedCurrency(latest.balance * real)}</span> a year in buying power (
+              <span className={gainClass(real)}>{formatSignedPct(real)}</span> after inflation)
             </p>
           ) : (
             <p className="text-sm text-ink-muted">{rate === null ? "Add the interest rate in Settings to compare it with inflation." : "Waiting for inflation data."}</p>
@@ -59,24 +59,28 @@ export function SavingsCard({ account, cpi, inflation, todayKey }: { account: Sa
         <p className="text-sm text-ink-muted">No balance yet. Type what your banking app shows.</p>
       )}
 
-      <form key={formKey} action={action} className="flex flex-wrap items-end gap-2">
-        <input type="hidden" name="accountId" value={account.id} />
-        <label className="flex min-w-32 flex-1 flex-col gap-1">
-          <span className="text-sm text-ink-muted">Balance</span>
-          <input name="balance" inputMode="decimal" required placeholder="0,00" className="field" />
-        </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm text-ink-muted">On</span>
-          <input type="date" name="date" defaultValue={todayKey} max={todayKey} required className="field" />
-        </label>
-        <button type="submit" disabled={saving} className="btn btn-primary flex min-h-11 px-4 text-sm">
-          {latest ? "Update" : "Save"}
-        </button>
-      </form>
-      <ErrorLine error={state && !state.ok ? state.error : error} />
-
-      {account.balances.length > 1 && (
-        <Disclosure title={`History (${account.balances.length})`}>
+      <Disclosure title={latest ? "Update balance" : "Add a balance"} defaultOpen={!latest}>
+        {real !== null && rate !== null && inflation !== null && (
+          <p className="text-sm text-ink-muted">
+            {pct(rate)} interest − {pct(inflation)} inflation over the last 12 months = {formatSignedPct(real)} real.
+          </p>
+        )}
+        <form key={formKey} action={action} className="flex flex-wrap items-end gap-2">
+          <input type="hidden" name="accountId" value={account.id} />
+          <label className="flex min-w-32 flex-1 flex-col gap-1">
+            <span className="text-sm text-ink-muted">Balance</span>
+            <input name="balance" inputMode="decimal" required placeholder="0,00" className="field" />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-sm text-ink-muted">On</span>
+            <input type="date" name="date" defaultValue={todayKey} max={todayKey} required className="field" />
+          </label>
+          <button type="submit" disabled={saving} className="btn btn-primary flex min-h-11 px-4 text-sm">
+            Save
+          </button>
+        </form>
+        <ErrorLine error={state && !state.ok ? state.error : error} />
+        {account.balances.length > 0 && (
           <ul className="divide-y divide-border">
             {account.balances.map((b) => (
               <li key={b.id} className="flex min-h-12 items-center justify-between gap-3 text-sm">
@@ -90,8 +94,8 @@ export function SavingsCard({ account, cpi, inflation, todayKey }: { account: Sa
               </li>
             ))}
           </ul>
-        </Disclosure>
-      )}
+        )}
+      </Disclosure>
     </section>
   );
 }

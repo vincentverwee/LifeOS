@@ -23,10 +23,10 @@ function describeFetched(iso: string, tz: string, todayKey: string): string {
   return day === todayKey ? `today ${time}` : `${formatDate(day)} ${time}`;
 }
 
-/** The way into /invest/inflation: the real gain once there are trades, else what the page is about. */
+/** After inflation: the real gain (opens Insights) once there are trades, else the way to savings and prices. */
 function InflationLink({ real }: { real: { realGain: number; realPct: number | null } | null }) {
   return (
-    <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
+    <Link href={real ? "/invest/insights" : "/invest/inflation"} className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
       <span className="min-w-0">
         <span className="block text-sm text-ink-muted">{real ? "After inflation" : "Inflation"}</span>
         {real ? (

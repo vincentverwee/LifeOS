@@ -112,15 +112,21 @@ export function realRate(rate: number, inflation: number): number {
 export type BudgetMonth = { start: string; label: string | null; budget: number; spent: number };
 export type BudgetRow = BudgetMonth & { budgetToday: number; spentToday: number };
 
+/** Below this rise in prices the budget card stays hidden (nothing to say yet). */
+export const BUDGET_MIN_RISE = 0.005;
+
 /**
- * Budget months in today's euros (newest first), and how the current budget
- * compares with the first month carrying the same label, grown with prices.
+ * Budget months in today's euros (newest first), and what the current budget is
+ * worth against prices in the first finished month with the same label: "prices are
+ * up X % since then, so your €1.000 buys what €Y did". Compares one budget with
+ * prices, never two budgets with each other (those differ by choice).
  */
 export function budgetVsInflation(
   months: BudgetMonth[],
   cpi: CpiPoint[],
   current: { budget: number; label: string | null } | null,
-): { rows: BudgetRow[]; first: (BudgetRow & { keepUp: number }) | null } {
+): { rows: BudgetRow[]; power: { since: string; rise: number; budget: number; buys: number } | null } {
+  const latest = cpi.at(-1)?.month;
   const rows = [...months]
     .sort((a, b) => (a.start < b.start ? 1 : -1))
     .map((m) => ({
@@ -128,7 +134,9 @@ export function budgetVsInflation(
       budgetToday: inTodaysEuros(m.budget, monthOf(m.start), cpi),
       spentToday: inTodaysEuros(m.spent, monthOf(m.start), cpi),
     }));
-  const same = current ? rows.filter((r) => r.label === current.label && r.budget > 0) : [];
-  const oldest = same.at(-1);
-  return { rows, first: oldest ? { ...oldest, keepUp: oldest.budgetToday } : null };
+  const oldest = current ? rows.filter((r) => r.label === current.label).at(-1) : undefined;
+  if (!current || !oldest || !latest || current.budget <= 0) return { rows, power: null };
+  const rise = factor(cpi, monthOf(oldest.start), latest) - 1;
+  if (rise < BUDGET_MIN_RISE) return { rows, power: null };
+  return { rows, power: { since: monthOf(oldest.start), rise, budget: current.budget, buys: current.budget / (1 + rise) } };
 }
