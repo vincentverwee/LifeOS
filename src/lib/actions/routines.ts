@@ -7,6 +7,8 @@ import { prisma } from "@/lib/prisma";
 import { knownError } from "@/lib/prismaErrors";
 import { parseDateKey } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
+import { categoryIdOf, categorySource } from "@/lib/reminders/routines";
+import { backfillCategoryRoutine } from "@/lib/data/categoryRoutines";
 
 export type RoutineFormState = { ok: true } | { ok: false; error: string } | null;
 
@@ -69,12 +71,35 @@ export async function updateRoutine(_prev: RoutineFormState, formData: FormData)
   const id = String(formData.get("id") ?? "");
   const fields = readFields(formData);
   if (typeof fields === "string") return { ok: false, error: fields };
+
+  const current = await prisma.routine.findUnique({ where: { id }, select: { source: true } });
+  if (!current) return { ok: false, error: "That item no longer exists." };
+  // "Done when I spend on …": only for hand-ticked items or ones already linked to a category
+  // (never touches the wash items' source). Empty = no link.
+  let source = current.source;
+  let linkedTo: string | null = null;
+  if (formData.has("categoryId") && (current.source === null || categoryIdOf(current.source))) {
+    const categoryId = String(formData.get("categoryId") ?? "");
+    if (categoryId) {
+      const category = await prisma.category.findUnique({ where: { id: categoryId }, select: { id: true } });
+      if (!category) return { ok: false, error: "That category no longer exists." };
+      source = categorySource(category.id);
+      const taken = await prisma.routine.findFirst({ where: { source, id: { not: id } }, select: { name: true } });
+      if (taken) return { ok: false, error: `“${taken.name}” is already linked to that category.` };
+      if (categoryIdOf(current.source) !== category.id) linkedTo = category.id;
+    } else {
+      source = null;
+    }
+  }
+
   try {
-    const { count } = await prisma.routine.updateMany({ where: { id }, data: fields });
+    const { count } = await prisma.routine.updateMany({ where: { id }, data: { ...fields, source } });
     if (count === 0) return { ok: false, error: "That item no longer exists." };
   } catch (e) {
     return knownError(e, NAME_TAKEN);
   }
+  // Fill in the past: every day with an expense in that category (unlinking keeps the logs).
+  if (linkedTo) await backfillCategoryRoutine(id, linkedTo);
   revalidate();
   redirect("/reminders/last-done");
 }

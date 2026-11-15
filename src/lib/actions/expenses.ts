@@ -7,6 +7,7 @@ import { MAX_AMOUNT, formatDate, parseAmount, parseDateKey } from "@/lib/format"
 import { getTodayKey } from "@/lib/today";
 import { monthFor } from "@/lib/data/ensureMonth";
 import { knownError } from "@/lib/prismaErrors";
+import { syncCategoryRoutines } from "@/lib/data/categoryRoutines";
 import { Prisma } from "@/generated/prisma/client";
 import { parsePints, parsePubChoice, parseSizeMl, type PubChoice } from "@/lib/beer/types";
 import { distanceM } from "@/lib/beer/nearby";
@@ -27,6 +28,7 @@ function revalidateExpenseRoutes() {
   revalidatePath("/budget/insights");
   revalidatePath("/budget/settings"); // spent per month/trip
   revalidatePath("/beer", "layout"); // pints, pubs, map
+  revalidatePath("/reminders", "layout"); // Last done items linked to a category
 }
 
 /**
@@ -271,6 +273,7 @@ export async function createExpense(input: CreateExpenseInput): Promise<CreateEx
     throw e;
   }
 
+  await syncCategoryRoutines([{ categoryId: category.id, date }]);
   revalidateExpenseRoutes();
   return {
     ok: true,
@@ -361,7 +364,7 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
   const [existing, category] = await Promise.all([
     prisma.expense.findUnique({
       where: { id: input.id },
-      select: { cycleId: true, tripId: true, pubId: true, pints: true, sizeMl: true },
+      select: { cycleId: true, tripId: true, pubId: true, pints: true, sizeMl: true, categoryId: true, date: true },
     }),
     prisma.category.findUnique({ where: { id: input.categoryId }, select: { id: true, pintPrice: true } }),
   ]);
@@ -408,14 +411,20 @@ export async function updateExpense(input: UpdateExpenseInput): Promise<UpdateEx
     return knownError(e, { P2025: "That expense no longer exists.", P2003: "That category no longer exists." });
   }
 
+  await syncCategoryRoutines([
+    { categoryId: existing.categoryId, date: existing.date },
+    { categoryId: category.id, date },
+  ]);
   revalidateExpenseRoutes();
   return { ok: true, movedTo: target?.ok && target.period.id !== current?.id ? target.name : null };
 }
 
 export async function deleteExpense(id: string): Promise<ExpenseMutationResult> {
   await requireAuth();
+  const existing = await prisma.expense.findUnique({ where: { id }, select: { categoryId: true, date: true } });
   const { count } = await prisma.expense.deleteMany({ where: { id } });
   if (count === 0) return { ok: false, error: "That expense no longer exists." };
+  if (existing) await syncCategoryRoutines([existing]);
   revalidateExpenseRoutes();
   return { ok: true };
 }

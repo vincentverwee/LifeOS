@@ -5,15 +5,22 @@ import { getRoutine } from "@/lib/data/routines";
 import { getTodayKey } from "@/lib/today";
 import { deleteRoutine, deleteRoutineLog } from "@/lib/actions/routines";
 import { formatDay } from "@/lib/reminders/schedule";
-import { describeRhythm, describeSince, routineLink } from "@/lib/reminders/routines";
+import { categoryIdOf, describeRhythm, describeSince, routineLink } from "@/lib/reminders/routines";
+import { getAllCategories } from "@/lib/data/categories";
 import { RoutineForm } from "@/components/reminders/RoutineForm";
 import { LogPastDate } from "@/components/reminders/LogPastDate";
 import { ConfirmDeleteButton } from "@/components/reminders/ConfirmDeleteButton";
 
 export default async function EditRoutinePage({ params }: PageProps<"/reminders/last-done/[id]">) {
   const { id } = await params;
-  const [routine, todayKey] = await Promise.all([getRoutine(id), getTodayKey()]);
+  const [routine, todayKey, allCategories] = await Promise.all([getRoutine(id), getTodayKey(), getAllCategories()]);
   if (!routine) notFound();
+  // "Done when I spend on …": hand-ticked items and category-linked ones (not the wash items).
+  const linkedId = categoryIdOf(routine.source);
+  const categories =
+    routine.source === null || linkedId
+      ? allCategories.filter((c) => !c.isArchived || c.id === linkedId).map((c) => ({ id: c.id, name: c.name }))
+      : null;
   const rhythm = describeRhythm(routine);
   const link = routineLink(routine.source);
 
@@ -65,7 +72,7 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
 
       <section className="flex flex-col gap-3">
         <h2 className="section-title">Edit</h2>
-        <RoutineForm routine={routine} todayKey={todayKey} />
+        <RoutineForm routine={routine} todayKey={todayKey} categories={categories} />
       </section>
 
       <ConfirmDeleteButton action={deleteRoutine} id={routine.id} title={routine.name} label="Delete item" />

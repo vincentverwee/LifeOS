@@ -477,7 +477,8 @@ model Routine {
   name      String       @unique
   // Optional nudge: due again this many days after the last time (then it shows in To do).
   everyDays Int?
-  // Set when another feature logs it: "wardrobe-wash-coloured" / "-white" = washing that load on Wardrobe → Wash.
+  // Set when another feature logs it: "wardrobe-wash-coloured" / "-white" = washing that load on Wardrobe → Wash;
+  // "budget-category:<categoryId>" = any day with an expense in that category (src/lib/data/categoryRoutines.ts).
   // Such an item is informational in Last done (no sheep, a link to that feature).
   source    String?      @unique
   createdAt DateTime     @default(now())

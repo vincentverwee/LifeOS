@@ -3,7 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { createRoutine, updateRoutine, type RoutineFormState } from "@/lib/actions/routines";
-import type { Routine } from "@/lib/reminders/routines";
+import { categoryIdOf, type Routine } from "@/lib/reminders/routines";
 import { SheepSpinner } from "@/components/icons/SheepSpinner";
 
 type Last = "today" | "not-yet" | "date";
@@ -30,8 +30,20 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-/** Add (no `routine`) or edit a Last done item. Adding also logs when it was last done. */
-export function RoutineForm({ routine, todayKey }: { routine?: Routine; todayKey: string }) {
+/**
+ * Add (no `routine`) or edit a Last done item. Adding also logs when it was last done.
+ * `categories` (edit only) offers linking it to a budget category: then every day with an
+ * expense there counts as done.
+ */
+export function RoutineForm({
+  routine,
+  todayKey,
+  categories,
+}: {
+  routine?: Routine;
+  todayKey: string;
+  categories?: { id: string; name: string }[] | null;
+}) {
   const [last, setLast] = useState<Last>("today");
   const nameRef = useRef<HTMLInputElement>(null);
   const [state, formAction] = useActionState<RoutineFormState, FormData>(
@@ -110,6 +122,23 @@ export function RoutineForm({ routine, todayKey }: { routine?: Routine; todayKey
         />
         <span className="text-sm text-ink-muted">After that many days it turns red and shows up in To do.</span>
       </label>
+
+      {routine && categories && (
+        <label className="flex flex-col gap-1">
+          <span className="text-sm text-ink-muted">Done when I spend on (optional)</span>
+          <select name="categoryId" defaultValue={categoryIdOf(routine.source) ?? ""} className="field">
+            <option value="">Nothing, I tick it myself</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-sm text-ink-muted">
+            Every day with an expense in that budget category counts as done, earlier ones too.
+          </span>
+        </label>
+      )}
 
       {state && !state.ok && <p className="text-sm text-critical">{state.error}</p>}
 

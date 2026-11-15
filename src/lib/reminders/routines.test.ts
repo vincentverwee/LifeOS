@@ -5,6 +5,8 @@ import {
   daysSince,
   describeRhythm,
   routineLink,
+  categoryIdOf,
+  categorySource,
   describeSince,
   isDue,
   isOverdue,
@@ -125,5 +127,13 @@ describe("routineLink", () => {
     expect(routineLink("wardrobe-wash-coloured")?.href).toBe("/wardrobe/wash");
     expect(routineLink("wardrobe-wash-white")?.href).toBe("/wardrobe/wash");
     expect(routineLink(null)).toBeNull();
+  });
+
+  it("links a budget category item to that category's expenses", () => {
+    expect(routineLink(categorySource("abc"))?.href).toBe("/budget/expenses?category=abc");
+    expect(categoryIdOf(categorySource("abc"))).toBe("abc");
+    expect(categoryIdOf("wardrobe-wash-white")).toBeNull();
+    expect(categoryIdOf("budget-category:")).toBeNull();
+    expect(categoryIdOf(null)).toBeNull();
   });
 });

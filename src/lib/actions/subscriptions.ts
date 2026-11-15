@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { MAX_AMOUNT, dayKey, formatDate, parseAmount, parseDateKey } from "@/lib/format";
 import { getTodayKey } from "@/lib/today";
 import { monthFor } from "@/lib/data/ensureMonth";
+import { syncCategoryRoutines } from "@/lib/data/categoryRoutines";
 import { knownError } from "@/lib/prismaErrors";
 import { anchorsFrom, isSubscriptionRepeat, renewalAfter, renewalOnOrAfter } from "@/lib/subscriptions/schedule";
 
@@ -30,6 +31,7 @@ function revalidateWithExpenses() {
   revalidatePath("/budget/add");
   revalidatePath("/budget/insights");
   revalidatePath("/budget/settings");
+  revalidatePath("/reminders", "layout"); // Last done items linked to a category
 }
 
 export type SubscriptionInput = {
@@ -154,6 +156,7 @@ async function advance(id: string, expectedDueOn: string, log: { amount: number 
   });
   if (!done) return { ok: false, error: "Already done." };
 
+  if (log) await syncCategoryRoutines([{ categoryId: sub.categoryId, date: utc(dueKey) }]);
   if (log) revalidateWithExpenses();
   else revalidate();
   return { ok: true };

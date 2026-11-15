@@ -13,13 +13,30 @@ export type Routine = {
   source: string | null;
 };
 
+/** `Routine.source` of an item done whenever an expense in that budget category is logged. */
+const CATEGORY_SOURCE_PREFIX = "budget-category:";
+
+export function categorySource(categoryId: string): string {
+  return CATEGORY_SOURCE_PREFIX + categoryId;
+}
+
+/** The linked budget category's id, or null when the source isn't a category link. */
+export function categoryIdOf(source: string | null): string | null {
+  return source?.startsWith(CATEGORY_SOURCE_PREFIX) ? source.slice(CATEGORY_SOURCE_PREFIX.length) || null : null;
+}
+
 /**
  * Where an item that another feature logs is done instead of ticking it here; null for
- * ordinary items. "wardrobe-wash-…" = washing that load on Wardrobe → Wash.
+ * ordinary items. "wardrobe-wash-…" = washing that load on Wardrobe → Wash;
+ * "budget-category:<id>" = an expense in that category (src/lib/data/categoryRoutines.ts).
  */
 export function routineLink(source: string | null): { href: string; label: string; from: string } | null {
   // "wardrobe-wash-coloured" / "wardrobe-wash-white": one per load.
   if (source?.startsWith("wardrobe-wash")) return { href: "/wardrobe/wash", label: "Wardrobe", from: "Wardrobe → Wash" };
+  const categoryId = categoryIdOf(source);
+  if (categoryId) {
+    return { href: `/budget/expenses?category=${encodeURIComponent(categoryId)}`, label: "Budget", from: "Budget expenses" };
+  }
   return null;
 }
 
