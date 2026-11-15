@@ -2,7 +2,8 @@
 // budget periods. Pints are pintsIn() (counted, else guessed), so the numbers match
 // Overview and Budget; prices per pint use counted beers only (totals()).
 
-import { addDays, weekdayOf } from "@/lib/reminders/schedule";
+import { addDays, daysBetween, weekdayOf } from "@/lib/reminders/schedule";
+import { averageInterval } from "@/lib/reminders/routines";
 import { pintsIn, totals, type BeerTotals, type BeerVisit } from "@/lib/beer/stats";
 
 export const monthOf = (dayKey: string) => dayKey.slice(0, 7);
@@ -152,4 +153,52 @@ export type MonthRow = { month: string; totals: BeerTotals };
 export function everyMonth(visits: BeerVisit[], last: string): MonthRow[] {
   if (visits.length === 0) return [];
   return monthsBetween(monthOf(visits[0].date), last).map((month) => ({ month, totals: totals(inMonth(visits, month)) }));
+}
+
+export type BeerRhythm = {
+  /** nights out (days with a pint) in the year up to `asOf` */
+  nights: number;
+  /** average days between nights over that year */
+  usual: number;
+  /** the same over the last 6 nights (Last done's "usually every ~N d"); null with fewer than 2 */
+  lately: number | null;
+  /** "more" = nights out closer together lately; null = about the same */
+  trend: "more" | "less" | null;
+  /** days from the newest night to `asOf` */
+  since: number;
+  /** the longest gap between two nights, in days */
+  longestBreak: { days: number; from: string; to: string } | null;
+  /** most nights in a row, and the first of them */
+  longestRun: { nights: number; from: string };
+};
+
+/**
+ * How often you go for a pint, over the year up to `asOf`: average gap overall and over
+ * the last 6 nights (the Last done rhythm), longest break, most nights in a row.
+ * Null below 2 nights.
+ */
+export function beerRhythm(visits: BeerVisit[], asOf: string): BeerRhythm | null {
+  const from = addDays(asOf, -364);
+  const set = new Set<string>();
+  for (const v of visits) if (v.date >= from && v.date <= asOf && pintsIn(v) > 0) set.add(v.date);
+  const days = [...set].sort();
+  if (days.length < 2) return null;
+
+  const usual = Math.round(daysBetween(days[0], days.at(-1)!) / (days.length - 1));
+  const lately = averageInterval([...days].reverse());
+  // Only call it a change when it's clearly different: a day and a quarter apart at least.
+  const trend =
+    lately === null || Math.abs(lately - usual) < Math.max(1, usual * 0.25) ? null : lately < usual ? "more" : "less";
+
+  let longestBreak: BeerRhythm["longestBreak"] = null;
+  let run = 1;
+  let longestRun = { nights: 1, from: days[0] };
+  for (let i = 1; i < days.length; i++) {
+    const gap = daysBetween(days[i - 1], days[i]);
+    if (!longestBreak || gap > longestBreak.days) longestBreak = { days: gap, from: days[i - 1], to: days[i] };
+    run = gap === 1 ? run + 1 : 1;
+    if (run > longestRun.nights) longestRun = { nights: run, from: days[i - run + 1] };
+  }
+
+  return { nights: days.length, usual, lately, trend, since: daysBetween(days.at(-1)!, asOf), longestBreak, longestRun };
 }

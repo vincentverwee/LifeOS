@@ -4,6 +4,7 @@ import { getTodayKey } from "@/lib/today";
 import { getBeerVisits } from "@/lib/data/beer";
 import { pricesByMonth, totals } from "@/lib/beer/stats";
 import {
+  beerRhythm,
   biggestNights,
   byPub,
   comparisonDay,
@@ -35,6 +36,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <h2 className="mb-3 font-medium text-foreground">{title}</h2>
       {children}
     </section>
+  );
+}
+
+function RhythmRow({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <div className="flex min-h-12 items-center justify-between gap-3 border-t border-border px-4 py-2">
+      <dt className="text-ink-muted">{label}</dt>
+      <dd className="flex min-w-0 flex-col items-end text-right">
+        <span className="text-foreground">{value}</span>
+        {detail && <span className="text-xs text-ink-muted">{detail}</span>}
+      </dd>
+    </div>
   );
 }
 
@@ -84,7 +97,9 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
   });
   const pubs = byPub(monthVisits);
   const nights = biggestNights(monthVisits);
-  const weekdayRows = weekdays(visits, month === current ? todayKey : `${month}-${String(length).padStart(2, "0")}`);
+  const asOf = month === current ? todayKey : `${month}-${String(length).padStart(2, "0")}`;
+  const weekdayRows = weekdays(visits, asOf);
+  const rhythm = beerRhythm(visits, asOf);
   const prices = pricesByMonth(visits).map((p) => ({
     label: shortMonth.format(toDate(p.month)),
     price: Math.round(p.pricePerPint * 100) / 100,
@@ -188,6 +203,41 @@ export default async function BeerInsightsPage(props: PageProps<"/beer/insights"
           </ul>
         )}
       </Section>
+
+      {rhythm && (
+        <Disclosure title="Rhythm · past year">
+          <dl className="-mx-4 pb-1 text-sm">
+            <RhythmRow label="Usually" value={`a night out every ~${plural(rhythm.usual, "day", "days")}`} detail={plural(rhythm.nights, "night", "nights")} />
+            {rhythm.lately !== null && (
+              <RhythmRow
+                label="Lately"
+                value={`every ~${plural(rhythm.lately, "day", "days")}`}
+                detail={rhythm.trend === "more" ? "▲ more often" : rhythm.trend === "less" ? "▼ less often" : "about the same · last 6 nights"}
+              />
+            )}
+            {month === current && (
+              <RhythmRow
+                label="Last one"
+                value={rhythm.since === 0 ? "today" : rhythm.since === 1 ? "yesterday" : `${rhythm.since} days ago`}
+              />
+            )}
+            {rhythm.longestBreak && (
+              <RhythmRow
+                label="Longest break"
+                value={plural(rhythm.longestBreak.days, "day", "days")}
+                detail={`${formatDate(rhythm.longestBreak.from)} → ${formatDate(rhythm.longestBreak.to)}`}
+              />
+            )}
+            {rhythm.longestRun.nights > 1 && (
+              <RhythmRow
+                label="Most in a row"
+                value={plural(rhythm.longestRun.nights, "night", "nights")}
+                detail={`from ${formatDate(rhythm.longestRun.from)}`}
+              />
+            )}
+          </dl>
+        </Disclosure>
+      )}
 
       <Disclosure title="By weekday · past year">
         <div className="pb-3">
