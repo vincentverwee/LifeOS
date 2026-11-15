@@ -48,38 +48,50 @@ export function InflationInsight({
   }
 
   const yoy = yearOnYear(cpi).at(-1)?.pct ?? null;
-  const real = realResult(trades, cpi, totals.value);
-  const points = keepUpSeries(trades, cpi, valueSeries(trades, prices, todayKey));
+  const hasTrades = trades.length > 0;
+  const real = hasTrades ? realResult(trades, cpi, totals.value) : null;
+  const points = hasTrades ? keepUpSeries(trades, cpi, valueSeries(trades, prices, todayKey)) : [];
+  const yoyLine = (
+    <>
+      Belgian prices are up <span className="font-medium text-foreground">{yoy !== null ? pct(yoy) : "?"}</span> on a year earlier (known up to{" "}
+      {monthLong.format(new Date(`${latest.month}-01T00:00:00Z`))}).
+    </>
+  );
   const savings = accounts.filter((a) => !a.isArchived && a.balances.length > 0);
 
   return (
     <section className="flex flex-col gap-3">
       <h2 className="section-title">Compared with inflation</h2>
-      <div className="card p-5">
-        <p className={`font-mono text-3xl font-semibold tabular-nums ${gainClass(real.realGain)}`}>{formatSignedCurrency(real.realGain)}</p>
-        <p className="text-sm text-ink-muted">
-          real gain {real.realPct !== null && `(${formatSignedPct(real.realPct)})`} · every buy grown with prices since its month needs{" "}
-          {formatCurrency(real.keepUp)}, you have {formatCurrency(totals.value)}
-        </p>
-        <div className="mt-3">
-          <InflationChart points={points} />
+      {real ? (
+        <div className="card p-5">
+          <p className={`font-mono text-3xl font-semibold tabular-nums ${gainClass(real.realGain)}`}>{formatSignedCurrency(real.realGain)}</p>
+          <p className="text-sm text-ink-muted">
+            real gain {real.realPct !== null && `(${formatSignedPct(real.realPct)})`} · every buy grown with prices since its month needs{" "}
+            {formatCurrency(real.keepUp)}, you have {formatCurrency(totals.value)}
+          </p>
+          <div className="mt-3">
+            <InflationChart points={points} />
+          </div>
+          <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
+            <span className="flex items-center gap-1.5">
+              <span className="h-0.5 w-4 bg-primary" aria-hidden="true" /> Worth
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="w-4 border-t-2 border-dashed border-warning" aria-hidden="true" /> To keep up
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-0.5 w-4 bg-ink-muted" aria-hidden="true" /> Under the mattress
+            </span>
+          </p>
+          <p className="mt-3 border-t border-border pt-3 text-sm text-ink-muted">{yoyLine}</p>
         </div>
-        <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-ink-muted">
-          <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 bg-primary" aria-hidden="true" /> Worth
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="w-4 border-t-2 border-dashed border-warning" aria-hidden="true" /> To keep up
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="h-0.5 w-4 bg-ink-muted" aria-hidden="true" /> Under the mattress
-          </span>
-        </p>
-        <p className="mt-3 border-t border-border pt-3 text-sm text-ink-muted">
-          Belgian prices are up <span className="font-medium text-foreground">{yoy !== null ? pct(yoy) : "?"}</span> on a year earlier (known up to{" "}
-          {monthLong.format(new Date(`${latest.month}-01T00:00:00Z`))}).
-        </p>
-      </div>
+      ) : (
+        <div className="card p-5">
+          <p className="text-sm text-ink-muted">Prices vs a year earlier</p>
+          <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{yoy !== null ? pct(yoy) : "?"}</p>
+          <p className="text-sm text-ink-muted">Money that earns less than this loses buying power. After your first buy, your real gain shows here.</p>
+        </div>
+      )}
 
       {savings.length > 0 && (
         <ul className="card-list">

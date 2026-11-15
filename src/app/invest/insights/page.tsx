@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Disclosure } from "@/components/Disclosure";
 import { FundDot } from "@/components/invest/FundDot";
@@ -20,16 +19,12 @@ export default async function InvestInsightsPage() {
   const [todayKey, { trades, prices, positions, totals }, cpi, accounts] = await Promise.all([getTodayKey(), getPortfolio(), getCpi(), getSavingsAccounts()]);
   const header = <PageHeader title="Insights" back={{ href: "/invest", label: "Investments" }} />;
   if (trades.length === 0) {
+    // Savings and prices don't need trades: only the investment part waits for the first one.
     return (
       <div className="flex flex-col gap-6">
         {header}
-        <p className="text-sm text-ink-muted">Nothing to show until your first trade.</p>
-        <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
-          <span className="font-medium text-foreground">Savings and budget vs inflation</span>
-          <span aria-hidden="true" className="text-xl text-ink-muted">
-            ›
-          </span>
-        </Link>
+        <InflationInsight trades={trades} prices={prices} totals={totals} cpi={cpi} accounts={accounts} todayKey={todayKey} />
+        <p className="text-sm text-ink-muted">How your money is split, money put in per month and costs show after your first trade.</p>
       </div>
     );
   }
