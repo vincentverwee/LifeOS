@@ -22,6 +22,12 @@ export default async function InvestInsightsPage() {
       <div className="flex flex-col gap-6">
         {header}
         <p className="text-sm text-ink-muted">Nothing to show until your first trade.</p>
+        <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
+          <span className="font-medium text-foreground">Savings and budget vs inflation</span>
+          <span aria-hidden="true" className="text-xl text-ink-muted">
+            ›
+          </span>
+        </Link>
       </div>
     );
   }
