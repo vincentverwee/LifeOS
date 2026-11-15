@@ -132,3 +132,15 @@ describe("night", () => {
     expect(mood({ kind: "diary", wroteToday: true }, 6)).toBe("happy");
   });
 });
+
+describe("invest", () => {
+  const i = (monthPct: number | null, hasTrades = true): MoodInput => ({ kind: "invest", hasTrades, monthPct });
+  it("waits for the first buy", () => {
+    expect(moodFor(i(null, false), "W", "2026-11-16", 12).mood).toBe("default");
+  });
+  it("grins when up, sweats when well down, else stays calm", () => {
+    expect(moodFor(i(0.03), "W", "2026-11-16", 12).mood).toBe("happy");
+    expect(moodFor(i(-0.06), "W", "2026-11-16", 12).mood).toBe("worried");
+    expect(moodFor(i(-0.01), "W", "2026-11-16", 12).mood).toBe("default");
+  });
+});

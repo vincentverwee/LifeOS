@@ -26,6 +26,8 @@ import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
 import { getBeerWeek, getDiaryWeek, weekOf } from "@/lib/data/homeWeek";
 import { mascotName } from "@/lib/mascots";
 import { THEME } from "@/lib/theme";
+import { getInvestGlance } from "@/lib/data/invest";
+import { formatSignedCurrency, formatSignedPct, gainClass } from "@/lib/invest/format";
 
 /*
  * The Home tiles: each section's card body (async server components reading
@@ -532,6 +534,32 @@ async function WardrobeTileBody() {
   );
 }
 
+async function InvestTileBody({ todayKey }: { todayKey: string }) {
+  const g = await getInvestGlance(todayKey);
+  if (g.slices.length === 0) return <p className="text-sm text-ink-muted">{g.funds === 0 ? "Follow your ETFs" : "Log your first buy"}</p>;
+  const total = g.slices.reduce((s, x) => s + x.value, 0);
+  return (
+    <>
+      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
+        {formatCurrencyShort(g.value)}
+      </p>
+      <p className="truncate text-sm">
+        <span className={gainClass(g.gain)}>
+          {formatSignedCurrency(g.gain)} {g.gainPct !== null && `(${formatSignedPct(g.gainPct)})`}
+        </span>
+        {g.monthPct !== null && <span className="text-ink-muted"> · {formatSignedPct(g.monthPct)} this month</span>}
+      </p>
+      {g.slices.length > 1 && total > 0 && (
+        <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-muted" aria-label="How your money is split">
+          {g.slices.map((s) => (
+            <span key={s.ticker} title={s.ticker} style={{ width: `${(s.value / total) * 100}%`, backgroundColor: `var(--color-tag-${s.color})` }} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 export type HomeSection = {
   kind: SectionKind;
   name: string;
@@ -601,6 +629,12 @@ export const HOME_SECTIONS: HomeSection[] = [
     name: "Recipes",
     href: "/recipes",
     render: () => <RecipesTileBody />,
+  },
+  {
+    kind: "invest",
+    name: "Investments",
+    href: "/invest",
+    render: (t) => <InvestTileBody todayKey={t} />,
   },
 ];
 

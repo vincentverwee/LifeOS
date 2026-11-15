@@ -10,6 +10,7 @@ import { getRemindersGlance } from "@/lib/data/reminders";
 import { getLastWashByLoad, getWardrobeGlance } from "@/lib/data/wardrobe";
 import { getWaypointGlance } from "@/lib/data/waypoint";
 import { getWorkoutsGlance } from "@/lib/data/workouts";
+import { getInvestGlance } from "@/lib/data/invest";
 import { mascotName } from "@/lib/mascots";
 import { moodFor, type MascotMood, type MoodInput } from "@/lib/mascotMood";
 import { THEME } from "@/lib/theme";
@@ -68,6 +69,10 @@ async function moodInput(kind: SectionKind, todayKey: string): Promise<MoodInput
         missed: g.week.left > 0 && !g.week.reachable,
         lastOn: g.last?.date ?? null,
       };
+    }
+    case "invest": {
+      const g = await getInvestGlance(todayKey);
+      return { kind, hasTrades: g.slices.length > 0 || g.value > 0, monthPct: g.monthPct };
     }
   }
 }

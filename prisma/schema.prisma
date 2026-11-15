@@ -894,3 +894,53 @@ model BodyWeight {
   kg        Decimal  @db.Decimal(5, 2)
   createdAt DateTime @default(now())
 }
+
+// ── Investments (long-term ETFs; trades logged by hand, Bolero has no API) ──
+
+// One fund. `ticker` is Yahoo's spelling (VWCE.DE, IWDA.AS); prices are fetched
+// for it once per ~6 h by the push cron and stored in InstrumentPrice.
+model Instrument {
+  id              String            @id @default(cuid())
+  ticker          String            @unique
+  isin            String?
+  name            String
+  currency        String            @default("EUR")
+  color           String
+  targetPct       Decimal?          @db.Decimal(5, 2)
+  tobRate         Decimal           @default(0.0012) @db.Decimal(6, 5)
+  sortOrder       Int               @default(0)
+  isArchived      Boolean           @default(false)
+  pricesFetchedAt DateTime?
+  createdAt       DateTime          @default(now())
+  trades          InvestmentTx[]
+  prices          InstrumentPrice[]
+}
+
+// A buy, sell or dividend. buy/sell: units × price + fees + tax; dividend: amount (net = amount − tax).
+model InvestmentTx {
+  id           String     @id @default(cuid())
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Restrict)
+  date         DateTime   @db.Date
+  type         String
+  units        Decimal?   @db.Decimal(14, 6)
+  price        Decimal?   @db.Decimal(14, 4)
+  amount       Decimal?   @db.Decimal(12, 2)
+  fees         Decimal    @default(0) @db.Decimal(10, 2)
+  tax          Decimal    @default(0) @db.Decimal(10, 2)
+  note         String?
+  createdAt    DateTime   @default(now())
+
+  @@index([instrumentId, date])
+}
+
+// One closing price per fund per trading day.
+model InstrumentPrice {
+  id           String     @id @default(cuid())
+  instrumentId String
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  date         DateTime   @db.Date
+  close        Decimal    @db.Decimal(14, 4)
+
+  @@unique([instrumentId, date])
+}

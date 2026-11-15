@@ -96,6 +96,7 @@ export const HUES: Record<SectionKind, { light: string; dark: string; accent: st
   people: { light: "#ffdfe0", dark: "#3c1d20", accent: "#c0434d", accentDark: "#ff9aa2" },
   waypoint: { light: "#e2ecdb", dark: "#232f1c", accent: "#527e35", accentDark: "#a9d48a" },
   recipes: { light: "#f3e6da", dark: "#342618", accent: "#9c5a30", accentDark: "#e7ab83" },
+  invest: { light: "#dceee9", dark: "#17302a", accent: "#1f7a63", accentDark: "#79d2b8" },
 };
 export const hueOf = (kind: SectionKind, dark = false) => {
   const h = HUES[kind];

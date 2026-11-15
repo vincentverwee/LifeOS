@@ -30,6 +30,12 @@ export type MoodInput =
       /** This week's goal can't be made any more (one session a day). */
       missed: boolean;
       lastOn: string | null;
+    }
+  | {
+      kind: "invest";
+      hasTrades: boolean;
+      /** Growth this month without new money, as a share (0.02 = +2 %); null = unknown. */
+      monthPct: number | null;
     };
 
 export type MascotMood = { mood: Mood; line: string };
@@ -44,6 +50,13 @@ export const WASH_WORRY = 8;
 export const WASH_OVERDUE_DAYS = 10;
 /** Days without a workout before the coach dozes off. */
 export const WORKOUT_SLEEPY_DAYS = 7;
+/** Up this share this month and the investor grins. */
+export const INVEST_HAPPY_PCT = 0.02;
+/** Down this share this month and the investor sweats (but stays calm). */
+export const INVEST_WORRY_PCT = -0.05;
+
+const pct = (n: number) => `${(Math.abs(n) * 100).toLocaleString("en-GB", { maximumFractionDigits: 1 })}%`;
+
 /** Before this hour (and from midnight) everyone not worried is asleep. */
 export const NIGHT_UNTIL_HOUR = 6;
 
@@ -125,6 +138,13 @@ function sectionMood(input: MoodInput, name: string, todayKey: string): MascotMo
         line: input.goal !== null ? `${name} says: ${input.left} more this week.` : `${name} is stretching.`,
       };
     }
+    case "invest":
+      if (!input.hasTrades) return { mood: "default", line: `${name} is waiting for your first buy.` };
+      if (input.monthPct !== null && input.monthPct >= INVEST_HAPPY_PCT)
+        return { mood: "happy", line: `${name} is grinning: up ${pct(input.monthPct)} this month.` };
+      if (input.monthPct !== null && input.monthPct <= INVEST_WORRY_PCT)
+        return { mood: "worried", line: `${name} is holding steady: down ${pct(input.monthPct)}. Think long term.` };
+      return { mood: "default", line: `${name} says: time in the market beats timing it.` };
   }
 }
 

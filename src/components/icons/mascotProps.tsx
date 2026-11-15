@@ -20,7 +20,8 @@ export type MascotKind =
   | "people"
   | "waypoint"
   | "recipes"
-  | "workouts";
+  | "workouts"
+  | "invest";
 
 export const MASCOT_KINDS: MascotKind[] = [
   "plain",
@@ -34,6 +35,7 @@ export const MASCOT_KINDS: MascotKind[] = [
   "waypoint",
   "recipes",
   "workouts",
+  "invest",
 ];
 
 const O = "currentColor";
@@ -323,6 +325,28 @@ function WaterBottle() {
   );
 }
 
+/** The investor's top hat: a tall crown with a band and a wide brim. */
+function TopHat() {
+  return (
+    <>
+      <path d="M-9 -1 L-8 -18 Q0 -19.5 8 -18 L9 -1 Z" fill={O} />
+      <path d="M-8.6 -6.5 Q0 -5 8.6 -6.5 L8.8 -3 Q0 -1.5 -8.8 -3 Z" fill={W} />
+      <path d="M-16 0 Q0 -4 16 0 Q0 3 -16 0 Z" fill={O} stroke={O} strokeWidth="1.6" strokeLinejoin="round" />
+    </>
+  );
+}
+
+/** A little card with a rising chart line and arrow head. */
+function ChartCard() {
+  return (
+    <>
+      <rect x="-11" y="-10" width="22" height="18" rx="3" fill={W} stroke={O} strokeWidth="2.6" />
+      <path d="M-7 4 L-2 -1 L1.5 2 L7 -5" fill="none" stroke={O} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.2 -5.6 L7.4 -5.6 L7.4 -1.4" fill="none" stroke={O} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  );
+}
+
 /** The prop layer for one kind, drawn on top of the head. */
 export function MascotProp({ kind, animal }: { kind: MascotKind; animal: MascotAnimal }) {
   const a = ANCHORS[animal];
@@ -375,6 +399,17 @@ export function MascotProp({ kind, animal }: { kind: MascotKind; animal: MascotA
           </At>
           <At p={nudge(a.front, 2, 1)} rotate={-12}>
             <WaterBottle />
+          </At>
+        </>
+      );
+    case "invest":
+      return (
+        <>
+          <At p={a.top} rotate={-6}>
+            <TopHat />
+          </At>
+          <At p={nudge(a.front, 3, 2)} rotate={-8}>
+            <ChartCard />
           </At>
         </>
       );

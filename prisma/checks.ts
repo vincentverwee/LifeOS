@@ -278,6 +278,37 @@ export const CHECKS: Check[] = [
     label: "Weigh-ins outside 20-300 kg",
     fix: "Fix those weigh-ins first.",
   },
+  // Investments: a trade's fields follow its type.
+  {
+    name: "investment_tx_valid",
+    table: "InvestmentTx",
+    check: `(
+      "fees" >= 0 AND "tax" >= 0
+      AND (
+        ("type" IN ('buy', 'sell') AND "units" IS NOT NULL AND "units" > 0 AND "price" IS NOT NULL AND "price" > 0 AND "amount" IS NULL)
+        OR ("type" = 'dividend' AND "amount" IS NOT NULL AND "amount" > 0 AND "units" IS NULL AND "price" IS NULL)
+      )
+    )`,
+    columns: "id, date, type",
+    label: "Investment trades with fields that don't match their type",
+    fix: "Fix those trades first.",
+  },
+  {
+    name: "instrument_valid",
+    table: "Instrument",
+    check: `(("targetPct" IS NULL OR "targetPct" BETWEEN 0 AND 100) AND "tobRate" BETWEEN 0 AND 0.05)`,
+    columns: "id, ticker",
+    label: "Funds with a target outside 0-100 % or an odd TOB rate",
+    fix: "Fix those funds first.",
+  },
+  {
+    name: "instrument_price_positive",
+    table: "InstrumentPrice",
+    check: `("close" > 0)`,
+    columns: `id, "instrumentId", date`,
+    label: "Fund prices of 0 or less",
+    fix: "Delete those prices first.",
+  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */

@@ -21,6 +21,7 @@ const NAMES: Record<MascotKind, string> = {
   waypoint: "Waypoint",
   recipes: "Recipes",
   workouts: "Workouts",
+  invest: "Investments",
 };
 
 // The theme tokens copied from globals.css, so both animals show in both modes
@@ -81,6 +82,12 @@ const SAMPLES: Record<Exclude<MascotKind, "plain">, MoodInput[]> = {
     workouts({ done: 0, left: 3, daysLeft: 3, behind: true, lastOn: "2026-10-20" }),
     workouts({ done: 1, left: 2, daysLeft: 2, behind: true }),
     workouts({ goal: null, done: 0, left: 0, daysLeft: 3, lastOn: "2026-10-25" }),
+  ],
+  invest: [
+    { kind: "invest", hasTrades: true, monthPct: 0.004 },
+    { kind: "invest", hasTrades: true, monthPct: 0.031 },
+    { kind: "invest", hasTrades: true, monthPct: -0.062 },
+    { kind: "invest", hasTrades: false, monthPct: null },
   ],
 };
 
