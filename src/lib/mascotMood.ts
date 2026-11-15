@@ -55,7 +55,6 @@ export const INVEST_HAPPY_PCT = 0.02;
 /** Down this share this month and the investor sweats (but stays calm). */
 export const INVEST_WORRY_PCT = -0.05;
 
-const pct = (n: number) => `${(Math.abs(n) * 100).toLocaleString("en-GB", { maximumFractionDigits: 1 })}%`;
 
 /** Before this hour (and from midnight) everyone not worried is asleep. */
 export const NIGHT_UNTIL_HOUR = 6;
@@ -141,9 +140,10 @@ function sectionMood(input: MoodInput, name: string, todayKey: string): MascotMo
     case "invest":
       if (!input.hasTrades) return { mood: "default", line: `${name} is waiting for your first buy.` };
       if (input.monthPct !== null && input.monthPct >= INVEST_HAPPY_PCT)
-        return { mood: "happy", line: `${name} is grinning: up ${pct(input.monthPct)} this month.` };
+        // No numbers: Home keeps money private.
+        return { mood: "happy", line: `${name} is grinning: a good month so far.` };
       if (input.monthPct !== null && input.monthPct <= INVEST_WORRY_PCT)
-        return { mood: "worried", line: `${name} is holding steady: down ${pct(input.monthPct)}. Think long term.` };
+        return { mood: "worried", line: `${name} is holding steady through a rough month. Think long term.` };
       return { mood: "default", line: `${name} says: time in the market beats timing it.` };
   }
 }

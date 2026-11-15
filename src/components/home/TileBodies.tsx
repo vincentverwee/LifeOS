@@ -27,7 +27,7 @@ import { getBeerWeek, getDiaryWeek, weekOf } from "@/lib/data/homeWeek";
 import { mascotName } from "@/lib/mascots";
 import { THEME } from "@/lib/theme";
 import { getInvestGlance } from "@/lib/data/invest";
-import { formatSignedCurrency, formatSignedPct, gainClass } from "@/lib/invest/format";
+import { TrendLine } from "@/components/invest/TrendLine";
 
 /*
  * The Home tiles: each section's card body (async server components reading
@@ -534,39 +534,29 @@ async function WardrobeTileBody() {
   );
 }
 
+/** Within ± this share a month counts as "steady" on the Investments tile. */
+const INVEST_STEADY_PCT = 0.005;
+
+/** This month in words, never numbers (the tile shows no money on Home). */
+function investDirection(monthPct: number | null): { text: string; className: string } {
+  if (monthPct === null || Math.abs(monthPct) < INVEST_STEADY_PCT) return { text: "Steady this month", className: "text-foreground" };
+  return monthPct > 0
+    ? { text: "Up this month", className: "text-positive-text" }
+    : { text: "Down this month · think long term", className: "text-critical" };
+}
+
+/** No amounts or percentages on Home (private): a growth line, the month in words, or a to-do. */
 async function InvestTileBody({ todayKey }: { todayKey: string }) {
   const g = await getInvestGlance(todayKey);
+  const nudge = g.savingsStale ? "Time to update your savings balance" : null;
   if (g.slices.length === 0) {
-    if (g.savings === null) return <p className="text-sm text-ink-muted">Savings and ETFs vs inflation</p>;
-    return (
-      <>
-        <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
-          {formatCurrencyShort(g.savings)}
-        </p>
-        <p className="text-sm text-ink-muted">In savings{g.funds === 0 ? "" : " · log your first buy"}</p>
-      </>
-    );
+    return <p className="text-sm text-ink-muted">{nudge ?? (g.funds === 0 ? "Savings and ETFs vs inflation" : "Log your first buy")}</p>;
   }
-  const total = g.slices.reduce((s, x) => s + x.value, 0);
+  const direction = investDirection(g.monthPct);
   return (
     <>
-      <p className="text-[clamp(22px,18cqw,34px)] leading-tight font-semibold tracking-tight whitespace-nowrap tabular-nums text-foreground">
-        {formatCurrencyShort(g.value)}
-      </p>
-      <p className="truncate text-sm">
-        <span className={gainClass(g.gain)}>
-          {formatSignedCurrency(g.gain)} {g.gainPct !== null && `(${formatSignedPct(g.gainPct)})`}
-        </span>
-        {g.monthPct !== null && <span className="text-ink-muted"> · {formatSignedPct(g.monthPct)} this month</span>}
-      </p>
-      {g.savings !== null && <p className="truncate text-sm text-ink-muted">Savings {formatCurrencyShort(g.savings)}</p>}
-      {g.slices.length > 1 && total > 0 && (
-        <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-muted" aria-label="How your money is split">
-          {g.slices.map((s) => (
-            <span key={s.ticker} title={s.ticker} style={{ width: `${(s.value / total) * 100}%`, backgroundColor: `var(--color-tag-${s.color})` }} />
-          ))}
-        </div>
-      )}
+      <TrendLine values={g.trend} className="h-10 w-full" />
+      <p className={`mt-2 truncate text-sm font-medium ${nudge ? "text-foreground" : direction.className}`}>{nudge ?? direction.text}</p>
     </>
   );
 }

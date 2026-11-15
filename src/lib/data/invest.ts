@@ -85,6 +85,11 @@ async function loadPortfolio(): Promise<Portfolio> {
 
 export const getPortfolio = cache(loadPortfolio);
 
+/** Days the Home tile's trend line covers. */
+export const TREND_DAYS = 182;
+/** A savings balance older than this gets an "update it" nudge on the Home tile. */
+export const SAVINGS_NUDGE_DAYS = 30;
+
 export type InvestGlance = {
   funds: number;
   value: number;
@@ -96,29 +101,35 @@ export type InvestGlance = {
   /** monthGrowth ÷ (the value at the start of the month + the money put in this month). */
   monthPct: number | null;
   slices: { color: string; value: number; ticker: string }[];
-  /** The newest balance of every active savings account, added up; null without any. */
-  savings: number | null;
+  /** Growth (worth − put in) over the last TREND_DAYS, ≤ 60 points: the tile draws its shape only. */
+  trend: number[];
+  /** An active savings account has no balance, or none in SAVINGS_NUDGE_DAYS (dates only are read). */
+  savingsStale: boolean;
 };
 
-/** Newest balance per active savings account, summed (one query, newest first). */
-async function savingsTotal(): Promise<number | null> {
-  const rows = await prisma.savingsBalance.findMany({
-    where: { account: { isArchived: false } },
-    orderBy: { date: "desc" },
-    distinct: ["accountId"],
-    select: { balance: true },
+/** True when an active savings account has no balance typed in within SAVINGS_NUDGE_DAYS. */
+async function savingsStale(todayKey: string): Promise<boolean> {
+  const accounts = await prisma.savingsAccount.findMany({
+    where: { isArchived: false },
+    select: { balances: { orderBy: { date: "desc" }, take: 1, select: { date: true } } },
   });
-  return rows.length ? rows.reduce((s, r) => s + Number(r.balance), 0) : null;
+  const since = addDays(todayKey, -SAVINGS_NUDGE_DAYS);
+  return accounts.some((a) => !a.balances[0] || dayKey(a.balances[0].date) < since);
 }
 
-/** Home tile and mood: trades plus only the last ~40 days of prices. */
+/**
+ * Home tile and mood: trades plus only the last ~6 months of prices. Savings balances
+ * stay off Home (private): only whether one is due for an update.
+ */
 async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
-  const [funds, trades, savings] = await Promise.all([getFunds(), getTrades(), savingsTotal()]);
+  const [funds, trades, stale] = await Promise.all([getFunds(), getTrades(), savingsStale(todayKey)]);
+  const active = funds.filter((f) => !f.isArchived).length;
   if (trades.length === 0) {
-    return { funds: funds.filter((f) => !f.isArchived).length, value: 0, gain: 0, gainPct: null, dayChange: 0, monthGrowth: null, monthPct: null, slices: [], savings };
+    return { funds: active, value: 0, gain: 0, gainPct: null, dayChange: 0, monthGrowth: null, monthPct: null, slices: [], trend: [], savingsStale: stale };
   }
   const monthStart = `${todayKey.slice(0, 7)}-01`;
-  const prices = await getPrices(addDays(monthStart, -10));
+  const trendFrom = addDays(todayKey, -TREND_DAYS);
+  const prices = await getPrices(addDays(trendFrom < monthStart ? trendFrom : monthStart, -10));
   const list = positions(funds, trades, prices, todayKey);
   const t = totals(list, trades);
   const series = valueSeries(trades, prices, todayKey, { from: addDays(monthStart, -1) });
@@ -133,8 +144,10 @@ async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
     const base = start.value + Math.max(0, end.deposited - start.deposited);
     monthPct = base > 0 ? monthGrowth / base : null;
   }
+  // Growth, not worth: a buy would otherwise show as a jump up.
+  const trend = valueSeries(trades, prices, todayKey, { from: trendFrom, maxPoints: 60 }).map((p) => p.value - p.deposited);
   return {
-    funds: funds.filter((f) => !f.isArchived).length,
+    funds: active,
     value: t.value,
     gain: t.gain,
     gainPct: t.gainPct,
@@ -142,7 +155,8 @@ async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
     monthGrowth,
     monthPct,
     slices: list.filter((p) => p.units > 0).map((p) => ({ color: p.fund.color, value: p.value, ticker: p.fund.ticker })),
-    savings,
+    trend,
+    savingsStale: stale,
   };
 }
 
