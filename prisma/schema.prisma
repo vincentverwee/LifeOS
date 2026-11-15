@@ -944,3 +944,36 @@ model InstrumentPrice {
 
   @@unique([instrumentId, date])
 }
+
+// ── Inflation (shown inside Investments) ──
+
+// Belgium's HICP (Eurostat, all items, 2015 = 100), one row per month; fetched by
+// the push cron at most once a day (src/lib/data/inflation.ts).
+model CpiMonth {
+  month     DateTime @id @db.Date
+  index     Decimal  @db.Decimal(8, 2)
+  fetchedAt DateTime @default(now())
+}
+
+// A savings account; its balance is typed in now and then (SavingsBalance).
+model SavingsAccount {
+  id         String           @id @default(cuid())
+  name       String           @unique
+  ratePct    Decimal?         @db.Decimal(5, 2)
+  color      String
+  sortOrder  Int              @default(0)
+  isArchived Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+  balances   SavingsBalance[]
+}
+
+model SavingsBalance {
+  id        String         @id @default(cuid())
+  accountId String
+  account   SavingsAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  date      DateTime       @db.Date
+  balance   Decimal        @db.Decimal(12, 2)
+  createdAt DateTime       @default(now())
+
+  @@unique([accountId, date])
+}

@@ -38,8 +38,12 @@ export default async function TradesPage({ searchParams }: PageProps<"/invest/tr
       />
 
       {usedFunds.length > 1 && (
-        <nav aria-label="Filter by fund" className="flex flex-wrap gap-2">
-          <Link href="/invest/trades" aria-current={!fundId ? "page" : undefined} className={`btn min-h-11 px-4 text-sm ${!fundId ? "btn-primary" : "btn-outline"}`}>
+        <nav aria-label="Filter by fund" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <Link
+            href="/invest/trades"
+            aria-current={!fundId ? "page" : undefined}
+            className={`btn inline-flex min-h-11 shrink-0 px-4 text-sm ${!fundId ? "bg-primary text-primary-foreground" : "btn-outline"}`}
+          >
             All
           </Link>
           {usedFunds.map((f) => (
@@ -47,7 +51,7 @@ export default async function TradesPage({ searchParams }: PageProps<"/invest/tr
               key={f.id}
               href={`/invest/trades?fund=${f.id}`}
               aria-current={fundId === f.id ? "page" : undefined}
-              className={`btn min-h-11 gap-1.5 px-4 text-sm ${fundId === f.id ? "btn-primary" : "btn-outline"}`}
+              className={`btn inline-flex min-h-11 shrink-0 gap-2 px-4 text-sm ${fundId === f.id ? "bg-primary text-primary-foreground" : "btn-outline"}`}
             >
               <FundDot color={f.color} className="h-2 w-2" />
               {f.ticker}

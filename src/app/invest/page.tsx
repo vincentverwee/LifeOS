@@ -2,8 +2,11 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { FundDot } from "@/components/invest/FundDot";
 import { RefreshPricesButton } from "@/components/invest/RefreshPricesButton";
+import { RangeSwitch, readRange } from "@/components/invest/RangeSwitch";
 import { ValueChart } from "@/components/invest/InvestChartsLazy";
 import { getPortfolio } from "@/lib/data/invest";
+import { getCpi } from "@/lib/data/inflation";
+import { realResult } from "@/lib/invest/inflation";
 import { getTimeZone, getTodayKey } from "@/lib/today";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { formatPrice, formatSignedCurrency, formatSignedPct, formatUnits, gainClass } from "@/lib/invest/format";
@@ -11,12 +14,6 @@ import { addDays, growthBetween, valueSeries } from "@/lib/invest/stats";
 
 export const metadata = { title: "Investments" };
 
-const RANGES = [
-  { key: "1m", label: "1M", days: 30 },
-  { key: "6m", label: "6M", days: 182 },
-  { key: "1y", label: "1Y", days: 365 },
-  { key: "all", label: "All", days: null },
-] as const;
 
 /** "today 14:05" / "13 Nov 14:05" in the viewer's time zone. */
 function describeFetched(iso: string, tz: string, todayKey: string): string {
@@ -27,9 +24,9 @@ function describeFetched(iso: string, tz: string, todayKey: string): string {
 }
 
 export default async function InvestPage({ searchParams }: PageProps<"/invest">) {
-  const [{ range: rangeParam }, todayKey, tz, portfolio] = await Promise.all([searchParams, getTodayKey(), getTimeZone(), getPortfolio()]);
+  const [{ range: rangeParam }, todayKey, tz, portfolio, cpi] = await Promise.all([searchParams, getTodayKey(), getTimeZone(), getPortfolio(), getCpi()]);
   const { funds, trades, prices, positions, totals } = portfolio;
-  const range = RANGES.find((r) => r.key === rangeParam) ?? RANGES[3];
+  const range = readRange(rangeParam);
 
   const newest = funds.map((f) => f.pricesFetchedAt).filter((x): x is string => x !== null).sort().at(-1) ?? null;
   const header = (
@@ -47,7 +44,7 @@ export default async function InvestPage({ searchParams }: PageProps<"/invest">)
               ? "Search your ETF by name or ticker (e.g. VWCE.DE). Prices come in by themselves every few hours."
               : "Copy the numbers from Bolero's order confirmation: units, price, fee and TOB."}
           </p>
-          <Link href={funds.length === 0 ? "/invest/settings" : "/invest/add"} className="btn btn-primary min-h-11 px-5 text-sm font-semibold">
+          <Link href={funds.length === 0 ? "/invest/settings" : "/invest/add"} className="btn btn-primary inline-flex min-h-11 px-5 text-sm font-semibold">
             {funds.length === 0 ? "Add a fund" : "Log a buy"}
           </Link>
         </section>
@@ -58,6 +55,7 @@ export default async function InvestPage({ searchParams }: PageProps<"/invest">)
   const series = valueSeries(trades, prices, todayKey, { from: range.days ? addDays(todayKey, -range.days) : undefined });
   const growth = series.length > 1 ? growthBetween(series[0], series.at(-1)!) : null;
   const held = positions.filter((p) => p.units > 0);
+  const real = cpi.length > 0 ? realResult(trades, cpi, totals.value) : null;
   const sold = positions.filter((p) => p.units === 0);
 
   return (
@@ -66,7 +64,7 @@ export default async function InvestPage({ searchParams }: PageProps<"/invest">)
 
       <section className="card p-5">
         <p className="text-sm text-ink-muted">Worth now</p>
-        <p className="font-mono text-4xl font-semibold tracking-tight tabular-nums text-foreground">{formatCurrency(totals.value)}</p>
+        <p className="font-mono text-3xl font-semibold tabular-nums text-foreground">{formatCurrency(totals.value)}</p>
         <p className={`mt-1 text-sm font-medium ${gainClass(totals.gain)}`}>
           {formatSignedCurrency(totals.gain)} {totals.gainPct !== null && `(${formatSignedPct(totals.gainPct)})`}
           <span className="font-normal text-ink-muted"> on what you hold</span>
@@ -95,29 +93,32 @@ export default async function InvestPage({ searchParams }: PageProps<"/invest">)
         </dl>
       </section>
 
+      <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
+        <span className="min-w-0">
+          <span className="block text-sm text-ink-muted">After inflation</span>
+          {real ? (
+            <span className={`block font-medium tabular-nums ${gainClass(real.realGain)}`}>
+              {formatSignedCurrency(real.realGain)} {real.realPct !== null && `(${formatSignedPct(real.realPct)})`}
+            </span>
+          ) : (
+            <span className="block font-medium text-foreground">Investments, savings and budget vs prices</span>
+          )}
+        </span>
+        <span aria-hidden="true" className="text-xl text-ink-muted">
+          ›
+        </span>
+      </Link>
+
       <section className="card p-5">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="section-title">Value over time</h2>
-          <nav aria-label="Range" className="flex gap-1">
-            {RANGES.map((r) => (
-              <Link
-                key={r.key}
-                href={r.key === "all" ? "/invest" : `/invest?range=${r.key}`}
-                aria-current={r.key === range.key ? "page" : undefined}
-                className={`flex min-h-11 min-w-11 items-center justify-center rounded-full px-2 text-xs font-medium ${
-                  r.key === range.key ? "bg-surface-muted text-foreground" : "text-ink-muted"
-                }`}
-              >
-                {r.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
+        <h2 className="section-title">Value over time</h2>
         {growth !== null && (
           <p className="text-sm text-ink-muted">
             <span className={gainClass(growth)}>{formatSignedCurrency(growth)}</span> growth {range.days ? `in ${range.label}` : "since the start"}, new money left out
           </p>
         )}
+        <div className="mt-3">
+          <RangeSwitch base="/invest" current={range} />
+        </div>
         <div className="mt-3">
           <ValueChart points={series} />
         </div>

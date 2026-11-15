@@ -105,13 +105,13 @@ export function TradeForm({
       </div>
 
       {!trade && lastBuy && (
-        <button type="button" onClick={fillLastBuy} className="btn btn-outline min-h-11 self-start px-4 text-sm">
+        <button type="button" onClick={fillLastBuy} className="btn btn-outline flex min-h-11 self-start px-4 text-sm">
           Same as last buy
         </button>
       )}
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">Fund</span>
+        <span className="text-sm text-ink-muted">Fund</span>
         <select name="instrumentId" value={fundId} onChange={(e) => setFundId(e.target.value)} className="field">
           {funds.map((f) => (
             <option key={f.id} value={f.id}>
@@ -122,23 +122,23 @@ export function TradeForm({
       </label>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">Date</span>
+        <span className="text-sm text-ink-muted">Date</span>
         <input type="date" name="date" value={date} max={todayKey} onChange={(e) => setDate(e.target.value)} required className="field" />
       </label>
 
       {type === "dividend" ? (
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-foreground">Dividend (gross)</span>
+          <span className="text-sm text-ink-muted">Dividend (gross)</span>
           <input name="amount" inputMode="decimal" value={dividend} onChange={(e) => setDividend(e.target.value)} placeholder="0,00" className="field" />
         </label>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-foreground">Units</span>
+            <span className="text-sm text-ink-muted">Units</span>
             <input name="units" inputMode="decimal" value={units} onChange={(e) => setUnits(e.target.value)} placeholder="0" className="field" />
           </label>
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-foreground">Price per unit</span>
+            <span className="text-sm text-ink-muted">Price per unit</span>
             <input name="price" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" className="field" />
           </label>
         </div>
@@ -147,14 +147,14 @@ export function TradeForm({
       <div className="grid grid-cols-2 gap-3">
         {type !== "dividend" ? (
           <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-foreground">Broker fee</span>
+            <span className="text-sm text-ink-muted">Broker fee</span>
             <input name="fees" inputMode="decimal" value={fees} onChange={(e) => setFees(e.target.value)} placeholder="0,00" className="field" />
           </label>
         ) : (
           <input type="hidden" name="fees" value="0" />
         )}
         <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium text-foreground">{type === "dividend" ? "Tax withheld" : "TOB (tax)"}</span>
+          <span className="text-sm text-ink-muted">{type === "dividend" ? "Tax withheld" : "TOB (tax)"}</span>
           <input
             inputMode="decimal"
             value={shownTax}
@@ -172,7 +172,7 @@ export function TradeForm({
       </div>
 
       <label className="flex flex-col gap-1">
-        <span className="text-sm font-medium text-foreground">Note</span>
+        <span className="text-sm text-ink-muted">Note</span>
         <input name="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="Optional" className="field" />
       </label>
 
@@ -189,12 +189,13 @@ export function TradeForm({
         </p>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={pending} className="btn btn-primary min-h-11 px-6 text-sm font-semibold">
-          {pending ? "Saving…" : trade ? "Save changes" : `Save ${TRADE_LABELS[type].toLowerCase()}`}
-        </button>
-        {trade && (
+      <button type="submit" disabled={pending} className="btn btn-primary flex w-full px-4 py-3 text-base font-semibold">
+        {pending ? "Saving…" : trade ? "Save changes" : `Save ${TRADE_LABELS[type].toLowerCase()}`}
+      </button>
+      {trade && (
+        <div className="flex">
           <ConfirmButton
+            className="min-h-11 px-5 text-sm"
             onConfirm={async () => {
               const res = await deleteTrade(trade.id);
               if (res.ok) router.push("/invest/trades");
@@ -203,8 +204,8 @@ export function TradeForm({
           >
             Delete
           </ConfirmButton>
-        )}
-      </div>
+        </div>
+      )}
       {deleteError && (
         <p role="alert" className="text-sm text-critical">
           {deleteError}

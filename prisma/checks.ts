@@ -309,6 +309,30 @@ export const CHECKS: Check[] = [
     label: "Fund prices of 0 or less",
     fix: "Delete those prices first.",
   },
+  {
+    name: "cpi_month_positive",
+    table: "CpiMonth",
+    check: `("index" > 0)`,
+    columns: "month, index",
+    label: "Inflation months with an index of 0 or less",
+    fix: "Delete those months (the next fetch fills them in again).",
+  },
+  {
+    name: "savings_account_rate",
+    table: "SavingsAccount",
+    check: `("ratePct" IS NULL OR "ratePct" BETWEEN 0 AND 20)`,
+    columns: "id, name",
+    label: "Savings accounts with a rate outside 0-20 %",
+    fix: "Fix those rates first.",
+  },
+  {
+    name: "savings_balance_valid",
+    table: "SavingsBalance",
+    check: `("balance" >= 0)`,
+    columns: `id, "accountId", date`,
+    label: "Savings balances below 0",
+    fix: "Fix those balances first.",
+  },
 ];
 
 /** Public tables without RLS, and those the Supabase API roles still hold grants on. */

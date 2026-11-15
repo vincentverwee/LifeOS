@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Disclosure } from "@/components/Disclosure";
 import { FundDot } from "@/components/invest/FundDot";
@@ -91,6 +92,13 @@ export default async function InvestInsightsPage() {
           <DepositsChart months={shownMonths} />
         </div>
       </section>
+
+      <Link href="/invest/inflation" className="card tap flex min-h-14 items-center justify-between gap-3 p-5">
+        <span className="font-medium text-foreground">Compared with inflation</span>
+        <span aria-hidden="true" className="text-xl text-ink-muted">
+          ›
+        </span>
+      </Link>
 
       <Disclosure title="Per year">
         <ul className="card-list">

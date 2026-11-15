@@ -17,9 +17,7 @@ export default async function EditTradePage({ params }: PageProps<"/invest/trade
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Edit trade" back={{ href: "/invest/trades", label: "Trades" }} />
-      <section className="card p-5">
-        <TradeForm funds={choices} todayKey={todayKey} trade={trade} />
-      </section>
+      <TradeForm funds={choices} todayKey={todayKey} trade={trade} />
     </div>
   );
 }
