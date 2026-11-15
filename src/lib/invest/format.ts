@@ -32,6 +32,17 @@ export function formatPrice(value: number): string {
   return price.format(value);
 }
 
+/**
+ * A typed unit price: comma or dot, up to 4 decimals (Euronext quotes 3, stored closes
+ * keep 4), above 0 and at most `max`. No thousands separators: "1.234,5" is null.
+ */
+export function parseUnitPrice(raw: unknown, max = 1_000_000): number | null {
+  const s = String(raw ?? "").trim().replace(",", ".");
+  if (!/^(\d+(\.\d{0,4})?|\.\d{1,4})$/.test(s)) return null;
+  const n = Math.round(Number(s) * 10_000) / 10_000;
+  return n > 0 && n <= max ? n : null;
+}
+
 /** Tailwind text colour for a gain: green up, red down, muted flat. */
 export function gainClass(value: number): string {
   if (Math.abs(value) < 0.005) return "text-ink-muted";

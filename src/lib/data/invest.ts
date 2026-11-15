@@ -3,6 +3,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { dayKey } from "@/lib/format";
+import { getTodayKey } from "@/lib/today";
 import { addDays, positions, totals, valueSeries, growthBetween, type Position, type Totals } from "@/lib/invest/stats";
 import { isTradeType, type Fund, type PricePoint, type Trade } from "@/lib/invest/types";
 
@@ -75,10 +76,10 @@ export type Portfolio = {
 
 /** Everything, for the section's pages: prices from a week before the first trade. */
 async function loadPortfolio(): Promise<Portfolio> {
-  const [funds, trades] = await Promise.all([getFunds(), getTrades()]);
+  const [funds, trades, todayKey] = await Promise.all([getFunds(), getTrades(), getTodayKey()]);
   const first = trades.at(-1)?.date ?? null;
   const prices = await getPrices(first ? addDays(first, -7) : null);
-  const list = positions(funds, trades, prices);
+  const list = positions(funds, trades, prices, todayKey);
   return { funds, trades, prices, positions: list, totals: totals(list, trades) };
 }
 
@@ -92,7 +93,7 @@ export type InvestGlance = {
   dayChange: number;
   /** Growth this calendar month without new money; null before a trade. */
   monthGrowth: number | null;
-  /** monthGrowth ÷ the value at the start of the month (or the money put in this month). */
+  /** monthGrowth ÷ (the value at the start of the month + the money put in this month). */
   monthPct: number | null;
   slices: { color: string; value: number; ticker: string }[];
   /** The newest balance of every active savings account, added up; null without any. */
@@ -118,7 +119,7 @@ async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
   }
   const monthStart = `${todayKey.slice(0, 7)}-01`;
   const prices = await getPrices(addDays(monthStart, -10));
-  const list = positions(funds, trades, prices);
+  const list = positions(funds, trades, prices, todayKey);
   const t = totals(list, trades);
   const series = valueSeries(trades, prices, todayKey, { from: addDays(monthStart, -1) });
   let monthGrowth: number | null = null;
@@ -128,7 +129,8 @@ async function loadInvestGlance(todayKey: string): Promise<InvestGlance> {
     const start = series[0].date < monthStart ? series[0] : { date: monthStart, value: 0, deposited: 0 };
     const end = series.at(-1)!;
     monthGrowth = growthBetween(start, end);
-    const base = start.value > 0 ? start.value : end.deposited - start.deposited;
+    // New money this month is part of the base, or its gains would inflate the %.
+    const base = start.value + Math.max(0, end.deposited - start.deposited);
     monthPct = base > 0 ? monthGrowth / base : null;
   }
   return {

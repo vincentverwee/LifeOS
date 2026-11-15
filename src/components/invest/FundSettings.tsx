@@ -3,6 +3,7 @@
 import { useActionState, useState, useTransition } from "react";
 import { addFund, deleteFund, lookupFunds, setFundArchived, updateFund, type FormState } from "@/lib/actions/invest";
 import { Disclosure } from "@/components/Disclosure";
+import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { CATEGORY_COLOR_SLOTS } from "@/lib/categoryPalette";
 import { FundDot } from "./FundDot";
 import { ErrorLine, useRun } from "./formBits";
@@ -94,9 +95,9 @@ export function FundList({ funds, counts }: { funds: Fund[]; counts: Record<stri
           </span>
         </button>
         {trades === 0 ? (
-          <button type="button" disabled={pending} onClick={() => run(() => deleteFund(f.id))} className="btn btn-ghost flex min-h-11 px-3 text-sm text-critical">
+          <ConfirmButton quiet disabled={pending} className="min-h-11 px-3 text-sm" onConfirm={() => run(() => deleteFund(f.id))}>
             Delete
-          </button>
+          </ConfirmButton>
         ) : (
           <button type="button" disabled={pending} onClick={() => run(() => setFundArchived(f.id, !f.isArchived))} className="btn btn-ghost flex min-h-11 px-3 text-sm">
             {f.isArchived ? "Bring back" : "Archive"}

@@ -10,8 +10,9 @@ import { CATEGORY_COLOR_SLOTS, isCategoryColorSlot } from "@/lib/categoryPalette
 import { toTrade } from "@/lib/data/invest";
 import { fetchCloses, refreshFund, refreshPricesIfStale, searchFunds } from "@/lib/data/investPrices";
 import { refreshInflationIfStale } from "@/lib/data/inflation";
+import { formatUnits, parseUnitPrice } from "@/lib/invest/format";
 import { isIsin, normalizeTicker } from "@/lib/invest/prices";
-import { addDays, firstOversell } from "@/lib/invest/stats";
+import { addDays, books, firstOversell } from "@/lib/invest/stats";
 import { isTradeType, LIMITS, PRICE_MANUAL_MIN_MS, type FundHit, type Trade } from "@/lib/invest/types";
 
 export type FormState = { ok: true; at: number; id?: string } | { ok: false; error: string } | null;
@@ -76,8 +77,7 @@ export async function saveTrade(_prev: FormState, formData: FormData): Promise<F
     if (!amount) return { ok: false, error: "Fill in the dividend amount." };
   } else {
     units = positive(formData.get("units"), LIMITS.units);
-    const p = parseAmount(String(formData.get("price") ?? ""));
-    price = p !== null && p > 0 && p <= LIMITS.price ? p : null;
+    price = parseUnitPrice(formData.get("price"), LIMITS.price);
     if (units === null) return { ok: false, error: "Fill in how many units." };
     if (price === null) return { ok: false, error: "Fill in the price per unit." };
   }
@@ -150,7 +150,9 @@ export async function addFund(_prev: FormState, formData: FormData): Promise<For
   const todayKey = await getTodayKey();
   const fetched = await fetchCloses(ticker, addDays(todayKey, -365));
   if (!fetched || fetched.prices.length === 0) return { ok: false, error: `No prices found for ${ticker}. Check the ticker (Yahoo's spelling, e.g. VWCE.DE).` };
-  if (fetched.currency && fetched.currency !== "EUR")
+  // EODHD (the fallback) doesn't say the currency, so only Yahoo can confirm a euro listing.
+  if (!fetched.currency) return { ok: false, error: `Couldn't confirm ${ticker} is a euro listing. Try again in a bit.` };
+  if (fetched.currency !== "EUR")
     return { ok: false, error: `${ticker} trades in ${fetched.currency}. Pick the euro listing (often .DE or .AS).` };
 
   const name = clean(formData.get("name")).slice(0, LIMITS.name) || fetched.name?.slice(0, LIMITS.name) || ticker;
@@ -214,6 +216,12 @@ export async function updateFund(_prev: FormState, formData: FormData): Promise<
 
 export async function setFundArchived(id: string, archived: boolean): Promise<Result> {
   await requireAuth();
+  if (archived) {
+    // Archived funds get no new prices, so one still held would show a frozen value.
+    const rows = await prisma.investmentTx.findMany({ where: { instrumentId: id } });
+    const held = books(rows.map(toTrade)).get(id)?.units ?? 0;
+    if (held > 1e-6) return { ok: false, error: `You still hold ${formatUnits(held)} units. Log the sell first.` };
+  }
   await prisma.instrument.updateMany({ where: { id }, data: { isArchived: archived } });
   revalidate();
   return { ok: true };

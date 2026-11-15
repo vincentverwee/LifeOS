@@ -38,6 +38,13 @@ describe("positions", () => {
     expect(p.priceDate).toBe("2026-12-18");
   });
 
+  it("moves only units held at the previous close, and not on a stale close", () => {
+    const trades = [buy("a", "2026-12-01", 10, 100), buy("a", "2026-12-18", 5, 121)];
+    const prices = { a: [{ date: "2026-12-17", close: 120 }, { date: "2026-12-18", close: 121 }] };
+    expect(positions([fund("a")], trades, prices, "2026-12-18")[0].dayChange).toBeCloseTo(10);
+    expect(positions([fund("a")], trades, prices, "2026-12-30")[0].dayChange).toBe(0);
+  });
+
   it("falls back to the last trade's price when no close is stored", () => {
     const [p] = positions([fund("a")], [buy("a", "2026-11-16", 4, 50)], {});
     expect(p.value).toBe(200);

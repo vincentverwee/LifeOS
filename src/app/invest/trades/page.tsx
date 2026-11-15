@@ -84,7 +84,9 @@ export default async function TradesPage({ searchParams }: PageProps<"/invest/tr
                         <p className="truncate text-sm text-ink-muted tabular-nums">
                           {formatDate(t.date)}
                           {t.type !== "dividend" && ` · ${formatUnits(t.units ?? 0)} × ${formatPrice(t.price ?? 0)}`}
-                          {t.fees + t.tax > 0 && ` · costs ${formatCurrency(t.fees + t.tax)}`}
+                          {t.type === "dividend"
+                            ? t.tax > 0 && ` · tax withheld ${formatCurrency(t.tax)}`
+                            : t.fees + t.tax > 0 && ` · costs ${formatCurrency(t.fees + t.tax)}`}
                           {t.note && ` · ${t.note}`}
                         </p>
                       </div>

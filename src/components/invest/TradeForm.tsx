@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveTrade, deleteTrade, type FormState } from "@/lib/actions/invest";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
 import { evaluateAmount, formatCurrency } from "@/lib/format";
+import { parseUnitPrice } from "@/lib/invest/format";
 import { suggestedTob } from "@/lib/invest/stats";
 import { TRADE_LABELS, TRADE_TYPES, type Fund, type Trade, type TradeType } from "@/lib/invest/types";
 
@@ -58,7 +59,7 @@ export function TradeForm({
 
   const fund = funds.find((f) => f.id === fundId);
   const u = num(units);
-  const p = amount(price);
+  const p = parseUnitPrice(price);
   const autoTax = type !== "dividend" && fund && u && p ? suggestedTob(u, p, fund.tobRate) : null;
   const shownTax = taxTouched ? tax : show(autoTax);
 

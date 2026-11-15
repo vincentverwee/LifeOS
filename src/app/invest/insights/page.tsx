@@ -85,9 +85,10 @@ export default async function InvestInsightsPage() {
       <InflationInsight trades={trades} prices={prices} totals={totals} cpi={cpi} accounts={accounts} todayKey={todayKey} />
 
       <section className="card p-5">
-        <h2 className="section-title">Put in per year</h2>
+        <h2 className="section-title">Bought − sold per year</h2>
         <p className="text-sm text-ink-muted">
           {formatCurrency(totalIn)} in {years.length} {years.length === 1 ? "year" : "years"}
+          {totals.dividends !== 0 && " (dividends not counted)"}
         </p>
         <div className="mt-3">
           <DepositsChart months={bars} />
@@ -100,7 +101,7 @@ export default async function InvestInsightsPage() {
             <li key={y.year} className="flex items-start justify-between gap-3 p-4 text-sm">
               <span className="font-medium text-foreground">{y.year}</span>
               <span className="text-right tabular-nums">
-                <span className="block text-foreground">Put in {formatCurrency(y.putIn)}</span>
+                <span className="block text-foreground">Bought − sold {formatCurrency(y.putIn)}</span>
                 <span className="block text-ink-muted">
                   <span className={gainClass(y.realised)}>{formatSignedCurrency(y.realised)}</span> realised · {formatCurrency(y.dividends)} dividends
                 </span>

@@ -107,15 +107,33 @@ export type Position = {
   gainPct: number | null;
   realised: number;
   dividends: number;
-  /** Units × (latest close − the close before it). */
+  /** Units held at the previous close × (latest close − that close); 0 when stale. */
   dayChange: number;
 };
 
-/** One position per fund that has trades, biggest first. */
-export function positions(funds: Fund[], trades: Trade[], pricesById: Record<string, PricePoint[]>): Position[] {
+/** A close older than this many days isn't "the last day" any more: no day change then. */
+export const DAY_CHANGE_MAX_AGE = 4;
+
+/** Units of one fund held at the end of `key`. */
+function unitsOn(sorted: Trade[], instrumentId: string, key: string): number {
+  let units = 0;
+  for (const t of sorted) {
+    if (t.date > key) break;
+    if (t.instrumentId !== instrumentId || t.type === "dividend") continue;
+    units += (t.type === "buy" ? 1 : -1) * (t.units ?? 0);
+  }
+  return Math.max(0, units);
+}
+
+/**
+ * One position per fund that has trades, biggest first. With `todayKey`, the day
+ * change is left at 0 when the newest close is over DAY_CHANGE_MAX_AGE days old.
+ */
+export function positions(funds: Fund[], trades: Trade[], pricesById: Record<string, PricePoint[]>, todayKey?: string): Position[] {
   const byFund = books(trades);
+  const sorted = sortTrades(trades);
   const lastTradePrice = new Map<string, number>();
-  for (const t of sortTrades(trades)) if (t.price !== null) lastTradePrice.set(t.instrumentId, t.price);
+  for (const t of sorted) if (t.price !== null) lastTradePrice.set(t.instrumentId, t.price);
 
   const out: Position[] = [];
   for (const fund of funds) {
@@ -127,6 +145,9 @@ export function positions(funds: Fund[], trades: Trade[], pricesById: Record<str
     const price = last?.close ?? lastTradePrice.get(fund.id) ?? null;
     const value = price !== null ? book.units * price : book.cost;
     const gain = value - book.cost;
+    const fresh = !todayKey || (last !== null && last.date >= addDays(todayKey, -DAY_CHANGE_MAX_AGE));
+    // Only units already held at the previous close moved with the last day's price.
+    const dayChange = last && prev && fresh ? unitsOn(sorted, fund.id, prev.date) * (last.close - prev.close) : 0;
     out.push({
       fund,
       units: book.units,
@@ -138,7 +159,7 @@ export function positions(funds: Fund[], trades: Trade[], pricesById: Record<str
       gainPct: book.cost > EPS ? gain / book.cost : null,
       realised: book.realised,
       dividends: book.dividends,
-      dayChange: last && prev ? book.units * (last.close - prev.close) : 0,
+      dayChange,
     });
   }
   return out.sort((a, b) => b.value - a.value);

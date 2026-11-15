@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { chartDay, formatDay, formatMonth, formatPct, formatSignedPct, spansYear } from "./format";
+import { chartDay, formatDay, formatMonth, formatPct, formatSignedPct, parseUnitPrice, spansYear } from "./format";
 
 describe("invest format", () => {
+  it("reads unit prices with up to 4 decimals", () => {
+    expect(parseUnitPrice("98,456")).toBe(98.456);
+    expect(parseUnitPrice("135,4567")).toBe(135.4567);
+    expect(parseUnitPrice(" 141.22 ")).toBe(141.22);
+    expect(parseUnitPrice("1.234,5")).toBeNull();
+    expect(parseUnitPrice("1,23456")).toBeNull();
+    expect(parseUnitPrice("0")).toBeNull();
+    expect(parseUnitPrice("")).toBeNull();
+    expect(parseUnitPrice("5", 4)).toBeNull();
+  });
   it("formats shares as percentages", () => {
     expect(formatPct(0.0451)).toBe("4,5%");
     expect(formatSignedPct(-0.0189)).toBe("−1,9%");
