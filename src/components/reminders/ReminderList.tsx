@@ -89,7 +89,7 @@ export function ReminderList({
     startTransition(async () => {
       addTicked(key);
       // Keep the row until it has slid away, even when the server is quicker.
-      const [result] = await Promise.all([completeReminder(reminder.id), wait(SLIDE_OUT_MS)]);
+      const [result] = await Promise.all([completeReminder(reminder.id, reminder.dueOn), wait(SLIDE_OUT_MS)]);
       if (result.ok) {
         setUndo({
           key,

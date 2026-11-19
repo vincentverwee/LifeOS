@@ -69,22 +69,27 @@ export async function updateReminder(_prev: ReminderFormState, formData: FormDat
 }
 
 /** The sheep box: a one-off is done for good, a repeating one moves to its next date after today. */
-export async function completeReminder(id: string): Promise<CompleteResult> {
+export async function completeReminder(id: string, shownDueOn: string | null): Promise<CompleteResult> {
   await requireAuth();
   const reminder = await prisma.reminder.findFirst({ where: { id, doneAt: null } });
   if (!reminder) return { ok: false, error: "That reminder no longer exists." };
   const previousDueOn = reminder.dueOn ? dayKey(reminder.dueOn) : null;
+  // Ticked on another device meanwhile (or a double tap): moving on again would skip a date.
+  if (previousDueOn !== shownDueOn) return { ok: false, error: "Already ticked off." };
+  const guard = { id, doneAt: null, dueOn: reminder.dueOn };
 
+  let count: number;
   if (reminder.repeat === "once" || !isRepeat(reminder.repeat) || !previousDueOn) {
-    await Promise.all([
-      prisma.reminder.update({ where: { id }, data: { doneAt: new Date() } }),
+    [{ count }] = await Promise.all([
+      prisma.reminder.updateMany({ where: guard, data: { doneAt: new Date() } }),
       // Finished ones expire from the Timeline; clear those out while we're here.
       prisma.reminder.deleteMany({ where: { doneAt: { lt: new Date(Date.now() - FINISHED_DAYS * 86_400_000) } } }),
     ]);
   } else {
     const next = nextDueAfter({ ...reminder, repeat: reminder.repeat }, previousDueOn, await getTodayKey());
-    await prisma.reminder.update({ where: { id }, data: { dueOn: utc(next) } });
+    ({ count } = await prisma.reminder.updateMany({ where: guard, data: { dueOn: utc(next) } }));
   }
+  if (count === 0) return { ok: false, error: "Already ticked off." };
   revalidate();
   return { ok: true, previousDueOn };
 }

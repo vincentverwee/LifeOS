@@ -143,6 +143,11 @@ async function moveBack(tx: Prisma.TransactionClient, moved: MovedItem[], from: 
   }
 }
 
+/** Row lock, so a second phone moving the same pieces waits and then sees them moved (Undo stays exact). */
+async function lockItems(tx: Prisma.TransactionClient, ids: string[]): Promise<void> {
+  await tx.$queryRaw`SELECT 1 FROM "ClothingItem" WHERE "id" = ANY(${ids}::text[]) FOR UPDATE`;
+}
+
 /**
  * Moves items one step (a tick on the wash screen, "All washed", the item page's switch).
  * Guarded on `from`, the status the screen showed, so a double tap or another device is a
@@ -154,6 +159,7 @@ export async function moveItems(ids: string[], from: ClothingStatus, to: Clothin
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return [];
   const today = utc(await getTodayKey());
   const moved = await prisma.$transaction(async (tx) => {
+    await lockItems(tx, ids.map(String));
     const rows = await tx.clothingItem.findMany({
       where: { id: { in: ids.map(String) }, status: from },
       select: { id: true, statusSince: true },
@@ -232,6 +238,7 @@ export async function washItems(ids: string[]): Promise<{ logged: WashGroup[]; m
   if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: [], moved: [] };
   const today = utc(await getTodayKey());
   const result = await prisma.$transaction(async (tx) => {
+    await lockItems(tx, ids.map(String));
     const inBasket = await tx.clothingItem.findMany({
       where: { id: { in: ids.map(String) }, status: "wash" },
       select: { id: true, washGroup: true, statusSince: true },
@@ -360,8 +367,11 @@ export async function wearOutfit(outfitId: string): Promise<void> {
 export async function setWornInWash(outfitId: string, itemIds: string[], inWash: boolean): Promise<void> {
   await requireAuth();
   if (!Array.isArray(itemIds) || itemIds.length === 0 || itemIds.length > 200) return;
-  const today = utc(await getTodayKey());
+  const todayKey = await getTodayKey();
+  const today = utc(todayKey);
   await prisma.$transaction(async (tx) => {
+    // Lock the wear row: two phones ticking pieces at once would otherwise overwrite each other's movedItemIds.
+    await tx.$queryRaw`SELECT 1 FROM "OutfitWear" WHERE "outfitId" = ${String(outfitId)} AND "wornOn" = ${todayKey}::date FOR UPDATE`;
     const wear = await tx.outfitWear.findUnique({
       where: { outfitId_wornOn: { outfitId: String(outfitId), wornOn: today } },
       select: { id: true, movedItemIds: true, outfit: { select: { items: { select: { itemId: true } } } } },
@@ -371,10 +381,14 @@ export async function setWornInWash(outfitId: string, itemIds: string[], inWash:
     const ids = itemIds.map(String).filter((id) => inOutfit.has(id));
     const moved = new Set(wear.movedItemIds);
     if (inWash) {
-      const clean = await tx.clothingItem.findMany({ where: { id: { in: ids }, status: "clean" }, select: { id: true } });
+      // Only what this call really moved is remembered (another phone may have just moved some).
+      const clean = await tx.clothingItem.updateManyAndReturn({
+        where: { id: { in: ids }, status: "clean" },
+        data: { status: "wash", statusSince: today },
+        select: { id: true },
+      });
       const now = clean.map((i) => i.id);
       if (now.length === 0) return;
-      await tx.clothingItem.updateMany({ where: { id: { in: now }, status: "clean" }, data: { status: "wash", statusSince: today } });
       for (const id of now) moved.add(id);
     } else {
       const back = ids.filter((id) => moved.has(id));

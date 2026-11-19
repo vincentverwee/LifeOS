@@ -14,7 +14,7 @@ export type Routine = {
 };
 
 /** `Routine.source` of an item done whenever an expense in that budget category is logged. */
-const CATEGORY_SOURCE_PREFIX = "budget-category:";
+export const CATEGORY_SOURCE_PREFIX = "budget-category:";
 
 export function categorySource(categoryId: string): string {
   return CATEGORY_SOURCE_PREFIX + categoryId;

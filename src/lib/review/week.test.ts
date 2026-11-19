@@ -76,6 +76,15 @@ describe("studyWeek", () => {
     expect(s.perDay).toEqual([4, 2.5, 0, 0, 0, 0, 0]);
   });
 
+  it("a day-off note on a day with study hours isn't a day off", () => {
+    const s = studyWeek(weekDays(MONDAY, SUNDAY), period, [
+      { date: "2026-11-04", hours: 0, note: "day off" },
+      { date: "2026-11-04", hours: 3, note: null },
+    ]);
+    expect(s.daysOff).toBe(0);
+    expect(s.goalDays).toBe(7);
+  });
+
   it("only counts days inside the period", () => {
     const s = studyWeek(weekDays(MONDAY, SUNDAY), { ...period, endDate: "2026-11-04" }, []);
     expect(s.goalDays).toBe(3);

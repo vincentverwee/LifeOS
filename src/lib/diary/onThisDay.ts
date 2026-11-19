@@ -1,4 +1,5 @@
 // Pure date math for the diary's "On this day" (no server imports, tested in onThisDay.test.ts).
+import { isLeapYear } from "@/lib/people/birthdays";
 
 /** Longest single bit of a day (one line of `DiaryEntry.text`). */
 export const MAX_BIT_LENGTH = 280;
@@ -33,10 +34,6 @@ export function moodOf(value: number | null | undefined): (typeof MOODS)[number]
 
 export function isMood(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 5;
-}
-
-function isLeapYear(year: number): boolean {
-  return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 
 function key(year: number, month: number, day: number): string {

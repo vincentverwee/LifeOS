@@ -170,6 +170,9 @@ export const getWorkoutLites = cache(loadWorkoutLites);
 export async function getSetLites(): Promise<(SetLite & { position: number })[]> {
   const rows = await prisma.workoutSet.findMany({
     where: { workout: FINISHED },
+    // Newest start first: sorts by day are stable, so on a day with two workouts the later
+    // one stays first ("last time" = the later one, as in the live session's lastValues).
+    orderBy: { workout: { startedAt: "desc" } },
     select: {
       workoutId: true,
       position: true,

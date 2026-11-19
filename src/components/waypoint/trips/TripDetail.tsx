@@ -73,10 +73,11 @@ export function TripDetail({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // The order the stored route was calculated for. A stored route matches the stored stops,
-  // so the first visit doesn't recalculate (or rewrite) anything.
+  // A stored route matches the stored stops (changing them clears it); 0 km without a line = all flown.
   const routedKey = useRef<string | null>(
-    initialTrip.route_geometry || initialLocations.length < 2 ? routeKeyOf(initialLocations) : null
+    initialTrip.route_geometry || initialTrip.total_km === 0 || initialLocations.length < 2
+      ? routeKeyOf(initialLocations)
+      : null
   );
   const routeKey = routeKeyOf(locations);
 

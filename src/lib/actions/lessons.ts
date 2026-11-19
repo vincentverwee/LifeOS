@@ -131,6 +131,7 @@ export async function createStudyEntriesFromForm(
   const rawDate = formData.get("date");
   const dateKey = rawDate ? parseDateKey(rawDate) : await getTodayKey();
   if (!dateKey) return { ok: false, error: "Pick a valid date." };
+  if (dateKey > (await getTodayKey())) return { ok: false, error: "That date is in the future." };
   const saved = await saveStudyEntries({ periodId, dateKey, hours, courseIds, note });
   if (!saved.ok) return saved;
 
@@ -147,8 +148,14 @@ const TIMER_MAX_HOURS = 12;
 export async function startStudyTimer(input: { periodId: string; courseIds: string[] }): Promise<LessonsResult> {
   await requireAuth();
   const courseIds = [...new Set(input.courseIds.map(String).filter(Boolean))];
-  const period = await prisma.studyPeriod.findUnique({ where: { id: input.periodId }, select: { id: true } });
-  if (!period) return { ok: false, error: "That study period no longer exists." };
+  // Stopping files the time under the period covering the start day, so check that one
+  // now: a timer that can never be saved would only lose the session.
+  const resolved = await resolvePeriod(input.periodId, utc(await getTodayKey()));
+  if (!resolved.ok) return resolved;
+  const period = resolved.period;
+  if (period.id !== input.periodId && courseIds.length) {
+    return { ok: false, error: `Today falls in ${period.name}; start the timer from that period.` };
+  }
   if (courseIds.length) {
     const courses = await prisma.studyCourse.findMany({
       where: { id: { in: courseIds }, periodId: period.id },
@@ -187,6 +194,11 @@ export async function stopStudyTimer(): Promise<StopStudyTimerResult> {
   // Courses deleted while the timer ran are dropped rather than failing the save.
   const existing = await prisma.studyCourse.findMany({ where: { id: { in: timer.courseIds } }, select: { id: true } });
   const courseIds = timer.courseIds.filter((id) => existing.some((c) => c.id === id));
+  // With none left the time would save without a course, which counts as study: for
+  // deleted tracked courses that's wrong, so only Discard is left.
+  if (timer.courseIds.length > 0 && courseIds.length === 0) {
+    return { ok: false, error: "The timer's courses were deleted; discard it and log the time by hand." };
+  }
 
   const saved = await prisma.$transaction(async (tx) => {
     const result = await saveStudyEntries({ periodId: timer.periodId, dateKey, hours, courseIds, note: null }, tx);

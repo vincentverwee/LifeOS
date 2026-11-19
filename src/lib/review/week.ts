@@ -87,7 +87,7 @@ export type StudyWeek = {
 
 /**
  * Study over `days`: hours per day, and the daily goal for each day inside the
- * period that isn't a day off (a 0 h entry with a note). Shared with the Sunday push.
+ * period that isn't a day off (0 h that day, with a note). Shared with the Sunday push.
  */
 export function studyWeek(
   days: string[],
@@ -96,7 +96,8 @@ export function studyWeek(
 ): StudyWeek {
   const totals = new Map<string, number>();
   for (const e of entries) totals.set(e.date, (totals.get(e.date) ?? 0) + e.hours);
-  const off = new Set(entries.filter((e) => e.hours === 0 && e.note).map((e) => e.date));
+  // A day off = nothing studied that day and a note saying so (as On this day counts it).
+  const off = new Set(entries.filter((e) => e.hours === 0 && e.note && !totals.get(e.date)).map((e) => e.date));
   const goalDays = days.filter((d) => d >= period.startDate && d <= period.endDate && !off.has(d));
   const perDay = days.map((d) => round2(totals.get(d) ?? 0));
   return {

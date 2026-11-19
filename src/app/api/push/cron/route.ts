@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { runPushSchedule } from "@/lib/push/schedule";
 import { refreshPricesIfStale } from "@/lib/data/investPrices";
 import { refreshInflationIfStale } from "@/lib/data/inflation";
+import { catchUpCategoryRoutines } from "@/lib/data/categoryRoutines";
 
 /**
  * Sends the push notifications that are due. Called every 15 minutes by
@@ -27,6 +28,7 @@ export async function GET(request: Request): Promise<Response> {
       console.error("[invest] inflation refresh failed", e);
       return { error: "inflation refresh failed" };
     }),
+    catchUpCategoryRoutines().catch((e) => console.error("[reminders] category catch-up failed", e)),
   ]);
   return Response.json({ ...push, prices, inflation });
 }

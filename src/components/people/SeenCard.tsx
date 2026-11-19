@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useOptimistic, useState } from "react";
-import { logContactOn, toggleContactToday, unlogContact, type PeopleFormState } from "@/lib/actions/people";
+import { logContactOn, setContactToday, unlogContact, type PeopleFormState } from "@/lib/actions/people";
 import { describeSince } from "@/lib/reminders/routines";
 import { formatDay } from "@/lib/reminders/schedule";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
@@ -75,12 +75,13 @@ export function SeenCard({
             <SheepCheckbox
               checked={checked[k]}
               label={`${k === "seen" ? "Saw" : "Messaged"} ${name} today`}
-              onChange={() =>
+              onChange={() => {
+                const on = !checked[k];
                 run(async () => {
                   toggle(k);
-                  await toggleContactToday(personId, k);
-                })
-              }
+                  await setContactToday(personId, k, on);
+                });
+              }}
             />
             <span className="text-sm leading-tight font-medium text-foreground">{CONTACT_LABEL[k].today}</span>
           </div>

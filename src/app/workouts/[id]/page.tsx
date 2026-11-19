@@ -5,7 +5,7 @@ import { getSetLites, getWorkout } from "@/lib/data/workouts";
 import { getTodayKey } from "@/lib/today";
 import { describeDoneOn } from "@/lib/reminders/schedule";
 import { moodOf } from "@/lib/diary/onThisDay";
-import { describeTempo } from "@/lib/workouts/stats";
+import { describeTempo, isRecord } from "@/lib/workouts/stats";
 import { partOfDay } from "@/lib/workouts/time";
 import { effortLabel, formatKm, formatMinutes, formatSet, groupSets } from "@/lib/workouts/types";
 import { ActivityDot } from "@/components/workouts/ui";
@@ -73,7 +73,7 @@ export default async function WorkoutPage({ params }: PageProps<"/workouts/[id]"
             {groupSets(workout.sets).map((group) => {
               const best = earlierBest(group[0].exerciseId);
               const top = Math.max(...group.map((s) => s.seconds ?? s.reps ?? 0));
-              const record = best !== null && top > best;
+              const record = isRecord(top, best);
               return (
                 <li key={group[0].exerciseId} className="rounded-xl border border-border p-3">
                   <p className="flex items-center gap-2 font-medium text-foreground">

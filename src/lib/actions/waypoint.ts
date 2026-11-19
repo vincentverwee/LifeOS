@@ -172,16 +172,22 @@ async function editTrip(id: string, input: UpdateTripInput): Promise<TripSummary
   const addBudget = !linked && input.budget !== undefined;
 
   const row = await prisma.$transaction(async (tx) => {
-    // Keep the linked budget trip's name and dates in step, under its own rules.
-    if (linked) {
-      const budget = await tx.trip.findUnique({ where: { id: linked }, select: { totalBudget: true } });
+    // Push only what this edit changed, so a van/description edit can't undo budget-side changes.
+    const sameDay = (a: Date | null, b: Date | null) => (a?.getTime() ?? null) === (b?.getTime() ?? null);
+    const renamed = title !== current.title;
+    const redated = !sameDay(startDate, current.startDate) || !sameDay(endDate, current.endDate);
+    if (linked && (renamed || redated)) {
+      const budget = await tx.trip.findUnique({
+        where: { id: linked },
+        select: { name: true, totalBudget: true, startDate: true, endDate: true },
+      });
       if (budget) {
         if (!startDate || !endDate) throw new TripError('This trip has a budget trip, so it needs a start and end date.');
         const valid = validateBudgetTrip({
-          name: budgetName(title),
+          name: renamed ? budgetName(title) : budget.name,
           totalBudget: Number(budget.totalBudget),
-          startDate: dateKey(startDate),
-          endDate: dateKey(endDate),
+          startDate: dateKey(redated ? startDate : budget.startDate),
+          endDate: dateKey(redated ? endDate : budget.endDate),
         });
         if (!valid.ok) throw new TripError(valid.error);
         const overlap = await overlapError(tx, valid.trip, linked);
@@ -267,6 +273,14 @@ export async function recalculateTripRoute(tripId: string): Promise<TripRoute | 
 
 // --- Locations ---
 
+/** Stops changed: drop the old route, so a failed recalculation shows "no route" and retries next visit. */
+function clearRoute(tx: Prisma.TransactionClient, tripId: string) {
+  return tx.waypointTrip.updateMany({
+    where: { id: tripId },
+    data: { totalKm: null, routeGeometry: Prisma.DbNull, overviewGeometry: Prisma.DbNull },
+  });
+}
+
 export async function createLocation(input: CreateLocationInput): Promise<Location> {
   await requireAuth();
   const name = optionalText(input.name, 200);
@@ -287,6 +301,7 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
     });
     if (!trip) throw new Error('That trip no longer exists.');
     if (trip._count.locations >= MAX_STOPS) throw new Error(`A trip can have at most ${MAX_STOPS} stops.`);
+    await clearRoute(tx, input.trip_id);
     return tx.waypointLocation.create({
       data: {
         tripId: input.trip_id,
@@ -310,7 +325,8 @@ export async function createLocation(input: CreateLocationInput): Promise<Locati
 export async function removeLocation(tripId: string, locationId: string): Promise<void> {
   await requireAuth();
   await prisma.$transaction(async (tx) => {
-    await tx.waypointLocation.deleteMany({ where: { id: locationId, tripId } });
+    const { count } = await tx.waypointLocation.deleteMany({ where: { id: locationId, tripId } });
+    if (count > 0) await clearRoute(tx, tripId);
     const rest = await tx.waypointLocation.findMany({
       where: { tripId },
       orderBy: { visitOrder: 'asc' },
@@ -338,6 +354,7 @@ export async function reorderLocations(tripId: string, orderedIds: string[]): Pr
     for (const [i, id] of orderedIds.entries()) {
       await tx.waypointLocation.update({ where: { id }, data: { visitOrder: i } });
     }
+    await clearRoute(tx, tripId);
   });
   revalidate();
 }
@@ -371,9 +388,12 @@ export async function updateLocation(id: string, input: UpdateLocationInput): Pr
 /** Marks the leg that arrives at this stop as flown (or driven again). */
 export async function setLegByPlane(tripId: string, locationId: string, byPlane: boolean): Promise<void> {
   await requireAuth();
-  await prisma.waypointLocation.updateMany({
-    where: { id: locationId, tripId },
-    data: { arrivedByPlane: byPlane === true },
+  await prisma.$transaction(async (tx) => {
+    const { count } = await tx.waypointLocation.updateMany({
+      where: { id: locationId, tripId },
+      data: { arrivedByPlane: byPlane === true },
+    });
+    if (count > 0) await clearRoute(tx, tripId);
   });
   revalidate();
 }

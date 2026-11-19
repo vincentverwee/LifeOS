@@ -58,12 +58,14 @@ export default async function EditRoutinePage({ params }: PageProps<"/reminders/
                   {formatDay(log.doneOn)}
                   <span className="text-ink-muted"> · {describeSince(log.doneOn, todayKey).toLowerCase()}</span>
                 </span>
-                <form action={deleteRoutineLog}>
-                  <input type="hidden" name="logId" value={log.id} />
-                  <button type="submit" className="btn btn-ghost inline-flex min-h-11 px-3 text-sm" aria-label="Remove this log">
-                    Remove
-                  </button>
-                </form>
+                {!link && (
+                  <form action={deleteRoutineLog}>
+                    <input type="hidden" name="logId" value={log.id} />
+                    <button type="submit" className="btn btn-ghost inline-flex min-h-11 px-3 text-sm" aria-label="Remove this log">
+                      Remove
+                    </button>
+                  </form>
+                )}
               </li>
             ))}
           </ul>

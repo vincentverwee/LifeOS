@@ -51,11 +51,12 @@ export async function addDiaryBit(_prev: DiaryFormState, formData: FormData): Pr
 
   const date = utc(d.date);
   const full = await prisma.$transaction(async (tx) => {
-    const existing = await tx.diaryEntry.findUnique({ where: { date }, select: { text: true } });
-    if (!existing) {
-      await tx.diaryEntry.create({ data: { date, text: bit, mood: m.mood } });
-      return false;
-    }
+    // A new day: created in one go (another device creating it at the same moment is skipped).
+    const { count } = await tx.diaryEntry.createMany({ data: [{ date, text: bit, mood: m.mood }], skipDuplicates: true });
+    if (count === 1) return false;
+    // An existing day: lock its row first, so two devices adding at once both keep their bit.
+    await tx.$queryRaw`SELECT 1 FROM "DiaryEntry" WHERE "date" = ${d.date}::date FOR UPDATE`;
+    const existing = await tx.diaryEntry.findUniqueOrThrow({ where: { date }, select: { text: true } });
     const text = [...diaryBits(existing.text), bit].join("\n");
     if (text.length > MAX_DIARY_LENGTH) return true;
     await tx.diaryEntry.update({ where: { date }, data: { text } });

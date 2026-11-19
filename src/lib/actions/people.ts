@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { parseAmount, parseDateKey } from "@/lib/format";
-import { getTodayKey } from "@/lib/today";
+import { getTodayKey, readPastDate } from "@/lib/today";
 import { isGiftStatus, isValidBirthday, type GiftStatus } from "@/lib/people/birthdays";
 import { orientLink } from "@/lib/people/links";
 import { getTrackDefault } from "@/lib/data/people";
@@ -38,14 +38,6 @@ type PersonFields = {
   seeEveryDays: number | null;
   trackContact: boolean;
 };
-
-/** A picked "YYYY-MM-DD" that isn't in the future. */
-async function readPastDate(raw: unknown): Promise<string | { error: string }> {
-  const date = parseDateKey(raw);
-  if (!date) return { error: "That date isn't valid." };
-  if (date > (await getTodayKey())) return { error: "That date is in the future." };
-  return date;
-}
 
 async function readPerson(formData: FormData): Promise<PersonFields | string> {
   const name = String(formData.get("name") ?? "").trim().slice(0, 100);
@@ -269,12 +261,15 @@ function isContactKind(value: unknown): value is ContactKind {
 }
 
 /** "Saw them today" / "Messaged them today"; tapping again takes it off. */
-export async function toggleContactToday(personId: string, kind: ContactKind): Promise<void> {
+export async function setContactToday(personId: string, kind: ContactKind, on: boolean): Promise<void> {
   await requireAuth();
   if (!isContactKind(kind)) return;
   const seenOn = utc(await getTodayKey());
-  const { count } = await prisma.personSeen.deleteMany({ where: { personId, seenOn, kind } });
-  if (count === 0 && (await personExists(personId))) {
+  // Sets the state the screen asked for (never a blind toggle): a stale screen on
+  // another device can't undo a log by "ticking" it again.
+  if (!on) {
+    await prisma.personSeen.deleteMany({ where: { personId, seenOn, kind } });
+  } else if (await personExists(personId)) {
     // A double tap from two devices hits the unique index; that's still "today".
     await prisma.personSeen.createMany({ data: [{ personId, seenOn, kind }], skipDuplicates: true });
   }

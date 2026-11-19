@@ -223,8 +223,9 @@ export async function startWorkout(input: { activityId: string; templateId?: str
   let position = 0;
   const sets = (template?.exercises ?? []).flatMap((e) =>
     Array.from({ length: e.sets }, (_, i) => {
-      const value = last.get(e.exerciseId)?.[i] ?? last.get(e.exerciseId)?.at(-1) ?? e.target;
       const time = measures.get(e.exerciseId) === "time";
+      // Template targets go up to 7200 for any exercise; reps sets only allow 1000.
+      const value = Math.min(last.get(e.exerciseId)?.[i] ?? last.get(e.exerciseId)?.at(-1) ?? e.target, time ? LIMITS.seconds : LIMITS.reps);
       return { exerciseId: e.exerciseId, position: position++, reps: time ? null : value, seconds: time ? value : null, done: false };
     }),
   );

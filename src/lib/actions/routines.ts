@@ -5,8 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { knownError } from "@/lib/prismaErrors";
-import { parseDateKey } from "@/lib/format";
-import { getTodayKey } from "@/lib/today";
+import { getTodayKey, readPastDate } from "@/lib/today";
 import { categoryIdOf, categorySource } from "@/lib/reminders/routines";
 import { backfillCategoryRoutine } from "@/lib/data/categoryRoutines";
 
@@ -32,14 +31,6 @@ function readFields(formData: FormData): { name: string; everyDays: number | nul
 
 const NAME_TAKEN = { P2002: "You already have one with that name." };
 
-/** A date the user picked; it can't be in the future. */
-async function readPastDate(raw: unknown): Promise<{ date: string } | { error: string }> {
-  const date = parseDateKey(raw);
-  if (!date) return { error: "That date isn't valid." };
-  if (date > (await getTodayKey())) return { error: "That date is in the future." };
-  return { date };
-}
-
 export async function createRoutine(_prev: RoutineFormState, formData: FormData): Promise<RoutineFormState> {
   await requireAuth();
   const fields = readFields(formData);
@@ -51,8 +42,8 @@ export async function createRoutine(_prev: RoutineFormState, formData: FormData)
   if (last === "today") firstLog = await getTodayKey();
   else if (last === "date") {
     const picked = await readPastDate(formData.get("lastDoneOn"));
-    if ("error" in picked) return { ok: false, error: picked.error };
-    firstLog = picked.date;
+    if (typeof picked !== "string") return { ok: false, error: picked.error };
+    firstLog = picked;
   }
 
   try {
@@ -133,6 +124,7 @@ export async function logRoutineToday(id: string): Promise<void> {
 /** Untick / Undo: removes today's log. */
 export async function unlogRoutineToday(id: string): Promise<void> {
   await requireAuth();
+  if (!(await isByHand(id))) return;
   await prisma.routineLog.deleteMany({ where: { routineId: id, doneOn: utc(await getTodayKey()) } });
   revalidate();
 }
@@ -143,8 +135,8 @@ export async function logRoutineOn(_prev: RoutineFormState, formData: FormData):
   const id = String(formData.get("id") ?? "");
   if (!(await isByHand(id))) return { ok: false, error: "This one is logged from elsewhere." };
   const picked = await readPastDate(formData.get("doneOn"));
-  if ("error" in picked) return { ok: false, error: picked.error };
-  const doneOn = utc(picked.date);
+  if (typeof picked !== "string") return { ok: false, error: picked.error };
+  const doneOn = utc(picked);
   await prisma.routineLog.upsert({
     where: { routineId_doneOn: { routineId: id, doneOn } },
     create: { routineId: id, doneOn },
@@ -156,6 +148,7 @@ export async function logRoutineOn(_prev: RoutineFormState, formData: FormData):
 
 export async function deleteRoutineLog(formData: FormData): Promise<void> {
   await requireAuth();
-  await prisma.routineLog.deleteMany({ where: { id: String(formData.get("logId") ?? "") } });
+  // Logs mirrored from expenses or washes can't be removed by hand.
+  await prisma.routineLog.deleteMany({ where: { id: String(formData.get("logId") ?? ""), routine: { source: null } } });
   revalidate();
 }

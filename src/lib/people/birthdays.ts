@@ -22,7 +22,7 @@ export function birthdayOf(row: { birthMonth: number | null; birthDay: number | 
     : { birthMonth: row.birthMonth, birthDay: row.birthDay, birthYear: row.birthYear };
 }
 
-function isLeapYear(year: number): boolean {
+export function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
 }
 

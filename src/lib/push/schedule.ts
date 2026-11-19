@@ -126,8 +126,8 @@ async function studyEvening(todayKey: string): Promise<PushPayload | null> {
   const [{ period }, timer] = await Promise.all([loadStudyPeriods(undefined, todayKey), getStudyTimer()]);
   if (!period || timer || todayKey < period.startDate || todayKey > period.endDate) return null;
   const today = period.entries.filter((e) => e.date === todayKey);
-  if (today.some((e) => e.hours === 0 && e.note)) return null; // logged as a day off
   const hours = today.reduce((sum, e) => sum + e.hours, 0);
+  if (hours === 0 && today.some((e) => e.note)) return null; // logged as a day off
   if (hours >= period.goalHours) return null;
   return {
     title: "Study",
