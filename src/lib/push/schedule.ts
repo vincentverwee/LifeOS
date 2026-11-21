@@ -8,7 +8,7 @@ import { getReminders } from "@/lib/data/reminders";
 import { getRoutines } from "@/lib/data/routines";
 import { getAllPeriods, getPeriodData, getRunningPeriods } from "@/lib/data";
 import { budgetGlance } from "@/lib/data/budgetGlance";
-import { getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
+import { getStudyPlans, getStudyTimer, loadStudyPeriods } from "@/lib/data/lessons";
 import { computePeriodStats } from "@/lib/lessons/stats";
 import { studyWeek } from "@/lib/review/week";
 import { isPushKind, parsePushTimes, type PushPayload } from "@/lib/push/kinds";
@@ -75,6 +75,12 @@ async function digest(todayKey: string): Promise<PushPayload | null> {
     for (const { exam, course, daysUntil } of computePeriodStats(period, todayKey).upcomingExams) {
       if (EXAM_HEADS_UP_DAYS.includes(daysUntil)) lines.push(`${course?.name ?? "?"} ${exam.kind} ${inDays(daysUntil)}`);
     }
+    // Today's study plan (Lessons → Plan) on one line.
+    const names = new Map(period.courses.map((c) => [c.id, c.name]));
+    const planned = (await getStudyPlans(period.id))
+      .filter((p) => p.date === todayKey)
+      .map((p) => [p.courseId ? names.get(p.courseId) : null, p.note].filter(Boolean).join(" · "));
+    if (planned.length) lines.push(`Study plan: ${planned.join(", ")}`);
   }
 
   const tomorrow = addDays(todayKey, 1);

@@ -2,9 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getStudyPlans, loadStudyPeriods } from "@/lib/data/lessons";
 import { getTodayKey } from "@/lib/today";
-import { computePeriodStats } from "@/lib/lessons/stats";
-import { UpcomingExams } from "@/components/lessons/TodayCards";
-import { PlanCalendar } from "@/components/lessons/PlanCalendar";
+import { DaysLeft, PlanCalendar } from "@/components/lessons/PlanCalendar";
 import { StudyPeriodSwitcher } from "@/components/lessons/StudyPeriodSwitcher";
 
 export default async function LessonsPlanPage({ searchParams }: PageProps<"/lessons/plan">) {
@@ -23,7 +21,7 @@ export default async function LessonsPlanPage({ searchParams }: PageProps<"/less
       />
       {period ? (
         <>
-          <UpcomingExams exams={computePeriodStats(period, todayKey).upcomingExams} />
+          <DaysLeft todayKey={todayKey} courses={period.courses} exams={period.exams} plans={plans} />
           <PlanCalendar
             key={period.id}
             periodId={period.id}

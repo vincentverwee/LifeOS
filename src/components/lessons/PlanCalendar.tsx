@@ -16,7 +16,7 @@ const tag = (course: StudyCourse | undefined) => `var(--color-tag-${course?.colo
 
 /**
  * The period as Monday-first weeks: exam days filled in their course's colour,
- * planned courses as dots. Opens on this week; tap a day to plan it.
+ * planned items as small named chips. Opens on this week; tap a day to plan it.
  */
 export function PlanCalendar({
   periodId,
@@ -42,13 +42,19 @@ export function PlanCalendar({
   const allWeeks = calendarWeeks(startDate, endDate);
   const thisWeek = allWeeks.findIndex((w) => w.at(-1)!.key >= todayKey);
   const hidden = showEarlier || thisWeek <= 0 ? 0 : thisWeek;
+  const label = (p: StudyPlanItem) => (p.courseId ? courseById.get(p.courseId)?.name : null) ?? p.note ?? "";
   const weeks = allWeeks.slice(hidden);
 
   return (
     <section className="card flex flex-col gap-1">
-      {hidden > 0 && (
-        <button type="button" onClick={() => setShowEarlier(true)} className="btn btn-ghost mb-1 inline-flex min-h-11 self-start px-3 text-sm">
-          Show earlier weeks
+      {(hidden > 0 || showEarlier) && (
+        <button
+          type="button"
+          onClick={() => setShowEarlier(!showEarlier)}
+          aria-expanded={showEarlier}
+          className="btn btn-ghost mb-1 inline-flex min-h-11 self-start px-3 text-sm"
+        >
+          {showEarlier ? "Hide earlier weeks" : "Show earlier weeks"}
         </button>
       )}
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-ink-muted" aria-hidden="true">
@@ -74,26 +80,32 @@ export function PlanCalendar({
                     type="button"
                     onClick={() => setOpenDay(day.key)}
                     aria-label={`${formatLongDay(day.key)}${dayExams.length ? `, ${dayExams.length} exam` : ""}${dayPlans.length ? `, ${dayPlans.length} planned` : ""}`}
-                    className={`tap flex aspect-square min-h-11 flex-col items-center justify-center gap-1 rounded-lg leading-none ${
+                    className={`tap flex min-h-16 min-w-0 flex-col items-stretch gap-0.5 overflow-hidden rounded-lg p-0.5 text-center leading-none ${
                       day.key === todayKey ? "ring-2 ring-foreground ring-offset-1 ring-offset-surface" : ""
                     } ${day.key < todayKey ? "opacity-50" : ""} ${dayExams.length ? "font-semibold text-white" : "bg-surface-muted text-foreground"}`}
                     style={dayExams.length ? { backgroundColor: tag(examCourse) } : undefined}
                   >
-                    <span className="text-xs">{Number(day.key.slice(8))}</span>
+                    <span className="pt-1 text-xs">{Number(day.key.slice(8))}</span>
                     {dayExams.length > 0 ? (
-                      <span className="text-[9px] uppercase">{dayExams[0].kind}</span>
+                      <>
+                        <span className="truncate text-[9px]">{examCourse?.name ?? "?"}</span>
+                        <span className="text-[8px] uppercase">{dayExams[0].kind}</span>
+                      </>
                     ) : (
-                      dayPlans.length > 0 && (
-                        <span className="flex gap-0.5" aria-hidden="true">
-                          {dayPlans.slice(0, 3).map((p) => (
-                            <span
-                              key={p.id}
-                              className="h-1.5 w-1.5 rounded-full"
-                              style={{ backgroundColor: p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)" }}
-                            />
-                          ))}
-                        </span>
-                      )
+                      <>
+                        {dayPlans.slice(0, 2).map((p) => (
+                          <span
+                            key={p.id}
+                            className="truncate rounded px-0.5 py-px text-[9px]"
+                            style={{
+                              backgroundColor: `color-mix(in oklab, ${p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)"} 30%, transparent)`,
+                            }}
+                          >
+                            {label(p)}
+                          </span>
+                        ))}
+                        {dayPlans.length > 2 && <span className="text-[9px] text-ink-muted">+{dayPlans.length - 2}</span>}
+                      </>
                     )}
                   </button>
                 );
@@ -116,6 +128,57 @@ export function PlanCalendar({
           />
         )}
       </Sheet>
+    </section>
+  );
+}
+
+/** Every exam still ahead: days left, and on how many of those days its course is planned. */
+export function DaysLeft({
+  todayKey,
+  courses,
+  exams,
+  plans,
+}: {
+  todayKey: string;
+  courses: StudyCourse[];
+  exams: StudyExam[];
+  plans: StudyPlanItem[];
+}) {
+  const ahead = exams.filter((e) => e.date >= todayKey);
+  if (ahead.length === 0) return null;
+  const courseById = new Map(courses.map((c) => [c.id, c]));
+  return (
+    <section className="card">
+      <h2 className="font-medium text-foreground">Days left</h2>
+      <ul className="mt-2 flex flex-col divide-y divide-border">
+        {ahead.map((exam) => {
+          const course = courseById.get(exam.courseId);
+          const days = daysBetween(todayKey, exam.date);
+          const planned = new Set(
+            plans.filter((p) => p.courseId === exam.courseId && p.date >= todayKey && p.date < exam.date).map((p) => p.date)
+          ).size;
+          return (
+            <li key={exam.id} className="flex items-center justify-between gap-3 py-2.5 last:pb-0">
+              <span className="flex min-w-0 items-center gap-2.5">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: tag(course) }} aria-hidden="true" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm text-foreground">
+                    {course?.name ?? "?"} {exam.kind}
+                  </span>
+                  <span className="text-xs text-ink-muted">
+                    {formatLongDay(exam.date)} · {planned === 0 ? "nothing planned" : `${planned} ${planned === 1 ? "day" : "days"} planned`}
+                  </span>
+                </span>
+              </span>
+              <span
+                className={`shrink-0 font-mono text-sm font-semibold tabular-nums ${days <= 3 ? "text-critical" : "text-foreground"}`}
+              >
+                {days === 0 ? "today" : days === 1 ? "1 day" : `${days} days`}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
