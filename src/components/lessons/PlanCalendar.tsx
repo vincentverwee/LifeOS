@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Sheet } from "@/components/recipes/Sheet";
 import { ConfirmButton } from "@/components/ui/ConfirmButton";
+import { UndoBar } from "@/components/ui/UndoBar";
 import { calendarWeeks } from "@/lib/calendar";
 import { formatLongDay } from "@/lib/format";
 import { daysBetween } from "@/lib/lessons/stats";
@@ -37,6 +38,17 @@ export function PlanCalendar({
 }) {
   const [showEarlier, setShowEarlier] = useState(false);
   const [openDay, setOpenDay] = useState<string | null>(null);
+  const [addError, setAddError] = useState<string | null>(null);
+  const [, startAdd] = useTransition();
+  // The sheet closes on Add; the save finishes behind it and only speaks up when it fails.
+  const add = (input: { date: string; courseId: string | null; note: string }) => {
+    setOpenDay(null);
+    setAddError(null);
+    startAdd(async () => {
+      const result = await createStudyPlan({ periodId, ...input });
+      if (!result.ok) setAddError(result.error);
+    });
+  };
   const courseById = new Map(courses.map((c) => [c.id, c]));
 
   const allWeeks = calendarWeeks(startDate, endDate);
@@ -119,7 +131,7 @@ export function PlanCalendar({
         {openDay && (
           <DayPlan
             key={openDay}
-            periodId={periodId}
+            onAdd={add}
             day={openDay}
             courses={courses}
             courseById={courseById}
@@ -128,6 +140,7 @@ export function PlanCalendar({
           />
         )}
       </Sheet>
+      <UndoBar error={addError} />
     </section>
   );
 }
@@ -184,14 +197,14 @@ export function DaysLeft({
 }
 
 function DayPlan({
-  periodId,
+  onAdd,
   day,
   courses,
   courseById,
   exams,
   plans,
 }: {
-  periodId: string;
+  onAdd: (input: { date: string; courseId: string | null; note: string }) => void;
   day: string;
   courses: StudyCourse[];
   courseById: Map<string, StudyCourse>;
@@ -203,12 +216,11 @@ function DayPlan({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>, onOk?: () => void) => {
+  const run = (action: () => Promise<{ ok: true } | { ok: false; error: string }>) => {
     setError(null);
     startTransition(async () => {
       const result = await action();
-      if (!result.ok) return setError(result.error);
-      onOk?.();
+      if (!result.ok) setError(result.error);
     });
   };
 
@@ -269,13 +281,7 @@ function DayPlan({
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
-          run(
-            () => createStudyPlan({ periodId, date: day, courseId, note }),
-            () => {
-              setCourseId(null);
-              setNote("");
-            }
-          );
+          onAdd({ date: day, courseId, note });
         }}
       >
         <h3 className="section-title">Add</h3>
