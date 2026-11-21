@@ -105,7 +105,7 @@ export function PlanCalendar({
                     type="button"
                     onClick={() => setOpenDay(day.key)}
                     aria-label={`${formatLongDay(day.key)}${dayExams.length ? `, ${dayExams.length} exam` : ""}${dayPlans.length ? `, ${dayPlans.length} planned` : ""}`}
-                    className={`tap flex aspect-square min-h-11 min-w-0 flex-col overflow-hidden rounded-lg text-center leading-none ${
+                    className={`tap flex aspect-square min-h-11 min-w-0 flex-col overflow-hidden rounded-lg text-center leading-none [&>*]:shrink-0 ${
                       showNames ? "items-stretch gap-0.5 p-0.5" : "items-center justify-center gap-1"
                     } ${
                       day.key === todayKey ? "ring-2 ring-foreground ring-offset-1 ring-offset-surface" : ""
@@ -115,7 +115,8 @@ export function PlanCalendar({
                     <span className={`text-xs ${showNames ? "pt-1" : ""}`}>{Number(day.key.slice(8))}</span>
                     {dayExams.length > 0 && (
                       <>
-                        {showNames && <span className="truncate text-[9px]">{examCourse?.name ?? "?"}</span>}
+                        {/* No room on a phone; the colour already says which course. */}
+                        {showNames && <span className="hidden truncate text-[9px] sm:block">{examCourse?.name ?? "?"}</span>}
                         <span className={`uppercase ${showNames ? "text-[8px]" : "text-[9px]"}`}>{dayExams[0].kind}</span>
                       </>
                     )}
