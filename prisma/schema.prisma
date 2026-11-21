@@ -361,6 +361,7 @@ model StudyPeriod {
   courses     StudyCourse[]
   entries     StudyEntry[]
   timers      StudyTimer[]
+  plans       StudyPlan[]
 
   @@index([startDate])
 }
@@ -392,6 +393,7 @@ model StudyCourse {
   entries       StudyEntry[]
   exams         StudyExam[]
   lessons       LessonMark[]
+  plans         StudyPlan[]
 
   @@unique([periodId, name])
 }
@@ -424,6 +426,21 @@ model StudyExam {
 
   @@index([date])
   @@index([courseId])
+}
+
+// A planned study item on a day (Lessons → Plan): a course and/or a short note
+// (CHECK study_plan). Not ticked off: what was actually done is the log.
+model StudyPlan {
+  id        String       @id @default(cuid())
+  periodId  String
+  period    StudyPeriod  @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  courseId  String?
+  course    StudyCourse? @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  date      DateTime     @db.Date
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([periodId, date])
 }
 
 // One cell of the lesson grid: course × week × HC/WC. Status keys live in

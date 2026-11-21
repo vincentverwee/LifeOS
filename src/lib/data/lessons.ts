@@ -304,3 +304,15 @@ async function loadStudyTimer(): Promise<StudyTimerState | null> {
 
 /** Per request, so Home's Lessons tile and its alert dots share one query. */
 export const getStudyTimer = cache(loadStudyTimer);
+
+export type StudyPlanItem = { id: string; date: string; courseId: string | null; note: string | null };
+
+/** A period's planned items (Lessons → Plan), oldest day first. */
+export async function getStudyPlans(periodId: string): Promise<StudyPlanItem[]> {
+  const rows = await prisma.studyPlan.findMany({
+    where: { periodId },
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    select: { id: true, date: true, courseId: true, note: true },
+  });
+  return rows.map((r) => ({ ...r, date: dayKey(r.date) }));
+}

@@ -197,6 +197,15 @@ export const CHECKS: Check[] = [
     label: "Study courses with a grade outside 0–20",
     fix: "Fix those course grades first.",
   },
+  // A study plan item has a course or a note (or both); the note is 1–80 characters.
+  {
+    name: "study_plan",
+    table: "StudyPlan",
+    check: `(("courseId" IS NOT NULL OR "note" IS NOT NULL) AND ("note" IS NULL OR char_length(btrim("note")) BETWEEN 1 AND 80))`,
+    columns: 'id, date, "courseId", note',
+    label: "Study plan items with neither course nor note, or a note that's too long",
+    fix: "Fix those study plan items first.",
+  },
   // A diary day is 1–2000 characters (bits of ≤ 280 on their own lines), the mood 1–5 or empty.
   {
     name: "diary_entry",

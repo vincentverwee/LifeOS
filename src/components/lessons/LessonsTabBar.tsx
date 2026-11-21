@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { SectionTabBar } from "@/components/ui/SectionTabBar";
-import { GRID, INSIGHTS, SETTINGS, TODAY, isTabActive } from "./nav";
+import { INSIGHTS, PLAN, SETTINGS, TODAY, isTabActive } from "./nav";
 
 /** Lessons' phone tabs; + logs study time. */
 export function LessonsTabBar() {
@@ -12,7 +12,7 @@ export function LessonsTabBar() {
       label="Lessons"
       tabs={[
         { ...TODAY, active: isTabActive(pathname, TODAY.href, true) },
-        { ...GRID, active: isTabActive(pathname, GRID.href) },
+        { ...PLAN, active: isTabActive(pathname, PLAN.href) },
         { ...INSIGHTS, active: isTabActive(pathname, INSIGHTS.href) },
         { ...SETTINGS, active: isTabActive(pathname, SETTINGS.href) },
       ]}

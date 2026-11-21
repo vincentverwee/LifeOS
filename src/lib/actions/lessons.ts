@@ -541,3 +541,42 @@ export async function deleteStudyExam(id: string): Promise<LessonsResult> {
   revalidateLessonRoutes();
   return { ok: true };
 }
+
+// --- Plan ---
+
+export async function createStudyPlan(input: {
+  periodId: string;
+  date: string;
+  courseId: string | null;
+  note: string | null;
+}): Promise<LessonsResult> {
+  await requireAuth();
+  if (!parseDateKey(input.date)) return { ok: false, error: "Pick a date." };
+  const note = input.note?.trim() || null;
+  if (note && note.length > 80) return { ok: false, error: "Keep the note under 80 characters." };
+  if (!note && !input.courseId) return { ok: false, error: "Pick a course or write a note." };
+  const period = await prisma.studyPeriod.findUnique({
+    where: { id: input.periodId },
+    select: { id: true, startDate: true, endDate: true },
+  });
+  if (!period) return { ok: false, error: "This period was deleted." };
+  const date = utc(input.date);
+  if (date < period.startDate || date > period.endDate) return { ok: false, error: "That day is outside this period." };
+  if (input.courseId) {
+    const course = await prisma.studyCourse.findFirst({
+      where: { id: input.courseId, periodId: period.id, countsAsStudy: true },
+      select: { id: true },
+    });
+    if (!course) return { ok: false, error: "Pick a course." };
+  }
+  await prisma.studyPlan.create({ data: { periodId: period.id, courseId: input.courseId, date, note } });
+  revalidateLessonRoutes();
+  return { ok: true };
+}
+
+export async function deleteStudyPlan(id: string): Promise<LessonsResult> {
+  await requireAuth();
+  await prisma.studyPlan.deleteMany({ where: { id } });
+  revalidateLessonRoutes();
+  return { ok: true };
+}

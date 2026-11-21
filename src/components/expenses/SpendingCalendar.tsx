@@ -1,8 +1,8 @@
 import type { ListExpense } from "@/lib/data/expenses";
 import { formatCurrency } from "@/lib/format";
 import { Disclosure } from "@/components/Disclosure";
+import { calendarWeeks } from "@/lib/calendar";
 
-const MS_PER_DAY = 86_400_000;
 const WEEKDAYS = ["M", "T", "W", "T", "F", "S", "S"];
 
 const labelFormatter = new Intl.DateTimeFormat("nl-BE", {
@@ -49,18 +49,9 @@ export function SpendingCalendar({
   const levelOf = (total: number) =>
     total <= 0 || cap <= 0 ? 0 : Math.min(4, Math.max(1, Math.ceil((4 * total) / cap)));
 
-  const startMs = toMs(startDate);
-  const endMs = toMs(endDate);
-  // Monday on or before the start, Sunday on or after the end.
-  const gridStart = startMs - ((new Date(startMs).getUTCDay() + 6) % 7) * MS_PER_DAY;
-  const gridEnd = endMs + ((7 - new Date(endMs).getUTCDay()) % 7) * MS_PER_DAY;
-
-  const weeks: { key: string; inPeriod: boolean; total: number }[][] = [];
-  for (let ms = gridStart; ms <= gridEnd; ms += MS_PER_DAY) {
-    if (weeks.length === 0 || weeks.at(-1)!.length === 7) weeks.push([]);
-    const key = new Date(ms).toISOString().slice(0, 10);
-    weeks.at(-1)!.push({ key, inPeriod: ms >= startMs && ms <= endMs, total: totals.get(key) ?? 0 });
-  }
+  const weeks = calendarWeeks(startDate, endDate).map((week) =>
+    week.map((d) => ({ key: d.key, inPeriod: d.inRange, total: totals.get(d.key) ?? 0 }))
+  );
 
   return (
     <Disclosure title="Calendar">
