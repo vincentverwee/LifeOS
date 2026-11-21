@@ -17,7 +17,7 @@ const tag = (course: StudyCourse | undefined) => `var(--color-tag-${course?.colo
 
 /**
  * The period as Monday-first weeks: exam days filled in their course's colour,
- * planned items as small named chips. Opens on this week; tap a day to plan it.
+ * planned items as coloured dots (or small named chips with "Show names"). Opens on this week; tap a day to plan it.
  */
 export function PlanCalendar({
   periodId,
@@ -37,6 +37,7 @@ export function PlanCalendar({
   plans: StudyPlanItem[];
 }) {
   const [showEarlier, setShowEarlier] = useState(false);
+  const [showNames, setShowNames] = useState(false);
   const [openDay, setOpenDay] = useState<string | null>(null);
   const [addError, setAddError] = useState<string | null>(null);
   const [, startAdd] = useTransition();
@@ -59,16 +60,28 @@ export function PlanCalendar({
 
   return (
     <section className="card flex flex-col gap-1">
-      {(hidden > 0 || showEarlier) && (
+      <div className="mb-1 flex items-center justify-between gap-2">
+        {hidden > 0 || showEarlier ? (
+          <button
+            type="button"
+            onClick={() => setShowEarlier(!showEarlier)}
+            aria-expanded={showEarlier}
+            className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
+          >
+            {showEarlier ? "Hide earlier weeks" : "Show earlier weeks"}
+          </button>
+        ) : (
+          <span />
+        )}
         <button
           type="button"
-          onClick={() => setShowEarlier(!showEarlier)}
-          aria-expanded={showEarlier}
-          className="btn btn-ghost mb-1 inline-flex min-h-11 self-start px-3 text-sm"
+          onClick={() => setShowNames(!showNames)}
+          aria-pressed={showNames}
+          className="btn btn-ghost inline-flex min-h-11 px-3 text-sm"
         >
-          {showEarlier ? "Hide earlier weeks" : "Show earlier weeks"}
+          {showNames ? "Hide names" : "Show names"}
         </button>
-      )}
+      </div>
       <div className="grid grid-cols-7 gap-1 text-center text-xs text-ink-muted" aria-hidden="true">
         {WEEKDAYS.map((d, i) => (
           <span key={i}>{d}</span>
@@ -92,13 +105,31 @@ export function PlanCalendar({
                     type="button"
                     onClick={() => setOpenDay(day.key)}
                     aria-label={`${formatLongDay(day.key)}${dayExams.length ? `, ${dayExams.length} exam` : ""}${dayPlans.length ? `, ${dayPlans.length} planned` : ""}`}
-                    className={`tap flex min-h-16 min-w-0 flex-col items-stretch gap-0.5 overflow-hidden rounded-lg p-0.5 text-center leading-none ${
+                    className={`tap flex min-w-0 flex-col overflow-hidden rounded-lg text-center leading-none ${
+                      showNames ? "min-h-16 items-stretch gap-0.5 p-0.5" : "aspect-square min-h-11 items-center justify-center gap-1"
+                    } ${
                       day.key === todayKey ? "ring-2 ring-foreground ring-offset-1 ring-offset-surface" : ""
                     } ${day.key < todayKey ? "opacity-50" : ""} ${dayExams.length ? "font-semibold text-white" : "bg-surface-muted text-foreground"}`}
                     style={dayExams.length ? { backgroundColor: tag(examCourse) } : undefined}
                   >
-                    <span className="pt-1 text-xs">{Number(day.key.slice(8))}</span>
-                    {dayExams.length > 0 ? (
+                    <span className={`text-xs ${showNames ? "pt-1" : ""}`}>{Number(day.key.slice(8))}</span>
+                    {!showNames ? (
+                      dayExams.length > 0 ? (
+                        <span className="text-[9px] uppercase">{dayExams[0].kind}</span>
+                      ) : (
+                        dayPlans.length > 0 && (
+                          <span className="flex gap-0.5" aria-hidden="true">
+                            {dayPlans.slice(0, 3).map((p) => (
+                              <span
+                                key={p.id}
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{ backgroundColor: p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)" }}
+                              />
+                            ))}
+                          </span>
+                        )
+                      )
+                    ) : dayExams.length > 0 ? (
                       <>
                         <span className="truncate text-[9px]">{examCourse?.name ?? "?"}</span>
                         <span className="text-[8px] uppercase">{dayExams[0].kind}</span>
