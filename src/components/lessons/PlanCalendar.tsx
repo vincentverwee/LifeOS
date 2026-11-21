@@ -113,43 +113,49 @@ export function PlanCalendar({
                     style={dayExams.length ? { backgroundColor: tag(examCourse) } : undefined}
                   >
                     <span className={`text-xs ${showNames ? "pt-1" : ""}`}>{Number(day.key.slice(8))}</span>
-                    {!showNames ? (
-                      dayExams.length > 0 ? (
-                        <span className="text-[9px] uppercase">{dayExams[0].kind}</span>
-                      ) : (
-                        dayPlans.length > 0 && (
+                    {dayExams.length > 0 && (
+                      <>
+                        {showNames && <span className="truncate text-[9px]">{examCourse?.name ?? "?"}</span>}
+                        <span className={`uppercase ${showNames ? "text-[8px]" : "text-[9px]"}`}>{dayExams[0].kind}</span>
+                      </>
+                    )}
+                    {!showNames
+                      ? dayPlans.length > 0 && (
                           <span className="flex gap-0.5" aria-hidden="true">
                             {dayPlans.slice(0, 3).map((p) => (
                               <span
                                 key={p.id}
-                                className="h-1.5 w-1.5 rounded-full"
+                                // A white ring keeps a dot visible on an exam day of the same colour.
+                                className={`h-1.5 w-1.5 rounded-full ${dayExams.length ? "ring-1 ring-white" : ""}`}
                                 style={{ backgroundColor: p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)" }}
                               />
                             ))}
                           </span>
                         )
-                      )
-                    ) : dayExams.length > 0 ? (
-                      <>
-                        <span className="truncate text-[9px]">{examCourse?.name ?? "?"}</span>
-                        <span className="text-[8px] uppercase">{dayExams[0].kind}</span>
-                      </>
-                    ) : (
-                      <>
-                        {dayPlans.slice(0, 2).map((p) => (
-                          <span
-                            key={p.id}
-                            className="truncate rounded px-0.5 py-px text-[9px]"
-                            style={{
-                              backgroundColor: `color-mix(in oklab, ${p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)"} 30%, transparent)`,
-                            }}
-                          >
-                            {label(p)}
-                          </span>
-                        ))}
-                        {dayPlans.length > 2 && <span className="text-[9px] text-ink-muted">+{dayPlans.length - 2}</span>}
-                      </>
-                    )}
+                      : (() => {
+                          // An exam day already spends two lines on the exam, so there's room for one chip.
+                          const room = dayExams.length ? 1 : 2;
+                          return (
+                            <>
+                              {dayPlans.slice(0, room).map((p) => (
+                                <span
+                                  key={p.id}
+                                  className="truncate rounded px-0.5 py-px text-[9px] font-normal"
+                                  style={{
+                                    backgroundColor: dayExams.length
+                                      ? "rgb(255 255 255 / 0.25)"
+                                      : `color-mix(in oklab, ${p.courseId ? tag(courseById.get(p.courseId)) : "var(--color-ink-muted)"} 30%, transparent)`,
+                                  }}
+                                >
+                                  {label(p)}
+                                </span>
+                              ))}
+                              {dayPlans.length > room && (
+                                <span className={`text-[9px] ${dayExams.length ? "" : "text-ink-muted"}`}>+{dayPlans.length - room}</span>
+                              )}
+                            </>
+                          );
+                        })()}
                   </button>
                 );
               })}
