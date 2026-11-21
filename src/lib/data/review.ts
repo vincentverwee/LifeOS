@@ -60,6 +60,7 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
     prevStudy,
     diary,
     routineLogs,
+    habitLogs,
     reminders,
     outfitWears,
     itemWears,
@@ -87,6 +88,7 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
       where: { doneOn: range },
       select: { routine: { select: { name: true, source: true } } },
     }),
+    prisma.habitLog.findMany({ where: { doneOn: range }, select: { habit: true, doneOn: true } }),
     // One-offs finished this week; doneAt is a moment, so widen by a day and check the local day.
     prisma.reminder.findMany({
       where: { repeat: "once", doneAt: { gte: utc(addDays(monday, -1)), lt: utc(addDays(lastDay, 2)) } },
@@ -131,6 +133,7 @@ export async function getWeekReview(monday: string, todayKey: string, tz: string
     prevStudyHours: prevStudy._sum.hours?.toNumber() ?? 0,
     diary: diary.map((d) => ({ date: dayKey(d.date), text: d.text, mood: d.mood })),
     routineLogs: routineLogs.map((l) => ({ name: l.routine.name, source: l.routine.source })),
+    habitLogs: habitLogs.map((l) => ({ habit: l.habit, doneOn: dayKey(l.doneOn) })),
     remindersDone: reminders
       .filter((r) => r.doneAt && days.includes(dayKeyIn(tz, r.doneAt)))
       .map((r) => r.title),

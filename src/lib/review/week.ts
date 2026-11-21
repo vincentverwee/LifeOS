@@ -8,6 +8,7 @@ import { addDays, weekdayOf } from "@/lib/reminders/schedule";
 import { diaryBits } from "@/lib/diary/onThisDay";
 import { mascotName } from "@/lib/mascots";
 import { WASH_ROUTINE_SOURCE } from "@/lib/wardrobe/types";
+import { HABITS, isHabitKey } from "@/lib/reminders/habits";
 
 /*
  * The weekly review (/review): one Mon–Sun week told as tap-through cards, each
@@ -64,6 +65,8 @@ export type WeekRaw = {
   prevStudyHours: number;
   diary: { date: string; text: string; mood: number | null }[];
   routineLogs: { name: string; source: string | null }[];
+  /** Daily habit ticks this week. */
+  habitLogs: { habit: string; doneOn: string }[];
   remindersDone: string[];
   outfitWears: { name: string }[];
   itemWears: number;
@@ -127,6 +130,8 @@ export type WeekSummary = {
   beer: { pints: number; liters: number; pubs: string[]; prevPints: number };
   diary: { moods: (number | null)[]; written: number; bits: number; best: string | null };
   lastDone: { name: string; count: number }[];
+  /** Daily habits: ticks per day (Mon…) and per habit, most first; null when none were ticked. */
+  habits: { perDay: number[]; total: number; possible: number; byHabit: { name: string; count: number }[] } | null;
   remindersDone: string[];
   wardrobe: { outfits: { name: string; count: number }[]; itemWears: number; washes: number };
   recipes: string[];
@@ -203,6 +208,18 @@ export function summarizeWeek(raw: WeekRaw): WeekSummary {
       best: best ? diaryBits(best.text).at(-1) ?? null : null,
     },
     lastDone: counted(raw.routineLogs.filter((l) => !l.source || !WASH_SOURCES.has(l.source)).map((l) => l.name)),
+    habits: (() => {
+      const logs = raw.habitLogs.filter((l) => inWeek(l.doneOn) && isHabitKey(l.habit));
+      if (logs.length === 0) return null;
+      return {
+        perDay: days.map((d) => logs.filter((l) => l.doneOn === d).length),
+        total: logs.length,
+        possible: days.length * HABITS.length,
+        byHabit: HABITS.map((h) => ({ name: h.label, count: logs.filter((l) => l.habit === h.key).length })).sort(
+          (a, b) => b.count - a.count
+        ),
+      };
+    })(),
     remindersDone: raw.remindersDone,
     wardrobe: {
       outfits: counted(raw.outfitWears.map((w) => w.name)),
@@ -247,7 +264,7 @@ export type StoryCard = {
   list?: string[];
   quote?: string;
   /** Bars per day (Mon…), heights relative to the largest or the goal line. */
-  bars?: { labels: string[]; values: number[]; goal?: number; format: "money" | "hours" };
+  bars?: { labels: string[]; values: number[]; goal?: number; format: "money" | "hours" | "count" };
   moods?: (number | null)[];
   /** The last card: the win of the week. */
   outro?: boolean;
@@ -418,6 +435,33 @@ export function buildStory(week: WeekSummary, animal: MascotAnimal): StoryCard[]
           : []),
       ],
       list: shortList([...week.lastDone.map((r) => (r.count > 1 ? `${r.name} ×${r.count}` : r.name)), ...week.remindersDone]),
+    });
+  }
+
+  // Daily habits
+  const h = week.habits;
+  if (h) {
+    const share = h.total / h.possible;
+    const hardest = h.byHabit.at(-1)!;
+    cards.push({
+      key: "habits",
+      kind: "reminders",
+      speaker: say("reminders"),
+      line:
+        share >= 0.7
+          ? pick(["Look at those habits stack up!", "Healthy and happy, that's the week."], seed("habits"))
+          : share >= 0.4
+            ? pick(["A good bunch of little habits.", "Small things, every day. Nice."], seed("habits"))
+            : pick(["A few habits made it in. Every one counts.", "Small steps. Next week, one more."], seed("habits")),
+      big: [
+        { value: `${h.total}/${h.possible}`, label: "habits ticked" },
+        { value: `${Math.round(share * 100)}%`, label: "of the week" },
+      ],
+      bars: { labels, values: h.perDay, goal: HABITS.length, format: "count" },
+      list: shortList([
+        ...h.byHabit.slice(0, 3).filter((x) => x.count > 0).map((x) => `${x.name} ×${x.count}`),
+        `Hardest: ${hardest.name}`,
+      ]),
     });
   }
 

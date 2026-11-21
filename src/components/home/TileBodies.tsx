@@ -345,6 +345,17 @@ async function RemindersTileBody({ todayKey }: { todayKey: string }) {
       ) : (
         <p className="text-sm text-ink-muted">Nothing overdue</p>
       )}
+      {reminders.habits && (
+        <div className="mt-3 border-t border-border pt-2.5 text-[13px] text-foreground">
+          <p>
+            <span className="text-ink-muted">Habits · </span>
+            {reminders.habits.done} of {reminders.habits.total} today
+          </p>
+          <div className="mt-1 h-1.5 rounded-full bg-surface-muted" aria-hidden="true">
+            <div className="h-full rounded-full bg-tag-green" style={{ width: `${(reminders.habits.done / reminders.habits.total) * 100}%` }} />
+          </div>
+        </div>
+      )}
       {reminders.next ? (
         <p className="mt-3 truncate border-t border-border pt-2.5 text-[13px] text-foreground">
           <span className="text-ink-muted">Next · </span>

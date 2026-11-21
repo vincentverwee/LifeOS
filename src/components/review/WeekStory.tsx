@@ -197,7 +197,7 @@ function CardBody({
 
 function Bars({ bars }: { bars: NonNullable<StoryCard["bars"]> }) {
   const max = Math.max(...bars.values, bars.goal ?? 0) || 1;
-  const fmt = (n: number) => (bars.format === "money" ? formatCurrency(n) : formatHours(n));
+  const fmt = (n: number) => (bars.format === "money" ? formatCurrency(n) : bars.format === "count" ? String(n) : formatHours(n));
   return (
     <div className="w-full max-w-xs">
       <div className="relative flex h-24 items-end gap-1.5">

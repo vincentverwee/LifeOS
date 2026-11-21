@@ -16,6 +16,7 @@ function raw(over: Partial<WeekRaw> = {}): WeekRaw {
     prevStudyHours: 0,
     diary: [],
     routineLogs: [],
+    habitLogs: [],
     remindersDone: [],
     outfitWears: [],
     itemWears: 0,
@@ -163,6 +164,25 @@ describe("trips", () => {
 });
 
 describe("buildStory", () => {
+  it("adds a habits card with ticks per day and the hardest habit", () => {
+    const week = summarizeWeek(
+      raw({
+        habitLogs: [
+          { habit: "water", doneOn: MONDAY },
+          { habit: "water", doneOn: "2026-11-03" },
+          { habit: "sleep", doneOn: MONDAY },
+          { habit: "water", doneOn: "2026-10-30" }, // last week: ignored
+        ],
+      })
+    );
+    expect(week.habits?.total).toBe(3);
+    expect(week.habits?.perDay).toEqual([2, 1, 0, 0, 0, 0, 0]);
+    const card = buildStory(week, "sheep").find((c) => c.key === "habits")!;
+    expect(card.big[0].value).toBe("3/77");
+    expect(card.list?.[0]).toBe("Drink enough water ×2");
+    expect(card.list?.at(-1)).toMatch(/^Hardest: /);
+  });
+
   it("is only an intro and the win card for a quiet week", () => {
     const cards = buildStory(summarizeWeek(raw()), "sheep");
     expect(cards.map((c) => c.key)).toEqual(["intro", "outro"]);
