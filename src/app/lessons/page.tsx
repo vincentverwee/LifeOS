@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getStudyTimer, getTrackedEntries, loadStudyPeriods } from "@/lib/data/lessons";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
+import { Suspense } from "react";
+import { PartnerStudying } from "@/components/lessons/PartnerStudying";
 import { getTodayKey } from "@/lib/today";
 import { comparePace, computePeriodStats, lessonWeekCount, lessonWeekOf, phaseLabel } from "@/lib/lessons/stats";
 import { StudyHero, StudyPace, UpcomingExams } from "@/components/lessons/TodayCards";
@@ -67,6 +69,9 @@ export default async function LessonsTodayPage({ searchParams }: PageProps<"/les
       />
 
       {timer && <RunningTimerBadge timer={timer} card />}
+      <Suspense fallback={null}>
+        <PartnerStudying />
+      </Suspense>
 
       <StudyHero stats={stats} goal={period.goalHours} status={phaseLabel(stats.phase)} todayKey={todayKey} />
 

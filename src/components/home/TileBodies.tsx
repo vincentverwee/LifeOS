@@ -23,6 +23,7 @@ import { getPeopleGlance } from "@/lib/data/people";
 import { getWardrobeGlance } from "@/lib/data/wardrobe";
 import { describeCountdown, SOON_DAYS } from "@/lib/people/birthdays";
 import { RunningTimerBadge } from "@/components/lessons/RunningTimerBadge";
+import { PartnerStudying } from "@/components/lessons/PartnerStudying";
 import { getBeerWeek, getDiaryWeek, weekOf } from "@/lib/data/homeWeek";
 import { mascotName } from "@/lib/mascots";
 import { THEME } from "@/lib/theme";
@@ -269,6 +270,9 @@ async function LessonsTileBody({ todayKey }: { todayKey: string }) {
           ` · ${lessons.nextExam.label} ${lessons.nextExam.daysUntil === 0 ? "today" : `in ${lessons.nextExam.daysUntil}d`}`}
       </p>
       {lessons.timer && <RunningTimerBadge timer={lessons.timer} />}
+      <Suspense fallback={null}>
+        <PartnerStudying />
+      </Suspense>
       <LessonsWeek glance={lessons} />
     </>
   );

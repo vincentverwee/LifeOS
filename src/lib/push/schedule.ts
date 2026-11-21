@@ -321,6 +321,7 @@ export async function runPushSchedule(now = new Date()): Promise<PushRunResult> 
     const times = parsePushTimes(sub.times);
 
     for (const kind of sub.kinds.filter(isPushKind)) {
+      if (kind === "partner-study") continue; // sent by /api/partner/study, not on a schedule
       // One failing query or send must not hold up the other devices and kinds.
       try {
         const outgoing: { key: string; payload: PushPayload }[] = [];

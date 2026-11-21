@@ -2,6 +2,8 @@
 
 import { requireAuth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { notifyPartnerStudying } from "@/lib/data/partner";
 import { prisma } from "@/lib/prisma";
 import { formatDate, parseDateKey, parseHours } from "@/lib/format";
 import { knownError } from "@/lib/prismaErrors";
@@ -153,22 +155,30 @@ export async function startStudyTimer(input: { periodId: string; courseIds: stri
   const resolved = await resolvePeriod(input.periodId, utc(await getTodayKey()));
   if (!resolved.ok) return resolved;
   const period = resolved.period;
+  let names: { name: string; countsAsStudy: boolean }[] = [];
   if (period.id !== input.periodId && courseIds.length) {
     return { ok: false, error: `Today falls in ${period.name}; start the timer from that period.` };
   }
   if (courseIds.length) {
     const courses = await prisma.studyCourse.findMany({
       where: { id: { in: courseIds }, periodId: period.id },
-      select: { countsAsStudy: true },
+      select: { name: true, countsAsStudy: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
     if (courses.length !== courseIds.length) return { ok: false, error: "Those courses belong to another period; pick them again." };
     const mixed = mixedKindsError(courses);
     if (mixed) return { ok: false, error: mixed };
+    names = courses;
   }
+  let startedAt: Date;
   try {
-    await prisma.studyTimer.create({ data: { id: TIMER_ID, periodId: period.id, courseIds } });
+    ({ startedAt } = await prisma.studyTimer.create({ data: { id: TIMER_ID, periodId: period.id, courseIds } }));
   } catch (error) {
     return knownError(error, { P2002: "A timer is already running." });
+  }
+  // Tracked time (countsAsStudy off) isn't studying; the tap doesn't wait for the other site.
+  if (!names.length || names[0].countsAsStudy) {
+    after(() => notifyPartnerStudying(startedAt, names.map((c) => c.name)));
   }
   revalidateLessonRoutes();
   return { ok: true };

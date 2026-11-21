@@ -39,6 +39,11 @@ export const PUSH_KINDS = [
     time: "19:00",
     description: "Sundays · this week's spending vs its share of the budget, study hours vs goal, Last done items done and due, subscriptions logged.",
   },
+  {
+    key: "partner-study",
+    label: "Partner studying",
+    description: "When the other site's study timer starts (needs PARTNER_* set on both sites).",
+  },
 ] as const;
 
 export type PushKind = (typeof PUSH_KINDS)[number]["key"];
@@ -49,11 +54,11 @@ export function isPushKind(value: unknown): value is PushKind {
   return typeof value === "string" && (ALL_PUSH_KINDS as string[]).includes(value);
 }
 
-/** Kinds sent at a time of day (all but the timer nudge). */
-export type TimedPushKind = Exclude<PushKind, "timer">;
+/** Kinds sent at a time of day (all but the timer nudge and the partner's study start). */
+export type TimedPushKind = Exclude<PushKind, "timer" | "partner-study">;
 
 export function isTimedPushKind(value: unknown): value is TimedPushKind {
-  return isPushKind(value) && value !== "timer";
+  return isPushKind(value) && value !== "timer" && value !== "partner-study";
 }
 
 /** A device's chosen times ("HH:MM" per kind); missing kinds use the default. */
