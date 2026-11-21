@@ -514,6 +514,23 @@ model RoutineLog {
   @@index([doneOn])
 }
 
+// Daily habits on Reminders (the fixed list in src/lib/reminders/habits.ts): one row per habit per day ticked.
+model HabitLog {
+  id        String   @id @default(cuid())
+  habit     String
+  doneOn    DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  @@unique([habit, doneOn])
+  @@index([doneOn])
+}
+
+// The row exists = daily habits are on; `since` = the day they were turned on.
+model HabitSettings {
+  id     String   @id @default("current")
+  since  DateTime @db.Date
+}
+
 // Someone in the /people contact book. The birthday is optional: month + day
 // together, the year only when known (for the age); 29 Feb falls on the 28th in
 // other years (src/lib/people/birthdays.ts). `groupName` is free text ("Family",

@@ -16,6 +16,8 @@ import {
 } from "@/lib/reminders/insights";
 import { SummaryCards } from "@/components/dashboard/SummaryCards";
 import { Disclosure } from "@/components/Disclosure";
+import { getHabits } from "@/lib/data/habits";
+import { HabitInsights } from "@/components/reminders/HabitInsights";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -45,7 +47,10 @@ const times = (n: number) => `${n} ${n === 1 ? "time" : "times"}`;
 export default async function RemindersInsightsPage({ searchParams }: PageProps<"/reminders/insights">) {
   const { item: requested } = await searchParams;
   const todayKey = await getTodayKey();
-  const routines = await getRoutineLogs(todayKey);
+  const [routines, habits] = await Promise.all([getRoutineLogs(todayKey), getHabits(todayKey)]);
+  const habitInsights = (habits.since || habits.logs.length > 0) && (
+    <HabitInsights logs={habits.logs} since={habits.since} todayKey={todayKey} />
+  );
 
   if (routines.length === 0) {
     return (
@@ -57,6 +62,7 @@ export default async function RemindersInsightsPage({ searchParams }: PageProps<
             Add one
           </Link>
         </p>
+        {habitInsights}
       </div>
     );
   }
@@ -171,6 +177,8 @@ export default async function RemindersInsightsPage({ searchParams }: PageProps<
           </ul>
         </Disclosure>
       )}
+
+      {habitInsights}
     </div>
   );
 }
