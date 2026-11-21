@@ -105,8 +105,8 @@ export function PlanCalendar({
                     type="button"
                     onClick={() => setOpenDay(day.key)}
                     aria-label={`${formatLongDay(day.key)}${dayExams.length ? `, ${dayExams.length} exam` : ""}${dayPlans.length ? `, ${dayPlans.length} planned` : ""}`}
-                    className={`tap flex min-w-0 flex-col overflow-hidden rounded-lg text-center leading-none ${
-                      showNames ? "min-h-16 items-stretch gap-0.5 p-0.5" : "aspect-square min-h-11 items-center justify-center gap-1"
+                    className={`tap flex aspect-square min-h-11 min-w-0 flex-col overflow-hidden rounded-lg text-center leading-none ${
+                      showNames ? "items-stretch gap-0.5 p-0.5" : "items-center justify-center gap-1"
                     } ${
                       day.key === todayKey ? "ring-2 ring-foreground ring-offset-1 ring-offset-surface" : ""
                     } ${day.key < todayKey ? "opacity-50" : ""} ${dayExams.length ? "font-semibold text-white" : "bg-surface-muted text-foreground"}`}
