@@ -17,7 +17,11 @@ export function HabitInsights({ logs, since, todayKey }: { logs: HabitLogRow[]; 
   const { keys, rows } = habitGrid(logs, todayKey, GRID_WEEKS);
   const hardest = stats[0];
   const easiest = stats.at(-1)!;
-  const columns = { gridTemplateColumns: `minmax(0, 7rem) repeat(${GRID_WEEKS * 7}, minmax(0, 1fr))` };
+  // A thin spacer track between weeks, so every day cell stays the same size.
+  const columns = {
+    gridTemplateColumns: `minmax(0, 7rem) ${Array(GRID_WEEKS).fill("repeat(7, minmax(0, 1fr))").join(" 2px ")}`,
+  };
+  const weekGap = (i: number) => (i > 0 && i % 7 === 0 ? [<span key={`gap-${i}`} aria-hidden="true" />] : []);
 
   return (
     <>
@@ -57,20 +61,19 @@ export function HabitInsights({ logs, since, todayKey }: { logs: HabitLogRow[]; 
           {rows.map(({ habit, done }) => (
             <div key={habit.key} className="grid items-center gap-[3px]" style={columns}>
               <span className="truncate pr-1 text-[11px] text-ink-muted">{habit.label}</span>
-              {done.map((d, i) => (
+              {done.flatMap((d, i) => [
+                ...weekGap(i),
                 <span
                   key={keys[i]}
                   title={`${formatDay(keys[i])} · ${d ? "done" : "not done"}`}
-                  className={`aspect-square rounded-[3px] ${i > 0 && i % 7 === 0 ? "ml-1" : ""} ${d ? GROUP_STYLE[habit.group].bar : "bg-surface-muted"}`}
-                />
-              ))}
+                  className={`aspect-square rounded-[3px] ${d ? GROUP_STYLE[habit.group].bar : "bg-surface-muted"}`}
+                />,
+              ])}
             </div>
           ))}
           <div className="grid gap-[3px] text-center text-[10px] text-ink-muted" style={columns} aria-hidden="true">
             <span />
-            {keys.map((k, i) => (
-              <span key={k} className={i > 0 && i % 7 === 0 ? "ml-1" : ""}>{WEEKDAY_LETTERS[weekdayOf(k)]}</span>
-            ))}
+            {keys.flatMap((k, i) => [...weekGap(i), <span key={k}>{WEEKDAY_LETTERS[weekdayOf(k)]}</span>])}
           </div>
         </div>
       </Disclosure>
