@@ -227,6 +227,9 @@ body {
 /* --- Phone ergonomics --- */
 html {
   -webkit-text-size-adjust: 100%;
+  /* Keep the scrollbar's space reserved so pages don't jump sideways between
+     short (no scrollbar) and long ones. No effect on overlay-scrollbar phones. */
+  scrollbar-gutter: stable;
 }
 
 /* overflow-x: clip (not hidden) so a swiped card or wide preview can never make
