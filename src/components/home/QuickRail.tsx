@@ -73,6 +73,19 @@ export function QuickRail({
   const pathname = usePathname();
   const off = global && (pathname === "/" || GLOBAL_OFF.some((p) => pathname.startsWith(p)));
   const [open, setOpen] = useState(false);
+  // From lg up the rail is docked open (CSS); this only keeps it clickable and the page unlocked.
+  const [wide, setWide] = useState(false);
+  useEffect(() => {
+    if (contained) return;
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const update = () => setWide(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [contained]);
+  const shown = open || wide;
+  const lockOpen = open && !wide;
+  const dock = contained ? "" : "lg:hidden";
   const root = useRef<HTMLDivElement>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const nav = useRef<HTMLElement>(null);
@@ -119,6 +132,8 @@ export function QuickRail({
       // In the /preview phone frame only touches inside the frame count.
       const ours =
         !off &&
+        // docked on wide screens: a swipe there (touchscreen laptop) must not drag it away
+        (contained || !window.matchMedia("(min-width: 1024px)").matches) &&
         (!contained || inBox(t.clientX, t.clientY)) &&
         !inSideScroller(e.target) &&
         !(e.target instanceof Element && e.target.closest(OWN_GESTURES));
@@ -177,7 +192,7 @@ export function QuickRail({
 
   // No scrolling behind the open rail (wheel and scrollbars too, not just touch).
   useEffect(() => {
-    if (!open) return;
+    if (!lockOpen) return;
     const el = contained ? scroller.current : document.documentElement;
     if (!el) return;
     const before = el.style.overflow;
@@ -185,7 +200,7 @@ export function QuickRail({
     return () => {
       el.style.overflow = before;
     };
-  }, [open, contained]);
+  }, [lockOpen, contained]);
 
   const place = contained ? "absolute" : "fixed";
   if (off) return <>{children}</>;
@@ -207,7 +222,7 @@ export function QuickRail({
         onClick={() => setOpen(true)}
         aria-label="Show sections"
         aria-expanded={open}
-        className={`${place} top-1/2 right-0 z-30 flex h-20 w-5 -translate-y-1/2 items-center justify-center rounded-l-xl bg-primary/25 text-primary hover:bg-primary/40 ${
+        className={`${place} ${dock} top-1/2 right-0 z-30 flex h-20 w-5 -translate-y-1/2 items-center justify-center rounded-l-xl bg-primary/25 text-primary hover:bg-primary/40 ${
           open ? "pointer-events-none opacity-0" : ""
         }`}
       >
@@ -221,17 +236,17 @@ export function QuickRail({
       <div
         aria-hidden="true"
         onClick={() => setOpen(false)}
-        className={`${place} inset-0 z-40 touch-none bg-black/25 transition-opacity ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
+        className={`${place} ${dock} inset-0 z-40 touch-none bg-black/25 transition-opacity ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
       />
 
       <nav
         ref={nav}
         aria-label="Sections"
-        aria-hidden={!open}
-        inert={!open}
-        className={`${place} top-0 right-0 bottom-0 z-50 flex w-20 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y border-l border-border bg-surface py-3 shadow-xl transition-transform duration-200 ${
+        aria-hidden={!shown}
+        inert={!shown}
+        className={`${place} top-0 right-0 bottom-0 z-50 flex w-20 flex-col items-center gap-1 overflow-x-hidden overflow-y-auto overscroll-contain touch-pan-y border-l border-border bg-surface py-3 shadow-xl transition-transform duration-200 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${
           open ? "translate-x-0" : "translate-x-full"
-        }`}
+        } ${contained ? "" : "lg:translate-x-0 lg:shadow-none"}`}
         style={
           contained
             ? undefined
@@ -247,7 +262,7 @@ export function QuickRail({
             href={s.href}
             onClick={() => setOpen(false)}
             aria-current={pathname.startsWith(s.href) ? "page" : undefined}
-            className="tap flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5"
+            className="tap flex w-full flex-col items-center gap-0.5 rounded-xl py-1.5 aria-[current=page]:bg-surface-muted"
           >
             <span className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-primary">
               <Suspense fallback={<Mascot kind={s.kind} size={44} decorative />}>

@@ -59,7 +59,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       data-mode={mode === "system" ? undefined : mode}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col lg:pr-20">
         <Navigation />
         {/* Swipe left on any page for the column of section mascots (Home renders its own, with moods and dots). */}
         <QuickRail global sections={railSections()} />
