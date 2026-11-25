@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { WashingMachine } from "lucide-react";
 import { moveItems, undoMove as undoMoveAction, unwashItems, washItems, type MovedItem } from "@/lib/actions/wardrobe";
-import { groupByWash } from "@/lib/wardrobe/logic";
-import { WASH_GROUP_LABEL, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
+import { WASH_GROUP_LABEL, WASH_GROUPS, type ClothingStatus, type WashGroup } from "@/lib/wardrobe/types";
 import { SheepCheckbox } from "@/components/reminders/SheepCheckbox";
 import { SLIDE_OUT_MS, SlideRow, wait } from "@/components/reminders/SlideRow";
 import { ItemPhoto } from "./ItemPhoto";
@@ -148,7 +147,7 @@ export function WashBoard({ items }: { items: Item[] }) {
     return () => clearTimeout(timer);
   }, [undo]);
 
-  function move(list: Item[], step: Step, what?: string) {
+  function move(list: Item[], step: Step, what?: string, load?: WashGroup) {
     const ids = list.map((i) => i.id);
     setError(null);
     setReturning(new Set());
@@ -158,7 +157,7 @@ export function WashBoard({ items }: { items: Item[] }) {
         // A wash goes through its own action: it also logs the load's Last done item.
         const [result] = await Promise.all([
           step.from === "wash"
-            ? washItems(ids)
+            ? washItems(ids, load ? [load] : [])
             : moveItems(ids, step.from, step.to).then((moved) => ({ moved, logged: undefined })),
           wait(SLIDE_OUT_MS),
         ]);
@@ -239,35 +238,36 @@ export function WashBoard({ items }: { items: Item[] }) {
           count={basketLeft}
           hint={basketLeft > 0 ? "Wash a whole load, or tick pieces one by one." : null}
         />
-        {wash.length === 0 ? (
-          <Empty>Nothing in the basket.</Empty>
-        ) : (
-          groupByWash(wash).map(({ group, items: load }) => {
-            const open = notLeaving(load);
-            const name = WASH_GROUP_LABEL[group];
-            return (
-              <div key={group} className="flex flex-col gap-2">
-                <div className="flex min-h-11 items-center justify-between gap-3">
-                  <h3 className="font-medium text-foreground">
-                    {name}{" "}
-                    <span className="font-normal text-ink-muted tabular-nums">{open.length}</span>
-                  </h3>
-                  {open.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => move(open, STEPS.wash, `all ${name.toLowerCase()}`)}
-                      className="btn btn-outline inline-flex min-h-11 items-center gap-1.5 px-3 text-sm"
-                    >
-                      <WashingMachine size={18} aria-hidden="true" />
-                      Wash all {name.toLowerCase()}
-                    </button>
-                  )}
-                </div>
-                {rows(load, STEPS.wash)}
+        {/* Both loads always: a wash can be logged with nothing in the basket. */}
+        {WASH_GROUPS.map((group) => {
+          const load = wash.filter((i) => i.washGroup === group);
+          const open = notLeaving(load);
+          const name = WASH_GROUP_LABEL[group].toLowerCase();
+          return (
+            <div key={group} className="flex flex-col gap-2">
+              <div className="flex min-h-11 items-center justify-between gap-3">
+                <h3 className="font-medium text-foreground">
+                  {WASH_GROUP_LABEL[group]}{" "}
+                  <span className="font-normal text-ink-muted tabular-nums">{open.length}</span>
+                </h3>
+                <button
+                  type="button"
+                  disabled={load.length > 0 && open.length === 0}
+                  onClick={() =>
+                    open.length > 0
+                      ? move(open, STEPS.wash, `all ${name}`)
+                      : move([], STEPS.wash, `${name} load`, group)
+                  }
+                  className="btn btn-outline inline-flex min-h-11 items-center gap-1.5 px-3 text-sm"
+                >
+                  <WashingMachine size={18} aria-hidden="true" />
+                  {open.length > 0 || load.length > 0 ? `Wash all ${name}` : `Log a ${name} wash`}
+                </button>
               </div>
-            );
-          })
-        )}
+              {rows(load, STEPS.wash)}
+            </div>
+          );
+        })}
       </section>
 
       <section className="flex flex-col gap-2">

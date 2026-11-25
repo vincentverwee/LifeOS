@@ -233,9 +233,14 @@ async function ensureWashRoutine(tx: Prisma.TransactionClient, group: WashGroup)
  * today on its Last done item. `logged` = the loads whose log this call added and `moved` =
  * the pieces it moved, so Undo (`unwashItems`) takes back exactly those.
  */
-export async function washItems(ids: string[]): Promise<{ logged: WashGroup[]; moved: MovedItem[] }> {
+export async function washItems(
+  ids: string[],
+  /** Loads washed without their pieces in the basket: logged even when nothing moves. */
+  loads: WashGroup[] = [],
+): Promise<{ logged: WashGroup[]; moved: MovedItem[] }> {
   await requireAuth();
-  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 1000) return { logged: [], moved: [] };
+  const extra = (Array.isArray(loads) ? loads : []).filter(isWashGroup);
+  if (!Array.isArray(ids) || ids.length > 1000 || (ids.length === 0 && extra.length === 0)) return { logged: [], moved: [] };
   const today = utc(await getTodayKey());
   const result = await prisma.$transaction(async (tx) => {
     await lockItems(tx, ids.map(String));
@@ -244,12 +249,12 @@ export async function washItems(ids: string[]): Promise<{ logged: WashGroup[]; m
       select: { id: true, washGroup: true, statusSince: true },
     });
     // A double tap / another device moved nothing: no wash to log.
-    if (inBasket.length === 0) return { logged: [], moved: [] };
+    if (inBasket.length === 0 && extra.length === 0) return { logged: [], moved: [] };
     await tx.clothingItem.updateMany({
       where: { id: { in: inBasket.map((i) => i.id) }, status: "wash" },
       data: { status: "drying", statusSince: today },
     });
-    const groups = new Set(inBasket.map((i) => (isWashGroup(i.washGroup) ? i.washGroup : "coloured")));
+    const groups = new Set([...extra, ...inBasket.map((i) => (isWashGroup(i.washGroup) ? i.washGroup : "coloured"))]);
     const logged: WashGroup[] = [];
     for (const group of groups) {
       const routineId = await ensureWashRoutine(tx, group);
@@ -271,9 +276,9 @@ export async function washItems(ids: string[]): Promise<{ logged: WashGroup[]; m
 export async function unwashItems(moved: MovedItem[], logged: WashGroup[]): Promise<void> {
   await requireAuth();
   const valid = readMoved(moved);
-  if (valid.length === 0) return;
-  const today = utc(await getTodayKey());
   const groups = (Array.isArray(logged) ? logged : []).filter(isWashGroup);
+  if (valid.length === 0 && groups.length === 0) return;
+  const today = utc(await getTodayKey());
   await prisma.$transaction(async (tx) => {
     await moveBack(tx, valid, "drying", "wash");
     for (const group of groups) {
