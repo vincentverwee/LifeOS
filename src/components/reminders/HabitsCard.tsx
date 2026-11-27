@@ -50,22 +50,34 @@ export function HabitsCard({ done, yesterdayDone, canYesterday }: { done: string
   return (
     <section className="card flex flex-col gap-3" aria-label="Daily habits">
       <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
-          {canYesterday && (
-            <button
-              type="button"
-              onClick={() => setYesterday(!yesterday)}
-              aria-label={yesterday ? "Back to today's habits" : "Yesterday's habits"}
-              className="btn btn-ghost -ml-3 h-11 w-11 p-0"
-            >
-              {yesterday ? <ChevronRight aria-hidden="true" className="h-5 w-5" /> : <ChevronLeft aria-hidden="true" className="h-5 w-5" />}
-            </button>
-          )}
+        <div className="min-w-0">
           <h2 className="font-medium text-foreground">{yesterday ? "Yesterday's habits" : "Daily habits"}</h2>
+          <p className="text-sm text-ink-muted">
+            <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> of {HABITS.length} {dayWord}
+          </p>
         </div>
-        <span className="text-sm text-ink-muted">
-          <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> of {HABITS.length} {dayWord}
-        </span>
+        {canYesterday && (
+          // 44 px tap area around a smaller visible pill
+          <button
+            type="button"
+            onClick={() => setYesterday(!yesterday)}
+            className="-my-1 flex min-h-11 shrink-0 items-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+          >
+            <span className="btn btn-outline inline-flex h-8 gap-1 px-3 text-sm">
+              {yesterday ? (
+                <>
+                  Today
+                  <ChevronRight aria-hidden="true" className="-mr-1 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <ChevronLeft aria-hidden="true" className="-ml-1 h-4 w-4" />
+                  Yesterday
+                </>
+              )}
+            </span>
+          </button>
+        )}
       </div>
       <div className="h-2 rounded-full bg-surface-muted" aria-hidden="true">
         <div className="h-full rounded-full bg-tag-green transition-[width]" style={{ width: `${(count / HABITS.length) * 100}%` }} />
