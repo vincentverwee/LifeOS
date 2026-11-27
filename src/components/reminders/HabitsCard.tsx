@@ -1,8 +1,8 @@
 "use client";
 
-import { useOptimistic } from "react";
+import { useOptimistic, useState } from "react";
 import {
-  Apple, BookOpen, Droplet, Footprints, Heart, Leaf, MessageCircle, Moon, Pencil, PhoneOff, Sun,
+  Apple, BookOpen, ChevronLeft, ChevronRight, Droplet, Footprints, Heart, Leaf, MessageCircle, Moon, Pencil, PhoneOff, Sun,
   type LucideIcon,
 } from "lucide-react";
 import { HABIT_GROUPS, HABITS, type HabitKey } from "@/lib/reminders/habits";
@@ -25,30 +25,46 @@ const ICON: Record<HabitKey, LucideIcon> = {
   "social-media": PhoneOff,
 };
 
-/** Today's daily habits on To do: ticks stay in place and come back fresh tomorrow. */
-export function HabitsCard({ done }: { done: string[] }) {
+/** Today's daily habits on To do: ticks stay in place and come back fresh tomorrow. The arrow flips to yesterday for a forgotten tick. */
+export function HabitsCard({ done, yesterdayDone, canYesterday }: { done: string[]; yesterdayDone: string[]; canYesterday: boolean }) {
   const { run, error } = useQuickAction();
-  const [ticked, setTicked] = useOptimistic(new Set(done));
+  const [yesterday, setYesterday] = useState(false);
+  const [days, setDays] = useOptimistic({ today: new Set(done), yesterday: new Set(yesterdayDone) });
+  const ticked = yesterday ? days.yesterday : days.today;
 
   function toggle(key: string) {
     const next = !ticked.has(key);
+    const forYesterday = yesterday;
     run(async () => {
       const set = new Set(ticked);
       if (next) set.add(key);
       else set.delete(key);
-      setTicked(set);
-      await toggleHabitToday(key, next);
+      setDays(forYesterday ? { ...days, yesterday: set } : { ...days, today: set });
+      await toggleHabitToday(key, next, forYesterday);
     });
   }
 
   const count = HABITS.filter((h) => ticked.has(h.key)).length;
+  const dayWord = yesterday ? "yesterday" : "today";
 
   return (
     <section className="card flex flex-col gap-3" aria-label="Daily habits">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-medium text-foreground">Daily habits</h2>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1">
+          {canYesterday && (
+            <button
+              type="button"
+              onClick={() => setYesterday(!yesterday)}
+              aria-label={yesterday ? "Back to today's habits" : "Yesterday's habits"}
+              className="btn btn-ghost -ml-3 h-11 w-11 p-0"
+            >
+              {yesterday ? <ChevronRight aria-hidden="true" className="h-5 w-5" /> : <ChevronLeft aria-hidden="true" className="h-5 w-5" />}
+            </button>
+          )}
+          <h2 className="font-medium text-foreground">{yesterday ? "Yesterday's habits" : "Daily habits"}</h2>
+        </div>
         <span className="text-sm text-ink-muted">
-          <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> of {HABITS.length} today
+          <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> of {HABITS.length} {dayWord}
         </span>
       </div>
       <div className="h-2 rounded-full bg-surface-muted" aria-hidden="true">
